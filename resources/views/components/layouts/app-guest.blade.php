@@ -15,22 +15,24 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="font-sans antialiased bg-hapag-cream text-hapag-ink min-h-screen flex flex-col">
+<body class="font-sans antialiased text-hapag-ink min-h-screen flex flex-col"
+      style="background-color:#FFF8EF; background-image:url('/images/texture1.png'); background-repeat:repeat; background-size:1600px auto;">
 
     {{-- Announcement bar (pushed by individual pages) --}}
     @stack('announcement')
 
-    {{-- ── Floating Pill Navbar ────────────────────────────────────────────── --}}
+    {{-- ── Guest Navbar ────────────────────────────────────────────────────── --}}
+    {{-- Before scroll: transparent, logo + auth only. After scroll: pill card + nav links. --}}
     <div class="sticky top-0 z-50 px-4 pt-4 pb-1">
-        <nav class="max-w-6xl mx-auto bg-white rounded-2xl shadow-md px-6 h-16 flex items-center justify-between">
+        <nav id="guest-nav" class="max-w-6xl mx-auto transition-all duration-300 px-6 h-16 flex items-center justify-between">
 
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="shrink-0">
                 <span class="text-2xl font-bold tracking-tight text-hapag-red">Hapag</span>
             </a>
 
-            {{-- Center nav links --}}
-            <div class="hidden md:flex items-center gap-1">
+            {{-- Center nav links — hidden until scrolled --}}
+            <div id="guest-nav-links" class="hidden md:flex items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-300">
                 <a href="{{ route('home') }}"
                    class="px-4 py-2 rounded-full text-sm font-semibold transition-colors
                           {{ request()->routeIs('home') ? 'text-hapag-ink font-bold' : 'text-hapag-gray hover:text-hapag-ink' }}">
@@ -131,6 +133,24 @@
 
     <script>
     (function () {
+        const nav   = document.getElementById('guest-nav');
+        const links = document.getElementById('guest-nav-links');
+
+        function updateNav() {
+            if (window.scrollY > 80) {
+                nav.classList.add('bg-white', 'rounded-2xl', 'shadow-md');
+                links.classList.remove('opacity-0', 'pointer-events-none');
+                links.classList.add('opacity-100');
+            } else {
+                nav.classList.remove('bg-white', 'rounded-2xl', 'shadow-md');
+                links.classList.add('opacity-0', 'pointer-events-none');
+                links.classList.remove('opacity-100');
+            }
+        }
+
+        window.addEventListener('scroll', updateNav, { passive: true });
+        updateNav();
+
         document.getElementById('mobile-menu-btn')?.addEventListener('click', function () {
             document.getElementById('mobile-menu').classList.toggle('hidden');
         });

@@ -13,9 +13,7 @@
 @endpush
 
 {{-- ── Hero Section ─────────────────────────────────────────────────────── --}}
-<section class="relative bg-hapag-cream overflow-hidden">
-    {{-- Subtle texture overlay --}}
-    <div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%236B3A2A&quot; fill-opacity=&quot;0.4&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+<section class="relative overflow-hidden">
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 md:pt-20 md:pb-24">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -67,7 +65,7 @@
 </section>
 
 {{-- ── Restaurant Brand Marquee ────────────────────────────────────────── --}}
-<section class="bg-hapag-cream2 border-y border-hapag-cream2 py-4 overflow-hidden">
+<section class="bg-hapag-white border-y max-w-7xl mx-auto border-hapag-cream2 p-4 rounded-2xl overflow-hidden">
     <div class="flex animate-marquee whitespace-nowrap gap-6 items-center">
         @php
             $brands = [
