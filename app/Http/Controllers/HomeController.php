@@ -2,33 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Restaurant;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class HomeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $weather    = $this->fetchWeather();
-        $weatherTag = $this->resolveTag($weather);
-
-        $featured = Restaurant::with('category')
-            ->where('status', 'active')
-            ->whereHas('category', fn ($q) => $q->where('weather_tag', $weatherTag))
-            ->inRandomOrder()
-            ->limit(6)
-            ->get();
-
-        // Fallback: if no restaurants match the tag, show any active ones
-        if ($featured->isEmpty()) {
-            $featured = Restaurant::with('category')
-                ->where('status', 'active')
-                ->inRandomOrder()
-                ->limit(6)
-                ->get();
+        if (auth()->check() && auth()->user()->role === 'customer') {
+            return $this->customerDashboard($request);
         }
 
-        return view('home', compact('weather', 'weatherTag', 'featured'));
+        return view('home-guest');
+    }
+
+    private function customerDashboard(Request $request)
+    {
+        $categories = Category::orderBy('name')->get();
+
+        $query = Restaurant::where('status', 'active')->with('category');
+
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        $restaurants = $query->orderBy('name')->get();
+
+        $weather    = $this->fetchWeather();
+        $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
+        $suggested  = Category::where('weather_tag', $weatherTag)->get();
+
+        return view('home-customer', compact('restaurants', 'categories', 'weather', 'weatherTag', 'suggested'));
     }
 
     private function fetchWeather(): array

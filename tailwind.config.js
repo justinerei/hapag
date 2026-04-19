@@ -12,7 +12,20 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Outfit', ...defaultTheme.fontFamily.sans],
+                mono: ['JetBrains Mono', ...defaultTheme.fontFamily.mono],
+            },
+            colors: {
+                hapag: {
+                    red:    '#E63946',
+                    amber:  '#F4A261',
+                    teal:   '#2A9D8F',
+                    brown:  '#6B3A2A',
+                    ink:    '#1A0F0A',
+                    gray:   '#8B7355',
+                    cream:  '#FFF8EF',
+                    cream2: '#F5ECD7',
+                },
             },
         },
     },
