@@ -142,10 +142,10 @@
                            class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors duration-150">
                             Sign In
                         </a>
-                        <a href="{{ route('register') }}"
-                           class="px-5 py-2 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+                        <button onclick="openAuthModal()"
+                                class="px-5 py-2 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                             Sign Up
-                        </a>
+                        </button>
                     @endauth
 
                     {{-- Mobile hamburger --}}
@@ -249,7 +249,7 @@
                             <li><a href="{{ route('orders.index') }}" class="text-gray-400 hover:text-white transition-colors">My Orders</a></li>
                         @else
                             <li><a href="{{ route('login') }}" class="text-gray-400 hover:text-white transition-colors">Sign In</a></li>
-                            <li><a href="{{ route('register') }}" class="text-gray-400 hover:text-white transition-colors">Create Account</a></li>
+                            <li><button onclick="openAuthModal()" class="text-gray-400 hover:text-white transition-colors">Create Account</button></li>
                         @endauth
                     </ul>
                 </div>
@@ -261,10 +261,10 @@
                         <p class="text-sm text-gray-400 leading-relaxed mb-4">
                             Create a free account to start ordering from local Laguna restaurants. Your cart saves automatically.
                         </p>
-                        <a href="{{ route('register') }}"
-                           class="inline-block px-6 py-2.5 rounded-full bg-hapag-red text-white text-sm font-bold hover:bg-red-700 transition-colors">
+                        <button onclick="openAuthModal()"
+                                class="px-6 py-2.5 rounded-full bg-hapag-red text-white text-sm font-bold hover:bg-red-700 transition-colors">
                             Sign up for free
-                        </a>
+                        </button>
                     @else
                         <h4 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">About</h4>
                         <p class="text-sm text-gray-400 leading-relaxed">
@@ -343,6 +343,7 @@
     })();
     </script>
 
+    <x-auth-modal />
     @stack('scripts')
 </body>
 </html>
