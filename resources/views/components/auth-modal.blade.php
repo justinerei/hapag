@@ -1,6 +1,6 @@
 @guest
 {{-- ══════════════════════════════════════════════════════════════════════════
-     Auth Modal — role selection → registration form (vanilla JS, two panels)
+     Auth Modal — role selection → split-layout registration form
      Include once in each layout: <x-auth-modal />
      Trigger from anywhere: openAuthModal()
 ══════════════════════════════════════════════════════════════════════════ --}}
@@ -16,14 +16,15 @@
     {{-- Centered card --}}
     <div class="relative flex min-h-screen items-center justify-center p-4">
         <div id="auth-modal-card"
-             class="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl
+             class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden
                     transition-all duration-200 scale-95 opacity-0">
 
             {{-- Close button --}}
             <button id="auth-modal-close"
                     onclick="closeAuthModal()"
-                    class="absolute top-4 right-4 p-2 rounded-full text-hapag-gray
-                           hover:bg-hapag-cream2 hover:text-hapag-ink transition-colors duration-150"
+                    class="absolute top-4 right-4 z-20 p-2 rounded-full text-white/70
+                           hover:bg-white/20 hover:text-white transition-colors duration-150
+                           mix-blend-normal"
                     aria-label="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -33,9 +34,13 @@
 
             {{-- ── Panel 1: Role selection ─────────────────────────────────── --}}
             <div id="auth-panel-role" class="px-8 py-10 sm:px-12 sm:py-12">
+
+                {{-- Close button override for role panel (dark) --}}
+                <style>#auth-panel-role ~ * #auth-modal-close, #auth-modal-card:has(#auth-panel-role:not(.hidden)) #auth-modal-close { color: #8B7355; }</style>
+
                 <div class="text-center mb-8">
                     <h2 id="auth-modal-title"
-                        class="text-2xl sm:text-3xl font-extrabold text-hapag-ink tracking-tight">
+                        class="text-2xl sm:text-3xl font-extrabold font-sans text-hapag-ink tracking-tight">
                         What brings you to <span class="text-hapag-red">Hapag?</span>
                     </h2>
                     <p class="mt-2 text-hapag-gray text-sm sm:text-base">
@@ -106,137 +111,213 @@
                 </p>
             </div>
 
-            {{-- ── Panel 2: Registration form ──────────────────────────────── --}}
-            <div id="auth-panel-form" class="hidden px-8 py-10 sm:px-12 sm:py-12">
+            {{-- ── Panel 2: Split layout registration ─────────────────────── --}}
+            <div id="auth-panel-form" class="hidden" style="min-height:520px">
 
-                {{-- Back link --}}
-                <button onclick="showPanel('role')"
-                        class="flex items-center gap-1.5 text-sm text-hapag-gray hover:text-hapag-ink
-                               transition-colors duration-150 mb-6 group">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:-translate-x-0.5 transition-transform duration-150"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Choose a different role
-                </button>
+                {{-- Left: Red branding panel --}}
+                <div class="hidden sm:flex w-[42%] bg-hapag-red flex-col px-8 py-10 text-white shrink-0">
 
-                {{-- Dynamic header --}}
-                <div class="mb-6">
-                    <h2 class="text-2xl font-extrabold text-hapag-ink tracking-tight">
-                        Join as a <span id="auth-role-label" class="text-hapag-red">Customer</span>
+                    {{-- Back --}}
+                    <button onclick="showPanel('role')"
+                            class="flex items-center gap-1.5 text-white/70 hover:text-white text-sm
+                                   transition-colors duration-150 mb-auto self-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                    </button>
+
+                    {{-- Role copy --}}
+                    <div class="mb-10">
+                        <h2 id="auth-brand-heading"
+                            class="text-3xl font-extrabold leading-tight tracking-tight mb-3">
+                            Your next meal is waiting.
+                        </h2>
+                        <p id="auth-brand-sub"
+                           class="text-white/75 text-sm leading-relaxed">
+                            Browse menus, place orders, and pick up food from your favorite Laguna restaurants.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Right: Form --}}
+                <div class="flex-1 px-7 py-8 overflow-y-auto">
+
+                    {{-- Mobile back --}}
+                    <button onclick="showPanel('role')"
+                            class="sm:hidden flex items-center gap-1 text-sm text-hapag-gray
+                                   hover:text-hapag-ink transition-colors mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                    </button>
+
+                    <h2 class="text-xl font-extrabold text-hapag-ink tracking-tight">
+                        Create Your Account
                     </h2>
-                    <p class="mt-1 text-hapag-gray text-sm">
-                        Create your free Hapag account.
+                    <p id="auth-form-sub" class="text-hapag-gray text-xs mt-0.5 mb-5">
+                        Enter your personal data to create your account
+                    </p>
+
+                    {{-- Validation errors --}}
+                    @if($errors->any())
+                    <div class="mb-4 flex items-start gap-2.5 bg-red-50 border border-hapag-red/30
+                                text-hapag-red px-4 py-3 rounded-xl text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 shrink-0"
+                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            @foreach($errors->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('register') }}" novalidate>
+                        @csrf
+                        <input type="hidden" name="role" id="auth-role-input"
+                               value="{{ old('role', 'customer') }}">
+
+                        {{-- First Name + Last Name --}}
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label for="auth-first-name"
+                                       class="block text-xs font-semibold text-hapag-gray mb-1">
+                                    First Name
+                                </label>
+                                <input id="auth-first-name" name="first_name" type="text"
+                                       value="{{ old('first_name') }}"
+                                       required autocomplete="given-name"
+                                       placeholder="e.g. Juan"
+                                       class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                              placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
+                                              focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                              {{ $errors->has('first_name') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                @error('first_name')
+                                    <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label for="auth-last-name"
+                                       class="block text-xs font-semibold text-hapag-gray mb-1">
+                                    Last Name
+                                </label>
+                                <input id="auth-last-name" name="last_name" type="text"
+                                       value="{{ old('last_name') }}"
+                                       required autocomplete="family-name"
+                                       placeholder="e.g. dela Cruz"
+                                       class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                              placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
+                                              focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                              {{ $errors->has('last_name') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                @error('last_name')
+                                    <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        {{-- Email --}}
+                        <div class="mb-3">
+                            <label for="auth-email"
+                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                Email
+                            </label>
+                            <input id="auth-email" name="email" type="email"
+                                   value="{{ old('email') }}"
+                                   required autocomplete="username"
+                                   placeholder="e.g. johndoe@email.com"
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                          placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                          {{ $errors->has('email') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                            @error('email')
+                                <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Municipality (customer only) --}}
+                        <div id="auth-municipality-field" class="mb-3">
+                            <label for="auth-municipality"
+                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                Municipality
+                            </label>
+                            <div class="relative">
+                                <select id="auth-municipality" name="municipality"
+                                        class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                               appearance-none outline-none transition-colors duration-150
+                                               focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                               {{ $errors->has('municipality') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                    <option value="">Select your municipality</option>
+                                    @foreach(['Alaminos','Bay','Biñan','Cabuyao','Calamba','Calauan','Cavinti','Famy','Kalayaan','Liliw','Los Baños','Luisiana','Lumban','Mabitac','Magdalena','Majayjay','Nagcarlan','Paete','Pagsanjan','Pakil','Pangil','Pila','Rizal','San Pablo City','San Pedro','Santa Cruz','Santa Maria','Siniloan','Victoria'] as $m)
+                                        <option value="{{ $m }}" {{ old('municipality') === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-hapag-gray">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            @error('municipality')
+                                <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Password --}}
+                        <div class="mb-3">
+                            <label for="auth-password"
+                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                Password
+                            </label>
+                            <input id="auth-password" name="password" type="password"
+                                   required autocomplete="new-password"
+                                   placeholder="Enter your password"
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                          outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                          {{ $errors->has('password') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                            @error('password')
+                                <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Confirm Password --}}
+                        <div class="mb-5">
+                            <label for="auth-password-confirm"
+                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                Confirm Password
+                            </label>
+                            <input id="auth-password-confirm" name="password_confirmation"
+                                   type="password" required autocomplete="new-password"
+                                   placeholder="Re-enter your password"
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                          outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
+                                          border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50">
+                        </div>
+
+                        <button type="submit" id="auth-submit-btn"
+                                class="w-full py-3 rounded-xl font-bold text-white text-sm bg-hapag-ink
+                                       hover:bg-black transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+                            Sign Up
+                        </button>
+                    </form>
+
+                    <p class="text-center text-xs text-hapag-gray mt-4">
+                        Already have an account?
+                        <a href="{{ route('login') }}"
+                           class="font-semibold text-hapag-ink hover:underline">Login</a>
                     </p>
                 </div>
 
-                {{-- Validation error summary --}}
-                @if($errors->any())
-                <div class="mb-5 flex items-start gap-3 bg-red-50 border border-hapag-red/30
-                            text-hapag-red px-4 py-3 rounded-xl text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 shrink-0"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                        @foreach($errors->all() as $error)
-                            <div>{{ $error }}</div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <form method="POST" action="{{ route('register') }}" novalidate>
-                    @csrf
-                    <input type="hidden" name="role" id="auth-role-input"
-                           value="{{ old('role', 'customer') }}">
-
-                    {{-- Name --}}
-                    <div class="mb-4">
-                        <label for="auth-name"
-                               class="block text-sm font-semibold text-hapag-ink mb-1.5">
-                            Full Name
-                        </label>
-                        <input id="auth-name" name="name" type="text"
-                               value="{{ old('name') }}"
-                               required autocomplete="name" autofocus
-                               class="w-full px-4 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                      placeholder:text-hapag-gray/60 outline-none transition-colors duration-150
-                                      focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                      {{ $errors->has('name') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-white hover:border-hapag-gray/50' }}"
-                               placeholder="e.g. Juan dela Cruz">
-                        @error('name')
-                            <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    {{-- Email --}}
-                    <div class="mb-4">
-                        <label for="auth-email"
-                               class="block text-sm font-semibold text-hapag-ink mb-1.5">
-                            Email Address
-                        </label>
-                        <input id="auth-email" name="email" type="email"
-                               value="{{ old('email') }}"
-                               required autocomplete="username"
-                               class="w-full px-4 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                      placeholder:text-hapag-gray/60 outline-none transition-colors duration-150
-                                      focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                      {{ $errors->has('email') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-white hover:border-hapag-gray/50' }}"
-                               placeholder="you@example.com">
-                        @error('email')
-                            <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    {{-- Password --}}
-                    <div class="mb-4">
-                        <label for="auth-password"
-                               class="block text-sm font-semibold text-hapag-ink mb-1.5">
-                            Password
-                        </label>
-                        <input id="auth-password" name="password" type="password"
-                               required autocomplete="new-password"
-                               class="w-full px-4 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                      outline-none transition-colors duration-150
-                                      focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                      {{ $errors->has('password') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-white hover:border-hapag-gray/50' }}"
-                               placeholder="Min. 8 characters">
-                        @error('password')
-                            <p class="mt-1 text-xs text-hapag-red">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    {{-- Confirm password --}}
-                    <div class="mb-6">
-                        <label for="auth-password-confirm"
-                               class="block text-sm font-semibold text-hapag-ink mb-1.5">
-                            Confirm Password
-                        </label>
-                        <input id="auth-password-confirm" name="password_confirmation"
-                               type="password" required autocomplete="new-password"
-                               class="w-full px-4 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                      outline-none transition-colors duration-150
-                                      focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                      border-hapag-cream2 bg-white hover:border-hapag-gray/50"
-                               placeholder="Repeat your password">
-                    </div>
-
-                    <button type="submit"
-                            class="w-full py-3 rounded-full font-bold text-white text-sm bg-hapag-red
-                                   hover:bg-red-700 transition-all duration-150
-                                   hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0">
-                        Create Account
-                    </button>
-                </form>
-
-                <p class="text-center text-sm text-hapag-gray mt-5">
-                    Already have an account?
-                    <a href="{{ route('login') }}"
-                       class="font-semibold text-hapag-red hover:underline">Sign in</a>
-                </p>
-            </div>
+            </div>{{-- /panel-form --}}
 
         </div>{{-- /card --}}
     </div>
@@ -244,15 +325,37 @@
 
 <script>
 (function () {
-    const overlay  = document.getElementById('auth-modal-overlay');
-    const card     = document.getElementById('auth-modal-card');
-    const backdrop = document.getElementById('auth-modal-backdrop');
-    const panelRole = document.getElementById('auth-panel-role');
-    const panelForm = document.getElementById('auth-panel-form');
-    const roleInput = document.getElementById('auth-role-input');
-    const roleLabel = document.getElementById('auth-role-label');
+    const overlay          = document.getElementById('auth-modal-overlay');
+    const card             = document.getElementById('auth-modal-card');
+    const backdrop         = document.getElementById('auth-modal-backdrop');
+    const panelRole        = document.getElementById('auth-panel-role');
+    const panelForm        = document.getElementById('auth-panel-form');
+    const roleInput        = document.getElementById('auth-role-input');
+    const brandHeading     = document.getElementById('auth-brand-heading');
+    const brandSub         = document.getElementById('auth-brand-sub');
+    const formSub          = document.getElementById('auth-form-sub');
+    const submitBtn        = document.getElementById('auth-submit-btn');
+    const municipalityField = document.getElementById('auth-municipality-field');
+    const closeBtn         = document.getElementById('auth-modal-close');
 
-    const roleNames = { customer: 'Customer', owner: 'Restaurant Owner' };
+    const roleConfigs = {
+        customer: {
+            brandHeading:    'Your next meal is waiting.',
+            brandSub:        'Browse menus, place orders, and pick up food from your favorite Laguna restaurants.',
+            formSub:         'Enter your personal data to create your account',
+            submitText:      'Sign Up',
+            showMunicipality: true,
+            closeDark:       false,
+        },
+        owner: {
+            brandHeading:    'Bring your kitchen online.',
+            brandSub:        'List your restaurant, manage your menu, and start receiving orders from local customers.',
+            formSub:         'Set up your personal account first \u2014 your restaurant details come next.',
+            submitText:      'Continue',
+            showMunicipality: false,
+            closeDark:       false,
+        },
+    };
 
     function openAuthModal(panel, role) {
         overlay.classList.remove('hidden');
@@ -290,26 +393,53 @@
     }
 
     function _setRole(role) {
+        const cfg = roleConfigs[role] || roleConfigs.customer;
         roleInput.value = role;
-        if (roleLabel) roleLabel.textContent = roleNames[role] || role;
+        if (brandHeading)     brandHeading.textContent = cfg.brandHeading;
+        if (brandSub)         brandSub.textContent     = cfg.brandSub;
+        if (formSub)          formSub.textContent      = cfg.formSub;
+        if (submitBtn)        submitBtn.textContent    = cfg.submitText;
+        if (municipalityField) municipalityField.classList.toggle('hidden', !cfg.showMunicipality);
+
+        // Close button: white on form panel (red bg visible), dark on role panel
+        if (closeBtn) {
+            closeBtn.className = closeBtn.className
+                .replace(/text-\S+/g, '')
+                .replace(/hover:bg-\S+/g, '')
+                .trim();
+        }
     }
 
     function _showPanel(name) {
         panelRole.classList.toggle('hidden', name !== 'role');
-        panelForm.classList.toggle('hidden', name !== 'form');
+        if (name === 'form') {
+            panelForm.classList.remove('hidden');
+            panelForm.style.display = 'flex';
+            // Close button white (sits over red panel)
+            if (closeBtn) {
+                closeBtn.style.color = 'rgba(255,255,255,0.8)';
+            }
+        } else {
+            panelForm.classList.add('hidden');
+            panelForm.style.display = '';
+            // Close button dark (white card background)
+            if (closeBtn) {
+                closeBtn.style.color = '#8B7355';
+            }
+        }
     }
 
-    // Close on backdrop click
+    // Initialise close button color for role panel (default view)
+    if (closeBtn) closeBtn.style.color = '#8B7355';
+
     backdrop.addEventListener('click', closeAuthModal);
 
-    // Close on Escape
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
             closeAuthModal();
         }
     });
 
-    // Expose globals
     window.openAuthModal = openAuthModal;
     window.closeAuthModal = closeAuthModal;
     window.selectRole = selectRole;

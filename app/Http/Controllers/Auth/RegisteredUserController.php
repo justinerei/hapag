@@ -25,17 +25,20 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => ['required', 'in:customer,owner'],
+            'first_name'   => ['required', 'string', 'max:255'],
+            'last_name'    => ['required', 'string', 'max:255'],
+            'email'        => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'password'     => ['required', 'confirmed', Rules\Password::defaults()],
+            'role'         => ['required', 'in:customer,owner'],
+            'municipality' => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'name'         => trim($request->first_name . ' ' . $request->last_name),
+            'email'        => $request->email,
+            'password'     => Hash::make($request->password),
+            'role'         => $request->role,
+            'municipality' => $request->municipality ?: null,
         ]);
 
         event(new Registered($user));
@@ -43,8 +46,8 @@ class RegisteredUserController extends Controller
         Auth::login($user);
 
         return match ($user->role) {
-            'owner' => redirect()->route('owner.dashboard'),
-            default => redirect()->route('home'),
+            'owner'  => redirect()->route('owner.setup'),
+            default  => redirect()->route('home'),
         };
     }
 }

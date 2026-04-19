@@ -47,10 +47,10 @@
 
             {{-- Auth actions --}}
             <div class="flex items-center gap-2">
-                <a href="{{ route('login') }}"
-                   class="hidden sm:block px-4 py-2 text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors">
+                <button onclick="openLoginModal()"
+                        class="hidden sm:block px-4 py-2 text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors">
                     Sign In
-                </a>
+                </button>
                 <button onclick="openAuthModal()"
                         class="px-5 py-2.5 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                     Sign Up
@@ -75,7 +75,7 @@
                class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
                       {{ request()->routeIs('restaurants.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Restaurants</a>
             <div class="border-t border-hapag-cream2 pt-2 mt-2 flex gap-2">
-                <a href="{{ route('login') }}" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-semibold text-hapag-gray hover:bg-hapag-cream transition-colors">Sign In</a>
+                <button onclick="openLoginModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-semibold text-hapag-gray hover:bg-hapag-cream transition-colors">Sign In</button>
                 <button onclick="openAuthModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-colors">Sign Up</button>
             </div>
         </div>
@@ -114,7 +114,7 @@
                     <ul class="space-y-2.5 text-sm">
                         <li><a href="{{ route('home') }}" class="text-gray-400 hover:text-white transition-colors">Home</a></li>
                         <li><a href="{{ route('restaurants.index') }}" class="text-gray-400 hover:text-white transition-colors">Browse Restaurants</a></li>
-                        <li><a href="{{ route('login') }}" class="text-gray-400 hover:text-white transition-colors">Sign In</a></li>
+                        <li><button onclick="openLoginModal()" class="text-gray-400 hover:text-white transition-colors">Sign In</button></li>
                         <li><button onclick="openAuthModal()" class="text-gray-400 hover:text-white transition-colors">Create Account</button></li>
                     </ul>
                 </div>
@@ -158,6 +158,7 @@
     </script>
 
     <x-auth-modal />
+    <x-login-modal />
     @stack('scripts')
 </body>
 </html>

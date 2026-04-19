@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class OwnerController extends Controller
 {
+    public function setup()
+    {
+        return view('owner.setup');
+    }
+
     public function dashboard()
     {
         $restaurants = auth()->user()

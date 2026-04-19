@@ -138,10 +138,10 @@
                         </div>
 
                     @else
-                        <a href="{{ route('login') }}"
-                           class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors duration-150">
+                        <button onclick="openLoginModal()"
+                                class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors duration-150">
                             Sign In
-                        </a>
+                        </button>
                         <button onclick="openAuthModal()"
                                 class="px-5 py-2 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                             Sign Up
@@ -248,7 +248,7 @@
                             <li><a href="{{ route('cart.index') }}" class="text-gray-400 hover:text-white transition-colors">My Cart</a></li>
                             <li><a href="{{ route('orders.index') }}" class="text-gray-400 hover:text-white transition-colors">My Orders</a></li>
                         @else
-                            <li><a href="{{ route('login') }}" class="text-gray-400 hover:text-white transition-colors">Sign In</a></li>
+                            <li><button onclick="openLoginModal()" class="text-gray-400 hover:text-white transition-colors">Sign In</button></li>
                             <li><button onclick="openAuthModal()" class="text-gray-400 hover:text-white transition-colors">Create Account</button></li>
                         @endauth
                     </ul>
@@ -344,6 +344,7 @@
     </script>
 
     <x-auth-modal />
+    <x-login-modal />
     @stack('scripts')
 </body>
 </html>

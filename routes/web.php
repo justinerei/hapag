@@ -68,6 +68,7 @@ Route::middleware(['auth', 'role:owner'])
     ->group(function () {
 
         Route::get('/', [OwnerController::class, 'dashboard'])->name('dashboard');
+        Route::get('/setup', [OwnerController::class, 'setup'])->name('setup');
 
         // Menu items
         Route::post('/items', [OwnerController::class, 'storeItem'])->name('items.store');
