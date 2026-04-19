@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'owm' => [
+        'key'  => env('OWM_API_KEY'),
+        'city' => env('DEFAULT_CITY', 'Santa Cruz,PH'),
+        'url'  => 'https://api.openweathermap.org/data/2.5/weather',
+    ],
+
+    'groq' => [
+        'key'   => env('GROQ_API_KEY'),
+        'url'   => 'https://api.groq.com/openai/v1/chat/completions',
+        'model' => 'llama3-8b-8192',
+    ],
+
 ];
