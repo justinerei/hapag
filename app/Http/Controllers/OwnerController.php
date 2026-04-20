@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
@@ -11,7 +12,54 @@ class OwnerController extends Controller
 {
     public function setup()
     {
-        return view('owner.setup');
+        if (auth()->user()->restaurants()->exists()) {
+            return redirect()->route('owner.dashboard');
+        }
+
+        $categories = Category::orderBy('name')->get();
+
+        return view('owner.setup', compact('categories'));
+    }
+
+    public function storeSetup(Request $request)
+    {
+        if (auth()->user()->restaurants()->exists()) {
+            return redirect()->route('owner.dashboard');
+        }
+
+        $data = $request->validate([
+            'name'         => ['required', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:1000'],
+            'category_id'  => ['required', 'exists:categories,id'],
+            'municipality' => ['required', 'string', 'max:255'],
+            'image_url'    => ['nullable', 'url', 'max:500'],
+        ]);
+
+        $coords = [
+            'Santa Cruz'  => [14.2794, 121.4117],
+            'Pagsanjan'   => [14.2713, 121.4559],
+            'Los Baños'   => [14.1692, 121.2436],
+            'Calamba'     => [14.2116, 121.1653],
+            'San Pablo'   => [14.0688, 121.3224],
+        ];
+
+        [$lat, $lng] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+
+        Restaurant::create([
+            'owner_id'     => auth()->id(),
+            'category_id'  => $data['category_id'],
+            'name'         => $data['name'],
+            'description'  => $data['description'] ?? null,
+            'address'      => $data['municipality'],
+            'municipality' => $data['municipality'],
+            'lat'          => $lat,
+            'lng'          => $lng,
+            'image_url'    => $data['image_url'] ?? null,
+            'status'       => 'pending',
+        ]);
+
+        return redirect()->route('owner.dashboard')
+            ->with('success', 'Your restaurant has been submitted for review. We\'ll notify you once it\'s approved.');
     }
 
     public function dashboard()

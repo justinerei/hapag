@@ -345,6 +345,7 @@
 
     <x-auth-modal />
     <x-login-modal />
+    <x-restaurant-setup-modal />
     @stack('scripts')
 </body>
 </html>

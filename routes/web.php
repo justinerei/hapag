@@ -69,6 +69,7 @@ Route::middleware(['auth', 'role:owner'])
 
         Route::get('/', [OwnerController::class, 'dashboard'])->name('dashboard');
         Route::get('/setup', [OwnerController::class, 'setup'])->name('setup');
+        Route::post('/setup', [OwnerController::class, 'storeSetup'])->name('setup.store');
 
         // Menu items
         Route::post('/items', [OwnerController::class, 'storeItem'])->name('items.store');
