@@ -349,7 +349,7 @@
                             'Dessert'   => 'https://i.pinimg.com/1200x/86/bd/6e/86bd6e184792c5e29be52fe23434cbe8.jpg',
                         ];
                     @endphp
-                    <div class="flex flex-nowrap gap-5 overflow-x-auto pb-4 w-full" style="scrollbar-width:none; -ms-overflow-style:none;">
+                    <div class="flex flex-nowrap gap-5 overflow-x-auto pb-4 w-full" style="scrollbar-width: on; -ms-overflow-style:none;">
                         @foreach($categories as $cat)
                         @php
                             $img = null;
@@ -358,9 +358,9 @@
                             }
                             $img = $img ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
                         @endphp
-                        <button class="shrink-0 flex flex-col items-center gap-2 group w-[120px]"
+                        <button class="shrink-0 flex flex-col items-center gap-2 group w-[160px]"
                                 data-cat-id="{{ $cat->id }}">
-                            <div class="w-[120px] h-[120px] rounded-2xl overflow-hidden border-2 border-transparent
+                            <div class="w-[160px] h-[160px] rounded-2xl overflow-hidden border-2 border-transparent
                         group-hover:border-hapag-red transition-all duration-150 shadow-sm bg-gray-100">
                                 <img src="{{ $img }}" alt="{{ $cat->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
@@ -396,7 +396,7 @@
                             <a href="{{ $dr ? route('restaurants.show', $dr) : route('restaurants.index') }}"
                                class="shrink-0 w-56 rounded-2xl overflow-hidden
                                       hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
-                               style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%);">
+                               style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%); v">
                                 <div class="p-5 flex flex-col min-h-[155px] justify-between">
                                     <div>
                                         <p class="text-white font-extrabold text-base leading-tight mb-1.5">
