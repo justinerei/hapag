@@ -342,15 +342,15 @@
                     <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">Cuisines</h2>
                     @php
                         $cuisineImgs = [
-                            'Filipino'  => 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=200&h=200&fit=crop',
-                            'BBQ'       => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
+                            'Filipino'  => 'https://i.pinimg.com/1200x/e2/95/a8/e295a8e416096d4172669cb4649e4ae8.jpg',
+                            'BBQ'       => 'https://i.pinimg.com/1200x/bb/3d/bb/bb3dbb02d108d02230155960f49b2a6d.jpg',
                             'Ihaw'      => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
-                            'Cafe'      => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop',
+                            'Cafe'      => 'https://i.pinimg.com/736x/e0/17/bd/e017bd3ac09b84fd3912f6d794f4cc08.jpg',
                             'Coffee'    => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop',
-                            'Bakery'    => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&h=200&fit=crop',
+                            'Bakery'    => 'https://i.pinimg.com/1200x/ea/e8/34/eae83495a307b0c89fb40a75ac2c861d.jpg',
                             'Fast Food' => 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&h=200&fit=crop',
                             'Desserts'  => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop',
-                            'Dessert'   => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop',
+                            'Dessert'   => 'https://i.pinimg.com/1200x/86/bd/6e/86bd6e184792c5e29be52fe23434cbe8.jpg',
                         ];
                     @endphp
                     <div class="flex flex-nowrap gap-5 overflow-x-auto pb-4 w-full" style="scrollbar-width:none; -ms-overflow-style:none;">
