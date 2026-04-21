@@ -45,6 +45,16 @@ Route::middleware('auth')->group(function () {
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 
+    // Favorites placeholder
+    Route::get('/favorites', fn () => view('favorites'))->name('favorites');
+
+    // Municipality quick-update (AJAX from customer navbar)
+    Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
+        $request->validate(['municipality' => ['required', 'string', 'max:255']]);
+        auth()->user()->update(['municipality' => $request->municipality]);
+        return response()->json(['ok' => true]);
+    })->name('profile.municipality');
+
     // Cart — clear before {cartItem} so DELETE /cart is never mistaken for a model route
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart', [CartController::class, 'add'])->name('cart.add');

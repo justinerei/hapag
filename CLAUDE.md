@@ -17,10 +17,11 @@ School: LSPU College of Computer Studies | Course: ITEL 203 — Web Systems and 
 
 - **Pickup only.** No couriers, no delivery, no GPS tracking. Payment is Cash on Pickup.
 - **No payment API.** No Stripe, GCash, PayMongo, PayPal, or any payment integration.
-- **Fictional restaurants only.** All restaurants have Filipino-sounding names seeded manually with hardcoded Laguna coordinates. No real brands.
-- **Laguna province scope only.** Map defaults to Santa Cruz, Laguna (zoom 13).
+- **Fictional restaurant brands with multiple branches.** 6 restaurant brands, each with branches across multiple Laguna cities. All seeded manually with hardcoded coordinates. No real brands.
+- **8 Laguna cities covered.** Customers choose their municipality at registration and can change it in their profile. Homepage defaults to their chosen municipality but they can browse/switch to other cities.
+- **25–30 total branches seeded.** Not every city has every restaurant. Each branch is a separate `restaurants` row with its own owner, coordinates, and menu of 10–15 items.
 - **No geocoding.** Nominatim was deliberately removed. All `lat`/`lng` values come from the database seeder only — never from a geocoding API.
-- **No social features.** No reviews, ratings, or extended user profiles.
+- **No social features.** No reviews, ratings, or extended user profiles. Customers can favorite restaurants but there are no reviews or ratings.
 
 ---
 
@@ -73,24 +74,28 @@ Stored in `users.role` column.
 | Role | Login Redirect | Access |
 |---|---|---|
 | Guest (not logged in) | — | Browse restaurants, view menus, see map |
-| `customer` | `/` (homepage) | Everything above + cart, orders, AI recommender |
-| `owner` | `/owner` | Own restaurant CRUD, menu management, order status, AI description generator |
+| `customer` | `/` (homepage) | Everything above + cart, orders, AI recommender, favorites, municipality preference |
+| `owner` | `/owner` | Own restaurant(s)/branch(es) CRUD, menu management, order status, AI description generator |
 | `admin` | `/admin` | Restaurant approvals, categories, all users/orders, DB backup |
 
 ---
 
-## Database Schema (8 Tables)
+## Database Schema (10 Tables)
 
 All migrations in `database/migrations/`, all models in `app/Models/`.
 
-**`users`** — id, name, email, password, role, email_verified_at, remember_token, timestamps
-- `hasMany(Restaurant)`, `hasMany(Order)`, `hasMany(CartItem)`
+**`users`** — id, name, email, password, role, municipality (nullable), email_verified_at, remember_token, timestamps
+- `municipality` — customer's preferred municipality, chosen at registration, editable in profile. Nullable for owners/admins.
+- `hasMany(Restaurant)`, `hasMany(Order)`, `hasMany(CartItem)`, `hasMany(Favorite)`
 
 **`categories`** — id, name, icon (emoji), weather_tag (rainy/hot/cool/cloudy), timestamps
 - `weather_tag` matched by `WeatherController` to suggest food categories on homepage
 
 **`restaurants`** — id, owner_id, category_id, name, description, address, municipality, lat, lng, image_url, status (pending/active/rejected), timestamps
+- Each row is a **branch**, not a brand. Multiple rows can share the same brand name in different municipalities.
+- One owner can own multiple branches (franchise model).
 - `lat`/`lng` are hardcoded in seeder — never geocoded
+- Each branch has its own menu of 10–15 items
 
 **`menu_items`** — id, restaurant_id, name, description, price, category, is_available, timestamps
 - `is_available = false` hides item from customers without deleting it
@@ -112,6 +117,11 @@ All migrations in `database/migrations/`, all models in `app/Models/`.
 **`voucher_usages`** — id, voucher_id, user_id, order_id, timestamps
 - Tracks one-time-per-customer enforcement
 
+**`favorites`** — id, user_id, restaurant_id, timestamps
+- Customers can favorite/unfavorite restaurants
+- `unique(['user_id', 'restaurant_id'])` — prevents duplicates
+- Used on homepage to show a "Your Favorites" section
+
 **`system_settings`** — id, key (unique), value, timestamps
 - Used for `last_backup_at` and `last_backup_file`
 
@@ -126,6 +136,8 @@ All migrations in `database/migrations/`, all models in `app/Models/`.
 | Restaurant Menu | `GET /menu/{restaurant}` | `RestaurantController@show` | Public; cart requires auth |
 | Cart | `GET /cart` | `CartController@index` | `auth` |
 | My Orders | `GET /orders` | `OrderController@index` | `auth` |
+| Profile / Settings | `GET /profile` | `ProfileController@edit` | `auth` |
+| Toggle Favorite | `POST /favorites/toggle/{restaurant}` | `FavoriteController@toggle` | `auth` |
 | Owner Dashboard | `GET /owner` | `OwnerController@dashboard` | `auth` + `role:owner` |
 | Admin Panel | `GET /admin` | `AdminController@dashboard` | `auth` + `role:admin` |
 
@@ -133,12 +145,12 @@ All migrations in `database/migrations/`, all models in `app/Models/`.
 
 ## Controllers Reference
 
-**`HomeController`** — fetches weather, loads featured restaurants by `weather_tag`
+**`HomeController`** — fetches weather, loads featured restaurants by `weather_tag`, filtered to customer's municipality by default. Shows "Your Favorites" section for logged-in customers.
 
 **`RestaurantController`**
-- `index()` — active restaurants, supports AJAX name/category filter
-- `show($id)` — single restaurant with available menu items
-- `mapData()` — JSON (id, name, lat, lng, category) for Leaflet pins
+- `index()` — active restaurants, defaults to customer's municipality, supports AJAX name/category/municipality filter. Customers can switch to browse other cities.
+- `show($id)` — single restaurant (branch) with available menu items
+- `mapData()` — JSON (id, name, lat, lng, category, municipality) for Leaflet pins, filterable by municipality
 
 **`CartController`**
 - `add()` — enforces one-restaurant rule, returns `409 {conflict: true}` on violation
@@ -160,6 +172,10 @@ All migrations in `database/migrations/`, all models in `app/Models/`.
 - `recommend()` — customer food recommender (fetches menu, calls GROQ)
 - `describe()` — owner menu description generator (calls GROQ)
 
+**`FavoriteController`**
+- `toggle()` — POST, adds or removes a favorite (idempotent toggle)
+- `index()` — returns customer's favorited restaurants (used by homepage)
+
 **`WeatherController`** — fetches OpenWeatherMap for `DEFAULT_CITY`, maps condition to `weather_tag`
 
 ---
@@ -178,9 +194,40 @@ All migrations in `database/migrations/`, all models in `app/Models/`.
 
 **Leaflet.js + OpenStreetMap**
 - Loaded via CDN in `resources/views/layouts/app.blade.php` — no npm install
-- Map center: `[14.2794, 121.4117]` (Santa Cruz, Laguna), zoom 13
+- Map center: defaults to customer's municipality coordinates, falls back to `[14.2794, 121.4117]` (Santa Cruz, Laguna) for guests, zoom 13
 - Tiles: CartoDB Positron — no API key required
-- Restaurant data from `GET /api/restaurants/map`
+- Restaurant data from `GET /api/restaurants/map` — supports `?municipality=` filter
+
+---
+
+## Municipality System
+
+### Customer municipality preference
+- Customers select their municipality during **registration** (required dropdown of the 8 covered cities)
+- Customers can **change** their municipality anytime via their **profile/settings page**
+- Stored in `users.municipality` column
+
+### How municipality affects what customers see
+- **Homepage:** Featured restaurants default to the customer's municipality. A municipality switcher/dropdown lets them browse other cities without changing their saved preference.
+- **Browse Restaurants page:** Defaults to customer's municipality filter. Customer can switch to "All Cities" or pick another specific city.
+- **Map:** Centers on the customer's municipality coordinates by default. Switching municipality re-centers the map.
+- **Guests (not logged in):** See all restaurants across all cities (no municipality preference stored). Map defaults to Santa Cruz.
+
+### Municipality switcher vs. saved preference
+- The **saved preference** (`users.municipality`) persists across sessions and determines the default view.
+- The **switcher** is a session-level or UI-level filter — browsing another city does NOT change the saved preference. Only the profile page changes the saved preference.
+
+---
+
+## Favorites System
+
+### How favorites work
+- Authenticated customers can **favorite/unfavorite** a restaurant from the restaurant card or menu page (heart icon toggle)
+- Endpoint: `POST /favorites/toggle/{restaurant}` — adds if not favorited, removes if already favorited
+- Stored in `favorites` table with unique constraint on `(user_id, restaurant_id)`
+- **Homepage** shows a "Your Favorites" section for logged-in customers, displaying their favorited restaurants from their current municipality view
+- Favorites persist across sessions (database-backed, not session-backed)
+- Guests cannot favorite — heart icon prompts login
 
 ---
 
@@ -284,15 +331,40 @@ Ready:     bg-teal-100 text-hapag-teal text-xs font-bold uppercase px-3 py-1 rou
 
 ---
 
-## Seeded Fictional Restaurants (Laguna)
+## Seeded Restaurant Brands & Branches (Laguna)
 
-| Restaurant | Municipality | Coords | Category |
-|---|---|---|---|
-| Lutong Bahay ni Aling Rosa | Santa Cruz | 14.2794, 121.4117 | Filipino |
-| Grill Masters PH | Santa Cruz | 14.2821, 121.4089 | BBQ / Ihaw-Ihaw |
-| Kape't Tinapay | Pagsanjan | 14.2713, 121.4559 | Cafe |
-| La Preciosa Bakery | Pagsanjan | 14.2698, 121.4612 | Bakery |
-| Mama Nena's Carinderia | Los Baños | 14.1692, 121.2436 | Filipino |
-| Bida Burger | Calamba | 14.2116, 121.1653 | Fast Food |
+### 8 Covered Municipalities
+Santa Cruz, Pagsanjan, Los Baños, Calamba, San Pablo, Bay, Nagcarlan, Pila
+
+### 6 Restaurant Brands
+| Brand | Category |
+|---|---|
+| Lutong Bahay ni Aling Rosa | Filipino 🍜 |
+| Grill Masters PH | BBQ / Ihaw-Ihaw 🔥 |
+| Kape't Tinapay | Cafe ☕ |
+| La Preciosa Bakery | Bakery 🍞 |
+| Mama Nena's Carinderia | Filipino 🍜 |
+| Bida Burger | Fast Food 🍔 |
+
+### Branching Rules
+- **25–30 total branches** spread across the 8 cities
+- Not every city has every brand — some cities might only have 3 out of 6
+- Each branch is a separate `restaurants` row with its own `id`, owner, coordinates, and menu
+- One owner can own multiple branches (franchise model)
+- Each branch has **10–15 menu items** seeded
+- Branch names follow the pattern: `"Brand Name — Municipality"` (e.g. `"Bida Burger — San Pablo"`)
+- Coordinates per branch are hardcoded in the seeder — unique per branch, never geocoded
+
+### Municipality Coordinates (seeder reference)
+| Municipality | Approx. Center Lat | Approx. Center Lng |
+|---|---|---|
+| Santa Cruz | 14.2794 | 121.4117 |
+| Pagsanjan | 14.2713 | 121.4559 |
+| Los Baños | 14.1692 | 121.2436 |
+| Calamba | 14.2116 | 121.1653 |
+| San Pablo | 14.0685 | 121.3254 |
+| Bay | 14.1806 | 121.2845 |
+| Nagcarlan | 14.1367 | 121.4163 |
+| Pila | 14.2327 | 121.3642 |
 
 **Food categories to seed:** Filipino 🍜 (rainy), BBQ/Ihaw-Ihaw 🔥 (cool), Cafe ☕ (rainy), Bakery 🍞 (cloudy), Fast Food 🍔 (hot), Desserts 🍨 (hot)
