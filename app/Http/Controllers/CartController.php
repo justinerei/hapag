@@ -24,6 +24,34 @@ class CartController extends Controller
         return view('cart.index', compact('cartItems', 'restaurant'));
     }
 
+    public function json()
+    {
+        $cartItems = CartItem::where('user_id', auth()->id())
+            ->with(['menuItem.restaurant'])
+            ->get();
+
+        $restaurant = $cartItems->first()?->menuItem->restaurant;
+
+        return response()->json([
+            'items' => $cartItems->map(fn ($ci) => [
+                'id'          => $ci->id,
+                'quantity'    => $ci->quantity,
+                'name'        => $ci->menuItem->name,
+                'price'       => (float) $ci->menuItem->price,
+                'image_url'   => $ci->menuItem->image_url ?? null,
+                'category'    => $ci->menuItem->category,
+                'restaurant'  => $ci->menuItem->restaurant->name ?? '',
+            ]),
+            'restaurant' => $restaurant ? [
+                'id'   => $restaurant->id,
+                'name' => $restaurant->name,
+                'municipality' => $restaurant->municipality,
+            ] : null,
+            'subtotal' => $cartItems->sum(fn ($ci) => $ci->menuItem->price * $ci->quantity),
+            'count'    => $cartItems->sum('quantity'),
+        ]);
+    }
+
     public function add(Request $request)
     {
         $request->validate(['menu_item_id' => 'required|exists:menu_items,id']);

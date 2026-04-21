@@ -48,7 +48,7 @@ class RestaurantController extends Controller
     {
         abort_if($restaurant->status !== 'active', 404);
 
-        $restaurant->load('category');
+        $restaurant->load(['category', 'owner']);
 
         $menuItems = $restaurant->menuItems()
             ->where('is_available', true)
@@ -57,7 +57,36 @@ class RestaurantController extends Controller
             ->get()
             ->groupBy('category');
 
-        return view('restaurants.show', compact('restaurant', 'menuItems'));
+        // Random 4 featured items
+        $featuredItems = $restaurant->menuItems()
+            ->where('is_available', true)
+            ->inRandomOrder()
+            ->limit(4)
+            ->get();
+
+        // Active vouchers for this restaurant + site-wide
+        $vouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where(fn ($q) => $q->where('restaurant_id', $restaurant->id)->orWhereNull('restaurant_id'))
+            ->get();
+
+        // Cart data for logged-in users
+        $cartItems = [];
+        $cartCount = 0;
+        if (auth()->check()) {
+            $cartItems = \App\Models\CartItem::where('user_id', auth()->id())
+                ->with('menuItem.restaurant')
+                ->get();
+            $cartCount = $cartItems->sum('quantity');
+        }
+
+        // All active restaurants for footer
+        $allRestaurants = Restaurant::where('status', 'active')->orderBy('name')->limit(5)->get();
+
+        return view('restaurants.show', compact(
+            'restaurant', 'menuItems', 'featuredItems',
+            'vouchers', 'cartItems', 'cartCount', 'allRestaurants'
+        ));
     }
 
     public function mapData()

@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
 
     // Cart — clear before {cartItem} so DELETE /cart is never mistaken for a model route
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::get('/cart/json', [CartController::class, 'json'])->name('cart.json');
     Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');

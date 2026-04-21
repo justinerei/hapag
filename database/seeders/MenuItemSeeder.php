@@ -144,6 +144,81 @@ class MenuItemSeeder extends Seeder
         };
     }
 
+    // Map food keywords to Unsplash placeholder images
+    private function foodImage(string $name, string $category): string
+    {
+        $map = [
+            // Specific dishes
+            'burger'    => 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
+            'fries'     => 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
+            'nugget'    => 'https://images.unsplash.com/photo-1562967914-608f82629710?w=400&h=400&fit=crop',
+            'hotdog'    => 'https://images.unsplash.com/photo-1612392062126-2fca84e2d6d5?w=400&h=400&fit=crop',
+            'chicken'   => 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400&h=400&fit=crop',
+            'adobo'     => 'https://images.unsplash.com/photo-1625938145744-e380515399bf?w=400&h=400&fit=crop',
+            'sinigang'  => 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=400&h=400&fit=crop',
+            'pork'      => 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop',
+            'liempo'    => 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop',
+            'lechon'    => 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop',
+            'bbq'       => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
+            'grill'     => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
+            'ihaw'      => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
+            'rice'      => 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=400&h=400&fit=crop',
+            'coffee'    => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop',
+            'kape'      => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop',
+            'latte'     => 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop',
+            'matcha'    => 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop',
+            'chocolate' => 'https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?w=400&h=400&fit=crop',
+            'tea'       => 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop',
+            'juice'     => 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=400&h=400&fit=crop',
+            'buko'      => 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=400&h=400&fit=crop',
+            'softdrink' => 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?w=400&h=400&fit=crop',
+            'bread'     => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop',
+            'pandesal'  => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop',
+            'ensaymada' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop',
+            'pastry'    => 'https://images.unsplash.com/photo-1517433367423-c7e5b0f35086?w=400&h=400&fit=crop',
+            'cake'      => 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=400&fit=crop',
+            'pie'       => 'https://images.unsplash.com/photo-1621955511667-e2c316e4575d?w=400&h=400&fit=crop',
+            'cookie'    => 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&h=400&fit=crop',
+            'noodle'    => 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop',
+            'pancit'    => 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop',
+            'soup'      => 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&h=400&fit=crop',
+            'salad'     => 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=400&fit=crop',
+            'egg'       => 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=400&fit=crop',
+            'fish'      => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'bangus'    => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'tilapia'   => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'squid'     => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'pusit'     => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'corn'      => 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&h=400&fit=crop',
+            'dessert'   => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&h=400&fit=crop',
+            'halo'      => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&h=400&fit=crop',
+            'leche'     => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&h=400&fit=crop',
+        ];
+
+        $lower = strtolower($name . ' ' . $category);
+        foreach ($map as $keyword => $url) {
+            if (str_contains($lower, $keyword)) return $url;
+        }
+
+        // Fallback by category
+        $catMap = [
+            'Ulam'       => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'Sabaw'      => 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&h=400&fit=crop',
+            'Kanin'      => 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=400&h=400&fit=crop',
+            'Inumin'     => 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=400&h=400&fit=crop',
+            'Ihaw-Ihaw'  => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
+            'Extras'     => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'Tinapay'    => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop',
+            'Pastry'     => 'https://images.unsplash.com/photo-1517433367423-c7e5b0f35086?w=400&h=400&fit=crop',
+            'Burgers'    => 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
+            'Meals'      => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop',
+            'Sides'      => 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
+            'Drinks'     => 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=400&h=400&fit=crop',
+        ];
+
+        return $catMap[$category] ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop';
+    }
+
     public function run(): void
     {
         $restaurants = Restaurant::all();
@@ -158,6 +233,7 @@ class MenuItemSeeder extends Seeder
                     'description'   => $item['description'],
                     'price'         => $this->price($item['price'], $restaurant->municipality),
                     'category'      => $item['category'],
+                    'image_url'     => $this->foodImage($item['name'], $item['category']),
                     'is_available'  => true,
                 ]);
             }

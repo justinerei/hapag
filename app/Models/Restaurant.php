@@ -18,6 +18,8 @@ class Restaurant extends Model
         'lat',
         'lng',
         'image_url',
+        'opening_time',
+        'closing_time',
         'status',
     ];
 

@@ -364,7 +364,24 @@ class RestaurantSeeder extends Seeder
             ],
         ];
 
+        // Map brand names to cover images in public/images/restaurants/
+        $brandImages = [
+            'Lutong Bahay'     => '/images/restaurants/lutong-bahay.png',
+            'Grill Masters'    => '/images/restaurants/grill-masters.png',
+            "Kape't Tinapay"   => '/images/restaurants/kape-tinapay.png',
+            'La Preciosa'      => '/images/restaurants/la-preciosa.png',
+            "Mama Nena"        => '/images/restaurants/mama-nenas.png',
+            'Bida Burger'      => '/images/restaurants/bida-burger.png',
+        ];
+
         foreach ($restaurants as $data) {
+            // Auto-assign image_url based on brand name prefix
+            foreach ($brandImages as $prefix => $img) {
+                if (str_starts_with($data['name'], $prefix)) {
+                    $data['image_url'] = $img;
+                    break;
+                }
+            }
             Restaurant::create($data);
         }
     }

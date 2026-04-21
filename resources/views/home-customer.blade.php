@@ -396,7 +396,7 @@
                             <a href="{{ $dr ? route('restaurants.show', $dr) : route('restaurants.index') }}"
                                class="shrink-0 w-56 rounded-2xl overflow-hidden
                                       hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
-                               style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%); v">
+                               style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%);">
                                 <div class="p-5 flex flex-col min-h-[155px] justify-between">
                                     <div>
                                         <p class="text-white font-extrabold text-base leading-tight mb-1.5">
