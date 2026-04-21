@@ -456,7 +456,12 @@
      MENU ITEMS JSON (for modal)
 ══════════════════════════════════════════════════════════ --}}
 @php
-    $menuJson = $menuItems->flatten()->mapWithKeys(function ($i) {
+    // Merge all menu items + featured items into one keyed collection for the JS modal
+    $allItems = $menuItems->flatten()->keyBy('id');
+    foreach ($featuredItems as $fi) {
+        $allItems[$fi->id] = $fi;
+    }
+    $menuJson = $allItems->mapWithKeys(function ($i) {
         return [$i->id => [
             'id'          => $i->id,
             'name'        => $i->name,
@@ -576,37 +581,104 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
         if (!currentItemId) return;
 
         var btn = document.getElementById('modal-add-btn');
+        var originalHTML = btn.innerHTML;
         btn.textContent = 'Adding...';
         btn.disabled = true;
 
         try {
-            // Add item N times (quantity)
-            for (var i = 0; i < currentQty; i++) {
-                var res = await fetch('{{ route("cart.add") }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
-                    body: JSON.stringify({ menu_item_id: currentItemId }),
-                });
+            var res = await fetch('{{ route("cart.add") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                body: JSON.stringify({ menu_item_id: currentItemId, quantity: currentQty }),
+            });
 
-                if (res.status === 409) {
-                    closeItemModal();
-                    showConflictModal(currentItemId);
-                    return;
-                }
-
-                if (!res.ok) break;
-                var data = await res.json();
-                updateCartBadge(data.cart_count);
+            if (res.status === 409) {
+                closeItemModal();
+                showConflictModal(currentItemId);
+                return;
             }
 
-            closeItemModal();
-            refreshCartPanel();
-            openCartPanel();
+            if (res.ok) {
+                var data = await res.json();
+                updateCartBadge(data.cart_count);
+                closeItemModal();
+
+                // Show green success toast
+                var itemName = MENU_DATA[currentItemId] ? MENU_DATA[currentItemId].name : 'Item';
+                showToast(currentQty + 'x ' + itemName + ' added to cart!');
+            }
         } catch (e) {
             console.error('Add to cart failed:', e);
+            showToast('Failed to add item. Try again.', true);
         } finally {
+            btn.innerHTML = originalHTML;
             btn.disabled = false;
         }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // QUICK ADD (+ button without opening modal — adds 1 directly)
+    // ═══════════════════════════════════════════════════════════════════════
+    window.quickAdd = async function (itemId, event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        if (!IS_AUTH) { window.location.href = '{{ route("login") }}'; return; }
+
+        try {
+            var res = await fetch('{{ route("cart.add") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                body: JSON.stringify({ menu_item_id: itemId, quantity: 1 }),
+            });
+
+            if (res.status === 409) {
+                showConflictModal(itemId);
+                return;
+            }
+
+            if (res.ok) {
+                var data = await res.json();
+                updateCartBadge(data.cart_count);
+                var itemName = MENU_DATA[itemId] ? MENU_DATA[itemId].name : 'Item';
+                showToast(itemName + ' added to cart!');
+            }
+        } catch (e) {
+            console.error('Quick add failed:', e);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TOAST NOTIFICATION
+    // ═══════════════════════════════════════════════════════════════════════
+    window.showToast = function (message, isError) {
+        // Remove existing toast if any
+        var existing = document.getElementById('hapag-toast');
+        if (existing) existing.remove();
+
+        var toast = document.createElement('div');
+        toast.id = 'hapag-toast';
+        toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white transition-all duration-300 opacity-0 -translate-y-4';
+        toast.style.background = isError ? '#E63946' : '#2A9D8F';
+        toast.innerHTML = '<div class="flex items-center gap-2">' +
+            (isError
+                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+            ) +
+            '<span>' + message + '</span></div>';
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(function () {
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+        });
+
+        // Auto-dismiss after 2.5s
+        setTimeout(function () {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', '-translate-y-4');
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 2500);
     };
 
     // ═══════════════════════════════════════════════════════════════════════

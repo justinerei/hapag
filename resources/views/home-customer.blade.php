@@ -127,7 +127,7 @@
             </a>
 
             {{-- Cart --}}
-            <a id="cart-nav-link" href="{{ route('cart.index') }}"
+            <button id="cart-toggle-btn"
                class="relative p-2 rounded-full hover:bg-hapag-cream text-hapag-gray hover:text-hapag-ink transition-colors"
                title="Cart">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
@@ -141,7 +141,7 @@
                              min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
                     {{ $cartCount }}
                 </span>
-            </a>
+            </button>
 
             {{-- Profile dropdown --}}
             <div class="relative" id="profile-wrapper">
@@ -315,6 +315,10 @@
                         <img src="{{ $weatherImg }}" alt="{{ $weatherTag }}"
                              class="absolute inset-0 w-full h-full object-cover object-right opacity-100">
 
+                        {{-- Gradient overlay so left text stays readable --}}
+                        <div class="absolute inset-0"
+                             style="background: linear-gradient(to right, #E63946 0%, #E63946 35%, transparent 70%);"></div>
+
                         {{-- Text content --}}
                         <div class="relative z-10 px-7 py-6 flex flex-col justify-center min-h-[170px]">
                             <p class="text-xl md:text-2xl font-extrabold text-white leading-snug">
@@ -338,18 +342,18 @@
                     <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">Cuisines</h2>
                     @php
                         $cuisineImgs = [
-                            'Filipino'  => 'https://i.pinimg.com/1200x/e2/95/a8/e295a8e416096d4172669cb4649e4ae8.jpg',
-                            'BBQ'       => 'https://i.pinimg.com/1200x/bb/3d/bb/bb3dbb02d108d02230155960f49b2a6d.jpg',
+                            'Filipino'  => 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=200&h=200&fit=crop',
+                            'BBQ'       => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
                             'Ihaw'      => 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
-                            'Cafe'      => 'https://i.pinimg.com/736x/e0/17/bd/e017bd3ac09b84fd3912f6d794f4cc08.jpg',
+                            'Cafe'      => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop',
                             'Coffee'    => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop',
-                            'Bakery'    => 'https://i.pinimg.com/1200x/ea/e8/34/eae83495a307b0c89fb40a75ac2c861d.jpg',
+                            'Bakery'    => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&h=200&fit=crop',
                             'Fast Food' => 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&h=200&fit=crop',
                             'Desserts'  => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop',
-                            'Dessert'   => 'https://i.pinimg.com/1200x/86/bd/6e/86bd6e184792c5e29be52fe23434cbe8.jpg',
+                            'Dessert'   => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop',
                         ];
                     @endphp
-                    <div class="flex flex-nowrap gap-5 overflow-x-auto pb-4 w-full" style="scrollbar-width: on; -ms-overflow-style:none;">
+                    <div class="flex gap-5 overflow-x-auto pb-2" style="scrollbar-width:none;">
                         @foreach($categories as $cat)
                         @php
                             $img = null;
@@ -358,15 +362,16 @@
                             }
                             $img = $img ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
                         @endphp
-                        <button class="shrink-0 flex flex-col items-center gap-2 group w-[160px]"
+                        <button class="cuisine-circle-btn shrink-0 flex flex-col items-center gap-2 group"
                                 data-cat-id="{{ $cat->id }}">
-                            <div class="w-[160px] h-[160px] rounded-2xl overflow-hidden border-2 border-transparent
-                        group-hover:border-hapag-red transition-all duration-150 shadow-sm bg-gray-100">
+                            <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-transparent
+                                        group-hover:border-hapag-red transition-all duration-150 shadow-sm">
                                 <img src="{{ $img }}" alt="{{ $cat->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                      loading="lazy">
                             </div>
-                            <span class="text-xs font-semibold text-hapag-red text-center leading-tight w-full truncate">
+                            <span class="text-xs font-semibold text-hapag-red
+                                         text-center leading-tight max-w-[80px]">
                                 {{ $cat->name }}
                             </span>
                         </button>
@@ -499,6 +504,39 @@
                 </section>
 
             </main>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════
+     CART SIDEBAR PANEL (Uber Eats style — slides from right)
+══════════════════════════════════════════════════════════ --}}
+<div id="cart-overlay" class="fixed inset-0 z-[90] hidden">
+    <div id="cart-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCartPanel()"></div>
+    <div id="cart-panel" class="absolute top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col translate-x-full transition-transform duration-300 ease-out">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-hapag-cream2 shrink-0">
+            <button onclick="closeCartPanel()" class="w-9 h-9 rounded-full hover:bg-hapag-cream flex items-center justify-center text-hapag-ink transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <h2 class="text-base font-extrabold text-hapag-ink">Your Cart</h2>
+            <div class="w-9"></div>
+        </div>
+        <div id="cart-restaurant-info" class="px-5 py-3 border-b border-hapag-cream2 shrink-0 hidden">
+            <p id="cart-resto-name" class="text-sm font-bold text-hapag-ink"></p>
+            <p id="cart-resto-location" class="text-xs text-hapag-gray"></p>
+        </div>
+        <div id="cart-items-list" class="flex-1 overflow-y-auto px-5 py-4 space-y-3"></div>
+        <div id="cart-empty" class="flex-1 flex flex-col items-center justify-center px-5 hidden">
+            <span class="text-5xl mb-3">🛒</span>
+            <p class="text-hapag-gray font-semibold text-sm">Your cart is empty</p>
+            <p class="text-hapag-gray text-xs mt-1">Add items from a restaurant to get started.</p>
+        </div>
+        <div id="cart-footer" class="border-t border-hapag-cream2 px-5 py-4 shrink-0 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-semibold text-hapag-ink">Subtotal</span>
+                <span id="cart-subtotal" class="text-base font-extrabold font-mono text-hapag-ink">₱0.00</span>
+            </div>
+            <a href="{{ route('cart.index') }}" class="block w-full py-3.5 rounded-xl bg-hapag-ink text-white text-sm font-bold text-center hover:bg-black transition-colors">Go to checkout</a>
         </div>
     </div>
 </div>
@@ -778,7 +816,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({ menu_item_id: menuItemId }),
+                body: JSON.stringify({ menu_item_id: menuItemId, quantity: 1 }),
             });
 
             if (res.status === 409) {
@@ -789,17 +827,41 @@
             if (res.ok) {
                 var data = await res.json();
                 updateCartBadge(data.cart_count);
-
-                if (btn.classList) {
-                    btn.classList.add('scale-125', 'bg-hapag-teal');
-                    setTimeout(function () {
-                        btn.classList.remove('scale-125', 'bg-hapag-teal');
-                    }, 500);
-                }
+                showToast('Item added to cart!');
             }
         } catch (e) {
             console.error('Quick add failed:', e);
         }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TOAST NOTIFICATION
+    // ═══════════════════════════════════════════════════════════════════════
+    window.showToast = function (message, isError) {
+        var existing = document.getElementById('hapag-toast');
+        if (existing) existing.remove();
+
+        var toast = document.createElement('div');
+        toast.id = 'hapag-toast';
+        toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white transition-all duration-300 opacity-0 -translate-y-4';
+        toast.style.background = isError ? '#E63946' : '#2A9D8F';
+        toast.innerHTML = '<div class="flex items-center gap-2">' +
+            (isError
+                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+            ) +
+            '<span>' + message + '</span></div>';
+
+        document.body.appendChild(toast);
+        requestAnimationFrame(function () {
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+        });
+        setTimeout(function () {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', '-translate-y-4');
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 2500);
     };
 
     function updateCartBadge(count) {
@@ -808,6 +870,120 @@
         badge.textContent = count;
         badge.classList.toggle('hidden', count <= 0);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CART SIDEBAR PANEL
+    // ═══════════════════════════════════════════════════════════════════════
+    var cartOverlay = document.getElementById('cart-overlay');
+    var cartPanel   = document.getElementById('cart-panel');
+    var CSRF_TOKEN  = document.querySelector('meta[name="csrf-token"]').content;
+
+    var cartToggle = document.getElementById('cart-toggle-btn');
+    if (cartToggle) {
+        cartToggle.addEventListener('click', function () {
+            if (cartOverlay.classList.contains('hidden')) {
+                openCartPanel();
+            } else {
+                closeCartPanel();
+            }
+        });
+    }
+
+    window.openCartPanel = function () {
+        refreshCartPanel();
+        cartOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(function () {
+            cartPanel.classList.remove('translate-x-full');
+            cartPanel.classList.add('translate-x-0');
+        });
+    };
+
+    window.closeCartPanel = function () {
+        cartPanel.classList.remove('translate-x-0');
+        cartPanel.classList.add('translate-x-full');
+        setTimeout(function () {
+            cartOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 300);
+    };
+
+    window.refreshCartPanel = async function () {
+        try {
+            var res  = await fetch('{{ route("cart.json") }}');
+            var data = await res.json();
+
+            var list      = document.getElementById('cart-items-list');
+            var empty     = document.getElementById('cart-empty');
+            var footer    = document.getElementById('cart-footer');
+            var restoInfo = document.getElementById('cart-restaurant-info');
+
+            if (data.items.length === 0) {
+                list.innerHTML = '';
+                list.classList.add('hidden');
+                empty.classList.remove('hidden');
+                footer.classList.add('hidden');
+                restoInfo.classList.add('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            list.classList.remove('hidden');
+            footer.classList.remove('hidden');
+
+            if (data.restaurant) {
+                restoInfo.classList.remove('hidden');
+                document.getElementById('cart-resto-name').textContent = data.restaurant.name;
+                document.getElementById('cart-resto-location').textContent = data.restaurant.municipality;
+            }
+
+            list.innerHTML = data.items.map(function (item) {
+                return '<div class="flex items-center gap-3 py-2 border-b border-hapag-cream2 last:border-0">' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<p class="text-sm font-semibold text-hapag-ink truncate">' + item.name + '</p>' +
+                        '<p class="text-xs font-mono text-hapag-gray">₱' + item.price.toFixed(2) + '</p>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-0 border border-hapag-cream2 rounded-full overflow-hidden shrink-0">' +
+                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity - 1) + ')" class="w-8 h-8 flex items-center justify-center text-hapag-ink hover:bg-hapag-cream transition-colors">' +
+                            (item.quantity <= 1
+                                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-hapag-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
+                                : '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>'
+                            ) +
+                        '</button>' +
+                        '<span class="w-6 text-center text-xs font-bold text-hapag-ink">' + item.quantity + '</span>' +
+                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity + 1) + ')" class="w-8 h-8 flex items-center justify-center text-hapag-ink hover:bg-hapag-cream transition-colors">' +
+                            '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            document.getElementById('cart-subtotal').textContent = '₱' + data.subtotal.toFixed(2);
+            updateCartBadge(data.count);
+        } catch (e) {
+            console.error('Cart refresh failed:', e);
+        }
+    };
+
+    window.updateCartItem = async function (cartItemId, newQty) {
+        try {
+            if (newQty <= 0) {
+                await fetch('/cart/' + cartItemId, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
+                });
+            } else {
+                await fetch('/cart/' + cartItemId, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                    body: JSON.stringify({ quantity: newQty }),
+                });
+            }
+            refreshCartPanel();
+        } catch (e) {
+            console.error('Cart update failed:', e);
+        }
+    };
 
 })();
 </script>

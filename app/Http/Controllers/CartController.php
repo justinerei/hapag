@@ -54,9 +54,13 @@ class CartController extends Controller
 
     public function add(Request $request)
     {
-        $request->validate(['menu_item_id' => 'required|exists:menu_items,id']);
+        $request->validate([
+            'menu_item_id' => 'required|exists:menu_items,id',
+            'quantity'      => 'sometimes|integer|min:1|max:99',
+        ]);
 
         $menuItem = MenuItem::findOrFail($request->menu_item_id);
+        $qty      = $request->input('quantity', 1);
 
         abort_if(! $menuItem->is_available, 422, 'This item is no longer available.');
 
@@ -74,12 +78,12 @@ class CartController extends Controller
             ->first();
 
         if ($cartItem) {
-            $cartItem->increment('quantity');
+            $cartItem->increment('quantity', $qty);
         } else {
             CartItem::create([
                 'user_id'      => auth()->id(),
                 'menu_item_id' => $menuItem->id,
-                'quantity'     => 1,
+                'quantity'     => $qty,
             ]);
         }
 
