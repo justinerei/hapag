@@ -308,28 +308,30 @@
                     };
                 @endphp
                 <section>
-                    <div class="rounded-2xl overflow-hidden relative"
+                    <div class="rounded-2xl overflow-hidden relative min-h-[170px]"
                          style="background: linear-gradient(135deg, #E63946 0%, #D62839 40%, #C2185B 100%);">
-                        <div class="flex items-stretch min-h-[155px]">
-                            {{-- Text side --}}
-                            <div class="flex-1 px-7 py-6 flex flex-col justify-center relative z-10">
-                                <p class="text-xl md:text-2xl font-extrabold text-white leading-snug">
-                                    {{ $weatherEmoji }} It's {{ $temp }}°C and {{ $condition }}<br>in {{ $city }}
-                                </p>
-                                <p class="text-white/75 text-sm mt-1.5 max-w-md leading-relaxed">
-                                    {{ $weatherSuggestion }}
-                                </p>
-                                @if($suggested->isNotEmpty())
-                                <p class="text-white/55 text-xs mt-3">
-                                    Suggested category: {{ $suggested->pluck('name')->implode(', ') }}
-                                </p>
-                                @endif
-                            </div>
-                            {{-- Weather illustration (right side, bottom-aligned) --}}
-                            <div class="hidden sm:flex items-end shrink-0 pr-2">
-                                <img src="{{ $weatherImg }}" alt="{{ $weatherTag }}"
-                                     class="h-36 w-auto object-contain drop-shadow-xl">
-                            </div>
+
+                        {{-- Weather image as background — covers entire card, right-aligned --}}
+                        <img src="{{ $weatherImg }}" alt="{{ $weatherTag }}"
+                             class="absolute inset-0 w-full h-full object-cover object-right opacity-100">
+
+                        {{-- Gradient overlay so left text stays readable --}}
+                        <div class="absolute inset-0"
+                             style="background: linear-gradient(to right, #E63946 0%, #E63946 35%, transparent 70%);"></div>
+
+                        {{-- Text content --}}
+                        <div class="relative z-10 px-7 py-6 flex flex-col justify-center min-h-[170px]">
+                            <p class="text-xl md:text-2xl font-extrabold text-white leading-snug">
+                                {{ $weatherEmoji }} It's {{ $temp }}°C and {{ $condition }}<br>in {{ $city }}
+                            </p>
+                            <p class="text-white/80 text-sm mt-1.5 max-w-sm leading-relaxed">
+                                {{ $weatherSuggestion }}
+                            </p>
+                            @if($suggested->isNotEmpty())
+                            <p class="text-white/60 text-xs mt-3">
+                                Suggested category: {{ $suggested->pluck('name')->implode(', ') }}
+                            </p>
+                            @endif
                         </div>
                     </div>
                 </section>
@@ -351,7 +353,7 @@
                             'Dessert'   => 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop',
                         ];
                     @endphp
-                    <div class="flex gap-5 overflow-x-auto pb-2" style="scrollbar-width:none;">
+                    <div class="flex flex-nowrap gap-5 overflow-x-auto pb-4 w-full" style="scrollbar-width:none; -ms-overflow-style:none;">
                         @foreach($categories as $cat)
                         @php
                             $img = null;
@@ -360,16 +362,15 @@
                             }
                             $img = $img ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
                         @endphp
-                        <button class="cuisine-circle-btn shrink-0 flex flex-col items-center gap-2 group"
+                        <button class="shrink-0 flex flex-col items-center gap-2 group w-[120px]"
                                 data-cat-id="{{ $cat->id }}">
-                            <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-transparent
-                                        group-hover:border-hapag-red transition-all duration-150 shadow-sm">
+                            <div class="w-[120px] h-[120px] rounded-2xl overflow-hidden border-2 border-transparent
+                        group-hover:border-hapag-red transition-all duration-150 shadow-sm bg-gray-100">
                                 <img src="{{ $img }}" alt="{{ $cat->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                      loading="lazy">
                             </div>
-                            <span class="text-xs font-semibold text-hapag-red
-                                         text-center leading-tight max-w-[80px]">
+                            <span class="text-xs font-semibold text-hapag-red text-center leading-tight w-full truncate">
                                 {{ $cat->name }}
                             </span>
                         </button>
