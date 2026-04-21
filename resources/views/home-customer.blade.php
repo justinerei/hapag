@@ -315,10 +315,6 @@
                         <img src="{{ $weatherImg }}" alt="{{ $weatherTag }}"
                              class="absolute inset-0 w-full h-full object-cover object-right opacity-100">
 
-                        {{-- Gradient overlay so left text stays readable --}}
-                        <div class="absolute inset-0"
-                             style="background: linear-gradient(to right, #E63946 0%, #E63946 35%, transparent 70%);"></div>
-
                         {{-- Text content --}}
                         <div class="relative z-10 px-7 py-6 flex flex-col justify-center min-h-[170px]">
                             <p class="text-xl md:text-2xl font-extrabold text-white leading-snug">
