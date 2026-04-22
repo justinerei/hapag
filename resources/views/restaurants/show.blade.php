@@ -97,9 +97,12 @@
         @endif
         {{-- Favourite heart --}}
         @auth
-        <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-sm flex items-center justify-center text-hapag-gray hover:text-hapag-red transition-colors"
-                onclick="var svg=this.querySelector('svg'); var f=svg.getAttribute('fill')==='currentColor'; svg.setAttribute('fill',f?'none':'currentColor'); this.classList.toggle('text-hapag-red',!f); this.classList.toggle('text-hapag-gray',f);">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        @php $isFavoritedHero = in_array($restaurant->id, $favoriteIds); @endphp
+        <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-sm flex items-center justify-center transition-colors hover:text-hapag-red {{ $isFavoritedHero ? 'text-hapag-red' : 'text-hapag-gray' }}"
+                data-restaurant-id="{{ $restaurant->id }}"
+                data-favorited="{{ $isFavoritedHero ? 'true' : 'false' }}"
+                onclick="toggleFavorite(this);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="{{ $isFavoritedHero ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
             </svg>
         </button>
@@ -746,6 +749,31 @@ var appliedDiscount  = 0;
             toast.classList.add('opacity-0', '-translate-y-4');
             setTimeout(function () { toast.remove(); }, 300);
         }, 2500);
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FAVORITE TOGGLE
+    // ═══════════════════════════════════════════════════════════════════════
+    window.toggleFavorite = async function (btn) {
+        var restaurantId = btn.dataset.restaurantId;
+        try {
+            var res = await fetch('{{ route("favorites.toggle") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                body: JSON.stringify({ restaurant_id: restaurantId }),
+            });
+            if (res.ok) {
+                var data = await res.json();
+                btn.dataset.favorited = data.favorited ? 'true' : 'false';
+                var svg = btn.querySelector('svg');
+                svg.setAttribute('fill', data.favorited ? 'currentColor' : 'none');
+                btn.classList.toggle('text-hapag-red', data.favorited);
+                btn.classList.toggle('text-hapag-gray', !data.favorited);
+                showToast(data.favorited ? 'Added to favorites!' : 'Removed from favorites.');
+            }
+        } catch (e) {
+            console.error('Favorite toggle failed:', e);
+        }
     };
 
     // ═══════════════════════════════════════════════════════════════════════

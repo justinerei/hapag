@@ -61,6 +61,8 @@ class HomeController extends Controller
 
         $cartCount = auth()->user()->cartItems()->count();
 
+        $favoriteIds = auth()->user()->favorites()->pluck('restaurant_id')->toArray();
+
         $weather    = $this->fetchWeather();
         $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
         $suggested  = Category::where('weather_tag', $weatherTag)->get();
@@ -68,7 +70,7 @@ class HomeController extends Controller
         return view('home-customer', compact(
             'restaurants', 'categories', 'weather', 'weatherTag',
             'suggested', 'deals', 'cartCount', 'promoRestaurantIds',
-            'popular', 'featuredItemMap'
+            'popular', 'featuredItemMap', 'favoriteIds'
         ));
     }
 

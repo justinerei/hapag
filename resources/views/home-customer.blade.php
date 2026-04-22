@@ -445,6 +445,7 @@
                                     'restaurant'  => $r,
                                     'hasPromo'    => in_array($r->id, $promoRestaurantIds),
                                     'featuredItem' => $featuredItemMap[$r->id] ?? null,
+                                    'favoriteIds' => $favoriteIds,
                                 ])
                             </div>
                             @endforeach
@@ -483,6 +484,7 @@
                                 'restaurant'   => $restaurant,
                                 'hasPromo'     => in_array($restaurant->id, $promoRestaurantIds),
                                 'featuredItem' => $featuredItemMap[$restaurant->id] ?? null,
+                                'favoriteIds'  => $favoriteIds,
                             ])
                         </div>
                         @endforeach
@@ -898,6 +900,34 @@
             toast.classList.add('opacity-0', '-translate-y-4');
             setTimeout(function () { toast.remove(); }, 300);
         }, 2500);
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FAVORITE TOGGLE
+    // ═══════════════════════════════════════════════════════════════════════
+    window.toggleFavorite = async function (btn) {
+        var restaurantId = btn.dataset.restaurantId;
+        try {
+            var res = await fetch('{{ route("favorites.toggle") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ restaurant_id: restaurantId }),
+            });
+            if (res.ok) {
+                var data = await res.json();
+                btn.dataset.favorited = data.favorited ? 'true' : 'false';
+                var svg = btn.querySelector('svg');
+                svg.setAttribute('fill', data.favorited ? 'currentColor' : 'none');
+                btn.classList.toggle('text-hapag-red', data.favorited);
+                btn.classList.toggle('text-hapag-gray', !data.favorited);
+                showToast(data.favorited ? 'Added to favorites!' : 'Removed from favorites.');
+            }
+        } catch (e) {
+            console.error('Favorite toggle failed:', e);
+        }
     };
 
     function updateCartBadge(count) {

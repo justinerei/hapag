@@ -59,6 +59,16 @@ class User extends Authenticatable
         return $this->hasMany(VoucherUsage::class);
     }
 
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function favoriteRestaurants()
+    {
+        return $this->belongsToMany(Restaurant::class, 'favorites');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

@@ -1,6 +1,7 @@
 @php
-    $hasPromo    = isset($hasPromo)    ? $hasPromo    : false;
+    $hasPromo     = isset($hasPromo)     ? $hasPromo     : false;
     $featuredItem = isset($featuredItem) ? $featuredItem : null;
+    $isFavorited  = isset($favoriteIds) && is_array($favoriteIds) && in_array($restaurant->id, $favoriteIds);
 @endphp
 <a href="{{ route('restaurants.show', $restaurant) }}"
    class="restaurant-card group block bg-white rounded-2xl overflow-hidden
@@ -27,25 +28,23 @@
         </span>
         @endif
 
-        {{-- Heart / favourite (UI only) --}}
+        {{-- Heart / favourite --}}
+        @auth
         <button class="heart-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-full
                        bg-white/90 backdrop-blur-sm shadow-sm
-                       flex items-center justify-center text-hapag-gray
-                       hover:text-hapag-red transition-colors"
-                data-liked="false"
-                onclick="event.preventDefault(); event.stopPropagation();
-                         var svg = this.querySelector('svg');
-                         var liked = this.dataset.liked === 'true';
-                         this.dataset.liked = liked ? 'false' : 'true';
-                         svg.setAttribute('fill', liked ? 'none' : 'currentColor');
-                         this.classList.toggle('text-hapag-red', !liked);
-                         this.classList.toggle('text-hapag-gray', liked);">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
+                       flex items-center justify-center transition-colors
+                       {{ $isFavorited ? 'text-hapag-red' : 'text-hapag-gray' }}
+                       hover:text-hapag-red"
+                data-restaurant-id="{{ $restaurant->id }}"
+                data-favorited="{{ $isFavorited ? 'true' : 'false' }}"
+                onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite(this);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="{{ $isFavorited ? 'currentColor' : 'none' }}"
                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
             </svg>
         </button>
+        @endauth
     </div>
 
     {{-- Info --}}

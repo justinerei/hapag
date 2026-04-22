@@ -45,8 +45,9 @@ Route::middleware('auth')->group(function () {
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 
-    // Favorites placeholder
-    Route::get('/favorites', fn () => view('favorites'))->name('favorites');
+    // Favorites
+    Route::get('/favorites', [\App\Http\Controllers\FavoriteController::class, 'index'])->name('favorites');
+    Route::post('/favorites/toggle', [\App\Http\Controllers\FavoriteController::class, 'toggle'])->name('favorites.toggle');
 
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
