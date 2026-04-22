@@ -3,99 +3,124 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\MenuItem;
 use App\Models\Restaurant;
-use App\Models\Voucher;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
-class HomeController extends Controller
+class RestaurantController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->check() && auth()->user()->role === 'customer') {
-            return $this->customerDashboard($request);
+        $query = Restaurant::with('category')
+            ->where('status', 'active')
+            ->orderBy('name');
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        return view('home-guest');
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        $restaurants = $query->get();
+        $categories  = Category::orderBy('name')->get();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'restaurants' => $restaurants->map(fn ($r) => [
+                    'id'           => $r->id,
+                    'name'         => $r->name,
+                    'description'  => $r->description,
+                    'municipality' => $r->municipality,
+                    'image_url'    => $r->image_url,
+                    'category'     => [
+                        'name' => $r->category->name,
+                        'icon' => $r->category->icon,
+                    ],
+                ]),
+            ]);
+        }
+
+        return view('restaurants.index', compact('restaurants', 'categories'));
     }
 
-    private function customerDashboard(Request $request)
+    public function show(Restaurant $restaurant)
     {
-        $categories = Category::orderBy('name')->get();
+        abort_if($restaurant->status !== 'active', 404);
 
-        $restaurants = Restaurant::where('status', 'active')
-            ->with('category')
-            ->withCount('menuItems')
+        $restaurant->load(['category', 'owner']);
+
+        $menuItems = $restaurant->menuItems()
+            ->where('is_available', true)
+            ->orderBy('category')
             ->orderBy('name')
+            ->get()
+            ->groupBy('category');
+
+        // Random 4 featured items
+        $featuredItems = $restaurant->menuItems()
+            ->where('is_available', true)
+            ->inRandomOrder()
+            ->limit(4)
             ->get();
 
-        $promoRestaurantIds = Voucher::where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->whereNotNull('restaurant_id')
-            ->pluck('restaurant_id')
-            ->unique()
-            ->toArray();
-
-        $deals = Voucher::where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->with('restaurant')
+        // Restaurant-specific vouchers ONLY (for the Promos section on menu page)
+        $restaurantVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); })
+            ->where('restaurant_id', $restaurant->id)
             ->get();
 
-        // Popular: user's municipality first, fallback to first 5
-        $userMunicipality = auth()->user()->municipality;
-        $popular = $userMunicipality
-            ? $restaurants->where('municipality', $userMunicipality)->take(5)->values()
-            : collect();
-        if ($popular->count() < 3) {
-            $popular = $restaurants->take(5);
+        // All available vouchers for cart promo section (restaurant + site-wide)
+        $allVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); })
+            ->where(function ($q) use ($restaurant) {
+                $q->where('restaurant_id', $restaurant->id)->orWhereNull('restaurant_id');
+            })
+            ->get();
+
+        // Cart data for logged-in users
+        $cartItems = [];
+        $cartCount = 0;
+        $favoriteIds = [];
+        if (auth()->check()) {
+            $cartItems = \App\Models\CartItem::where('user_id', auth()->id())
+                ->with('menuItem.restaurant')
+                ->get();
+            $cartCount = $cartItems->sum('quantity');
+            $favoriteIds = \App\Models\Favorite::where('user_id', auth()->id())
+                ->pluck('restaurant_id')->toArray();
         }
 
-        // First available menu item per restaurant for quick-add cart button
-        $featuredItemMap = MenuItem::where('is_available', true)
-            ->whereIn('restaurant_id', $restaurants->pluck('id'))
-            ->orderBy('id')
-            ->get(['id', 'restaurant_id'])
-            ->groupBy('restaurant_id')
-            ->map(fn ($items) => $items->first()->id);
+        // All active restaurants for footer
+        $allRestaurants = Restaurant::where('status', 'active')->orderBy('name')->limit(5)->get();
 
-        $cartCount = auth()->user()->cartItems()->count();
-
-        $favoriteIds = auth()->user()->favorites()->pluck('restaurant_id')->toArray();
-
-        $weather    = $this->fetchWeather();
-        $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
-        $suggested  = Category::where('weather_tag', $weatherTag)->get();
-
-        return view('home-customer', compact(
-            'restaurants', 'categories', 'weather', 'weatherTag',
-            'suggested', 'deals', 'cartCount', 'promoRestaurantIds',
-            'popular', 'featuredItemMap', 'favoriteIds'
+        return view('restaurants.show', compact(
+            'restaurant', 'menuItems', 'featuredItems',
+            'restaurantVouchers', 'allVouchers', 'cartItems', 'cartCount',
+            'allRestaurants', 'favoriteIds'
         ));
     }
 
-    private function fetchWeather(): array
+    public function mapData()
     {
-        $response = Http::timeout(5)->get(config('services.owm.url'), [
-            'q'     => config('services.owm.city'),
-            'appid' => config('services.owm.key'),
-            'units' => 'metric',
-        ]);
+        $restaurants = Restaurant::with('category')
+            ->where('status', 'active')
+            ->get(['id', 'name', 'address', 'municipality', 'lat', 'lng', 'category_id', 'image_url']);
 
-        return $response->successful() ? $response->json() : [];
-    }
-
-    private function resolveTag(array $weather): string
-    {
-        $main = $weather['weather'][0]['main'] ?? '';
-        $temp = $weather['main']['temp'] ?? 30;
-
-        return match (true) {
-            in_array($main, ['Thunderstorm', 'Drizzle', 'Rain'])                                          => 'rainy',
-            in_array($main, ['Clouds', 'Mist', 'Fog', 'Haze', 'Smoke', 'Dust', 'Sand', 'Ash', 'Squall']) => 'cloudy',
-            $main === 'Snow'                                                                               => 'cool',
-            $main === 'Clear' && $temp <= 24                                                               => 'cool',
-            default                                                                                        => 'hot',
-        };
+        return response()->json(
+            $restaurants->map(fn ($r) => [
+                'id'           => $r->id,
+                'name'         => $r->name,
+                'address'      => $r->address,
+                'municipality' => $r->municipality,
+                'lat'          => $r->lat,
+                'lng'          => $r->lng,
+                'image_url'    => $r->image_url,
+                'category'     => [
+                    'name' => $r->category->name,
+                    'icon' => $r->category->icon,
+                ],
+            ])
+        );
     }
 }
