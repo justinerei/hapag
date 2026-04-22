@@ -64,10 +64,18 @@ class RestaurantController extends Controller
             ->limit(4)
             ->get();
 
-        // Active vouchers for this restaurant + site-wide
-        $vouchers = \App\Models\Voucher::where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->where(fn ($q) => $q->where('restaurant_id', $restaurant->id)->orWhereNull('restaurant_id'))
+        // Restaurant-specific vouchers ONLY (for the Promos section on menu page)
+        $restaurantVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); })
+            ->where('restaurant_id', $restaurant->id)
+            ->get();
+
+        // All available vouchers for cart promo section (restaurant + site-wide)
+        $allVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); })
+            ->where(function ($q) use ($restaurant) {
+                $q->where('restaurant_id', $restaurant->id)->orWhereNull('restaurant_id');
+            })
             ->get();
 
         // Cart data for logged-in users
@@ -85,7 +93,7 @@ class RestaurantController extends Controller
 
         return view('restaurants.show', compact(
             'restaurant', 'menuItems', 'featuredItems',
-            'vouchers', 'cartItems', 'cartCount', 'allRestaurants'
+            'restaurantVouchers', 'allVouchers', 'cartItems', 'cartCount', 'allRestaurants'
         ));
     }
 

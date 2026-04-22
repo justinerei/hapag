@@ -160,12 +160,12 @@
             {{-- ── MAIN CONTENT ─────────────────────────────────────── --}}
             <main class="flex-1 min-w-0">
 
-                {{-- ── Promos (only if vouchers exist) ──────────────── --}}
-                @if($vouchers->isNotEmpty())
+                {{-- ── Promos (only restaurant-specific vouchers) ────── --}}
+                @if($restaurantVouchers->isNotEmpty())
                 <section class="mb-8">
                     <h2 class="text-xl font-extrabold text-hapag-ink mb-3">Promos</h2>
                     <div class="flex gap-4 overflow-x-auto pb-2" style="scrollbar-width:none;">
-                        @foreach($vouchers as $v)
+                        @foreach($restaurantVouchers as $v)
                         @php
                             $discLabel = $v->type === 'percentage'
                                 ? number_format($v->value, 0) . '% OFF'
@@ -173,16 +173,19 @@
                             $dealDesc = $v->type === 'percentage'
                                 ? 'Enjoy ' . $v->value . '% discount on your next ordering!'
                                 : 'Get ₱' . number_format($v->value, 0) . ' off your next order!';
-                            $dealTitle = $v->restaurant_id ? ($v->restaurant->name ?? 'Restaurant Deal') : 'Student Discount';
                         @endphp
-                        <div class="shrink-0 w-52 rounded-2xl overflow-hidden"
-                             style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%);">
+                        <div class="shrink-0 w-52 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                             style="background: linear-gradient(135deg, #E63946 0%, #B71C38 50%, #8B1A2B 100%);"
+                             onclick="claimPromo('{{ $v->code }}')">
                             <div class="p-5 flex flex-col min-h-[140px] justify-between">
                                 <div>
-                                    <p class="text-white font-extrabold text-sm leading-tight mb-1">{{ $dealTitle }}</p>
+                                    <p class="text-white font-extrabold text-sm leading-tight mb-1">{{ $restaurant->name }}</p>
                                     <p class="text-white/65 text-xs leading-relaxed">{{ $dealDesc }}</p>
                                 </div>
-                                <p class="text-white font-extrabold text-xl font-mono mt-3 leading-none text-right">{{ $discLabel }}</p>
+                                <div class="flex items-center justify-between mt-3">
+                                    <p class="text-white font-extrabold text-xl font-mono leading-none">{{ $discLabel }}</p>
+                                    <span class="text-white/80 text-[10px] font-bold uppercase bg-white/20 px-2 py-0.5 rounded-full">Claim</span>
+                                </div>
                             </div>
                         </div>
                         @endforeach
@@ -378,11 +381,56 @@
             <p class="text-hapag-gray text-xs mt-1">Add items from the menu to get started.</p>
         </div>
 
+        {{-- Promo / Voucher section --}}
+        <div id="cart-promo-section" class="border-t border-hapag-cream2 px-5 py-4 shrink-0 hidden">
+            <h3 class="text-sm font-bold text-hapag-ink mb-2">Apply a promo</h3>
+
+            {{-- Code input --}}
+            <div class="flex gap-2 mb-3">
+                <input id="promo-code-input" type="text" placeholder="Enter promo code"
+                       class="flex-1 px-3 py-2 rounded-xl border border-hapag-cream2 bg-hapag-cream text-sm text-hapag-ink placeholder:text-hapag-gray/50 focus:outline-none focus:ring-2 focus:ring-hapag-red/20 focus:border-hapag-red transition-colors uppercase">
+                <button id="promo-apply-btn" onclick="applyPromoCode()"
+                        class="px-4 py-2 rounded-xl bg-hapag-red text-white text-xs font-bold hover:bg-red-700 transition-colors shrink-0">
+                    Apply
+                </button>
+            </div>
+
+            {{-- Error / success message --}}
+            <div id="promo-message" class="hidden text-xs px-3 py-2 rounded-xl mb-3"></div>
+
+            {{-- Applied promo display --}}
+            <div id="promo-applied" class="hidden flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-teal shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <div class="min-w-0">
+                        <p id="promo-applied-code" class="text-xs font-bold text-hapag-teal truncate"></p>
+                        <p id="promo-applied-discount" class="text-[10px] text-hapag-gray"></p>
+                    </div>
+                </div>
+                <button onclick="removePromo()" class="text-hapag-red hover:text-red-700 shrink-0 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            {{-- Available promos (claimable) --}}
+            <div id="promo-available-list" class="space-y-2 mt-2">
+                {{-- Populated by JS --}}
+            </div>
+        </div>
+
         {{-- Footer --}}
         <div id="cart-footer" class="border-t border-hapag-cream2 px-5 py-4 shrink-0 hidden">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-sm text-hapag-gray">Subtotal</span>
+                <span id="cart-subtotal" class="text-sm font-mono text-hapag-gray">₱0.00</span>
+            </div>
+            <div id="cart-discount-row" class="hidden flex items-center justify-between mb-1">
+                <span class="text-sm text-hapag-teal font-semibold">Discount</span>
+                <span id="cart-discount" class="text-sm font-mono text-hapag-teal font-semibold">-₱0.00</span>
+            </div>
             <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-semibold text-hapag-ink">Subtotal</span>
-                <span id="cart-subtotal" class="text-base font-extrabold font-mono text-hapag-ink">₱0.00</span>
+                <span class="text-sm font-bold text-hapag-ink">Total</span>
+                <span id="cart-total" class="text-base font-extrabold font-mono text-hapag-ink">₱0.00</span>
             </div>
             <a href="{{ route('cart.index') }}"
                class="block w-full py-3.5 rounded-xl bg-hapag-ink text-white text-sm font-bold text-center hover:bg-black transition-colors">
@@ -478,6 +526,25 @@ var RESTAURANT_ID   = {{ $restaurant->id }};
 var RESTAURANT_NAME = @json($restaurant->name);
 var CSRF_TOKEN      = document.querySelector('meta[name="csrf-token"]').content;
 var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
+
+@php
+    $promosJson = $allVouchers->map(function ($v) {
+        $label = $v->type === 'percentage'
+            ? number_format($v->value, 0) . '% OFF'
+            : '₱' . number_format($v->value, 0) . ' OFF';
+        return [
+            'code'  => $v->code,
+            'label' => $label,
+            'type'  => $v->type,
+            'value' => (float) $v->value,
+            'min'   => $v->min_order_amount ? (float) $v->min_order_amount : null,
+            'scope' => $v->restaurant_id ? 'restaurant' : 'site-wide',
+        ];
+    });
+@endphp
+var AVAILABLE_PROMOS = @json($promosJson);
+var appliedPromoCode = null;
+var appliedDiscount  = 0;
 </script>
 
 {{-- ══════════════════════════════════════════════════════════
@@ -722,10 +789,11 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
             var res  = await fetch('{{ route("cart.json") }}');
             var data = await res.json();
 
-            var list      = document.getElementById('cart-items-list');
-            var empty     = document.getElementById('cart-empty');
-            var footer    = document.getElementById('cart-footer');
-            var restoInfo = document.getElementById('cart-restaurant-info');
+            var list        = document.getElementById('cart-items-list');
+            var empty       = document.getElementById('cart-empty');
+            var footer      = document.getElementById('cart-footer');
+            var restoInfo   = document.getElementById('cart-restaurant-info');
+            var promoSection = document.getElementById('cart-promo-section');
 
             if (data.items.length === 0) {
                 list.innerHTML = '';
@@ -733,14 +801,17 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
                 empty.classList.remove('hidden');
                 footer.classList.add('hidden');
                 restoInfo.classList.add('hidden');
+                if (promoSection) promoSection.classList.add('hidden');
+                appliedPromoCode = null;
+                appliedDiscount = 0;
                 return;
             }
 
             empty.classList.add('hidden');
             list.classList.remove('hidden');
             footer.classList.remove('hidden');
+            if (promoSection) promoSection.classList.remove('hidden');
 
-            // Restaurant info
             if (data.restaurant) {
                 restoInfo.classList.remove('hidden');
                 document.getElementById('cart-resto-name').textContent = data.restaurant.name;
@@ -769,8 +840,22 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
                 '</div>';
             }).join('');
 
-            document.getElementById('cart-subtotal').textContent = '₱' + data.subtotal.toFixed(2);
+            // Update totals
+            var subtotal = data.subtotal;
+            document.getElementById('cart-subtotal').textContent = '₱' + subtotal.toFixed(2);
+
+            var discountRow = document.getElementById('cart-discount-row');
+            if (appliedPromoCode && appliedDiscount > 0) {
+                discountRow.classList.remove('hidden');
+                document.getElementById('cart-discount').textContent = '-₱' + appliedDiscount.toFixed(2);
+                document.getElementById('cart-total').textContent = '₱' + Math.max(0, subtotal - appliedDiscount).toFixed(2);
+            } else {
+                discountRow.classList.add('hidden');
+                document.getElementById('cart-total').textContent = '₱' + subtotal.toFixed(2);
+            }
+
             updateCartBadge(data.count);
+            renderAvailablePromos();
         } catch (e) {
             console.error('Cart refresh failed:', e);
         }
@@ -790,6 +875,10 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
                     body: JSON.stringify({ quantity: newQty }),
                 });
             }
+            // If cart changes, re-validate promo
+            if (appliedPromoCode) {
+                await validateAndApplyPromo(appliedPromoCode, true);
+            }
             refreshCartPanel();
         } catch (e) {
             console.error('Cart update failed:', e);
@@ -801,6 +890,125 @@ var IS_AUTH         = {{ auth()->check() ? 'true' : 'false' }};
         if (!badge) return;
         badge.textContent = count;
         badge.classList.toggle('hidden', count <= 0);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PROMO / VOUCHER SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Claim promo from the restaurant menu promo cards
+    window.claimPromo = function (code) {
+        if (!IS_AUTH) { window.location.href = '{{ route("login") }}'; return; }
+        openCartPanel();
+        // Auto-fill and apply the code
+        var input = document.getElementById('promo-code-input');
+        if (input) input.value = code;
+        setTimeout(function () { applyPromoCode(); }, 300);
+    };
+
+    // Apply promo from the code input
+    window.applyPromoCode = async function () {
+        var input = document.getElementById('promo-code-input');
+        var code  = (input.value || '').trim().toUpperCase();
+        if (!code) return;
+        await validateAndApplyPromo(code, false);
+    };
+
+    // Apply promo from available promos list
+    window.applyAvailablePromo = async function (code) {
+        document.getElementById('promo-code-input').value = code;
+        await validateAndApplyPromo(code, false);
+    };
+
+    // Core validation via server
+    async function validateAndApplyPromo(code, silent) {
+        var msgEl = document.getElementById('promo-message');
+
+        try {
+            var res = await fetch('{{ route("vouchers.validate") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                body: JSON.stringify({ code: code }),
+            });
+
+            var data = await res.json();
+
+            if (!data.valid) {
+                if (!silent) {
+                    msgEl.textContent = data.message;
+                    msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-hapag-red border border-red-200';
+                    msgEl.classList.remove('hidden');
+                }
+                if (!silent) {
+                    appliedPromoCode = null;
+                    appliedDiscount = 0;
+                    document.getElementById('promo-applied').classList.add('hidden');
+                }
+                return;
+            }
+
+            // Success
+            appliedPromoCode = data.code;
+            appliedDiscount  = data.discount;
+
+            msgEl.classList.add('hidden');
+
+            var appliedEl = document.getElementById('promo-applied');
+            appliedEl.classList.remove('hidden');
+            document.getElementById('promo-applied-code').textContent = data.code;
+            document.getElementById('promo-applied-discount').textContent =
+                (data.type === 'percentage' ? data.value + '% off' : '₱' + data.value + ' off') +
+                ' — saving ₱' + data.discount.toFixed(2);
+
+            // Update totals
+            var discountRow = document.getElementById('cart-discount-row');
+            discountRow.classList.remove('hidden');
+            document.getElementById('cart-discount').textContent = '-₱' + data.discount.toFixed(2);
+            document.getElementById('cart-total').textContent = '₱' + data.final_amount.toFixed(2);
+
+            if (!silent) showToast('Promo ' + data.code + ' applied! You save ₱' + data.discount.toFixed(2));
+            renderAvailablePromos();
+
+        } catch (e) {
+            console.error('Promo validation failed:', e);
+            if (!silent) {
+                msgEl.textContent = 'Could not validate promo. Try again.';
+                msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-hapag-red border border-red-200';
+                msgEl.classList.remove('hidden');
+            }
+        }
+    }
+
+    window.removePromo = function () {
+        appliedPromoCode = null;
+        appliedDiscount  = 0;
+        document.getElementById('promo-applied').classList.add('hidden');
+        document.getElementById('promo-message').classList.add('hidden');
+        document.getElementById('promo-code-input').value = '';
+        document.getElementById('cart-discount-row').classList.add('hidden');
+        renderAvailablePromos();
+        refreshCartPanel();
+        showToast('Promo removed.');
+    };
+
+    function renderAvailablePromos() {
+        var container = document.getElementById('promo-available-list');
+        if (!container || !AVAILABLE_PROMOS || AVAILABLE_PROMOS.length === 0) return;
+
+        container.innerHTML = AVAILABLE_PROMOS
+            .filter(function (p) { return p.code !== appliedPromoCode; })
+            .map(function (p) {
+                var minText = p.min ? ' · Min ₱' + p.min.toFixed(0) : '';
+                var scopeText = p.scope === 'site-wide' ? 'All restaurants' : RESTAURANT_NAME;
+                return '<button onclick="applyAvailablePromo(\'' + p.code + '\')" ' +
+                    'class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-hapag-cream2 hover:border-hapag-red/30 hover:bg-red-50/50 transition-all text-left group">' +
+                    '<div class="min-w-0">' +
+                        '<p class="text-xs font-bold text-hapag-ink group-hover:text-hapag-red transition-colors">' + p.code + '</p>' +
+                        '<p class="text-[10px] text-hapag-gray">' + p.label + minText + ' · ' + scopeText + '</p>' +
+                    '</div>' +
+                    '<span class="text-[10px] font-bold text-hapag-red shrink-0 bg-red-50 px-2 py-0.5 rounded-full">Use</span>' +
+                '</button>';
+            }).join('');
     }
 
     // ═══════════════════════════════════════════════════════════════════════
