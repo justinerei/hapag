@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Inertia\Inertia;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
@@ -17,7 +18,7 @@ class HomeController extends Controller
             return $this->customerDashboard($request);
         }
 
-        return view('home-guest');
+        return Inertia::render('Home/Guest');
     }
 
     private function customerDashboard(Request $request)
@@ -67,11 +68,19 @@ class HomeController extends Controller
         $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
         $suggested  = Category::where('weather_tag', $weatherTag)->get();
 
-        return view('home-customer', compact(
-            'restaurants', 'categories', 'weather', 'weatherTag',
-            'suggested', 'deals', 'cartCount', 'promoRestaurantIds',
-            'popular', 'featuredItemMap', 'favoriteIds'
-        ));
+        return Inertia::render('Home/Customer', [
+            'restaurants'       => $restaurants,
+            'categories'        => $categories,
+            'weather'           => $weather,
+            'weatherTag'        => $weatherTag,
+            'suggested'         => $suggested,
+            'deals'             => $deals,
+            'cartCount'         => $cartCount,
+            'promoRestaurantIds'=> $promoRestaurantIds,
+            'popular'           => $popular,
+            'featuredItemMap'   => $featuredItemMap,
+            'favoriteIds'       => $favoriteIds,
+        ]);
     }
 
     private function fetchWeather(): array
