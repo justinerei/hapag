@@ -15,8 +15,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="font-sans antialiased text-hapag-ink min-h-screen flex flex-col"
-      style="background-color:#FFF8EF; background-image:url('/images/texture1.png'); background-repeat:repeat; background-size:1600px auto;">
+<body class="font-sans antialiased text-gray-800 min-h-screen flex flex-col bg-gray-50">
 
     {{-- Announcement bar (pushed by individual pages) --}}
     @stack('announcement')
@@ -28,19 +27,19 @@
 
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="shrink-0">
-                <span class="text-2xl font-bold tracking-tight text-hapag-red">Hapag</span>
+                <span class="text-2xl font-bold tracking-tight text-green-600">Hapag</span>
             </a>
 
             {{-- Center nav links — hidden until scrolled --}}
             <div id="guest-nav-links" class="hidden md:flex items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-300">
                 <a href="{{ route('home') }}"
                    class="px-4 py-2 rounded-full text-sm font-semibold transition-colors
-                          {{ request()->routeIs('home') ? 'text-hapag-ink font-bold' : 'text-hapag-gray hover:text-hapag-ink' }}">
+                          {{ request()->routeIs('home') ? 'text-gray-800 font-bold' : 'text-gray-500 hover:text-gray-800' }}">
                     Home
                 </a>
                 <a href="{{ route('restaurants.index') }}"
                    class="px-4 py-2 rounded-full text-sm font-semibold transition-colors
-                          {{ request()->routeIs('restaurants.*') ? 'text-hapag-ink font-bold' : 'text-hapag-gray hover:text-hapag-ink' }}">
+                          {{ request()->routeIs('restaurants.*') ? 'text-gray-800 font-bold' : 'text-gray-500 hover:text-gray-800' }}">
                     Restaurants
                 </a>
             </div>
@@ -48,17 +47,17 @@
             {{-- Auth actions --}}
             <div class="flex items-center gap-2">
                 <button onclick="openLoginModal()"
-                        class="hidden sm:block px-4 py-2 text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors">
+                        class="hidden sm:block px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
                     Sign In
                 </button>
                 <button onclick="openAuthModal()"
-                        class="px-5 py-2.5 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+                        class="px-5 py-2.5 rounded-full text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                     Sign Up
                 </button>
 
                 {{-- Mobile hamburger --}}
                 <button id="mobile-menu-btn"
-                        class="md:hidden ml-1 p-2 rounded-full text-hapag-gray hover:bg-hapag-cream2 transition-colors">
+                        class="md:hidden ml-1 p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
@@ -70,13 +69,13 @@
         <div id="mobile-menu" class="hidden max-w-6xl mx-auto mt-1 bg-white rounded-2xl shadow-md px-4 py-3 space-y-1">
             <a href="{{ route('home') }}"
                class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                      {{ request()->routeIs('home') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Home</a>
+                      {{ request()->routeIs('home') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">Home</a>
             <a href="{{ route('restaurants.index') }}"
                class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                      {{ request()->routeIs('restaurants.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Restaurants</a>
-            <div class="border-t border-hapag-cream2 pt-2 mt-2 flex gap-2">
-                <button onclick="openLoginModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-semibold text-hapag-gray hover:bg-hapag-cream transition-colors">Sign In</button>
-                <button onclick="openAuthModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-colors">Sign Up</button>
+                      {{ request()->routeIs('restaurants.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">Restaurants</a>
+            <div class="border-t border-gray-200 pt-2 mt-2 flex gap-2">
+                <button onclick="openLoginModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors">Sign In</button>
+                <button onclick="openAuthModal()" class="flex-1 text-center px-4 py-2 rounded-xl text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-colors">Sign Up</button>
             </div>
         </div>
     </div>
@@ -84,7 +83,7 @@
     {{-- Flash messages --}}
     @if(session('success'))
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            <div class="flex items-center gap-3 bg-teal-50 border border-hapag-teal text-hapag-teal px-5 py-3 rounded-2xl text-sm font-semibold">
+            <div class="flex items-center gap-3 bg-green-50 border border-green-500 text-green-700 px-5 py-3 rounded-2xl text-sm font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -97,7 +96,7 @@
     <main class="flex-1">{{ $slot }}</main>
 
     {{-- ── Footer ─────────────────────────────────────────────────────────── --}}
-    <footer class="bg-hapag-ink text-white relative overflow-hidden">
+    <footer class="bg-gray-800 text-white relative overflow-hidden">
         <div class="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32">
             <span class="text-[10rem] font-extrabold tracking-tighter text-white/[0.04] leading-none -mb-6">hapag</span>
         </div>
@@ -105,7 +104,7 @@
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-10">
                 <div>
-                    <h3 class="text-2xl font-bold text-hapag-red mb-3">Hapag</h3>
+                    <h3 class="text-2xl font-bold text-green-400 mb-3">Hapag</h3>
                     <p class="text-sm text-gray-400 leading-relaxed mb-3">Good food, right to your table.<br>Serving Laguna province, Philippines.</p>
                     <span class="inline-block text-xs text-gray-600 bg-white/5 px-3 py-1 rounded-full border border-white/10">Pickup only · Cash on Pickup</span>
                 </div>
@@ -121,7 +120,7 @@
                 <div>
                     <h4 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Get Started</h4>
                     <p class="text-sm text-gray-400 leading-relaxed mb-4">Create a free account to start ordering from local Laguna restaurants.</p>
-                    <button onclick="openAuthModal()" class="px-6 py-2.5 rounded-full bg-hapag-red text-white text-sm font-bold hover:bg-red-700 transition-colors">Sign up for free</button>
+                    <button onclick="openAuthModal()" class="px-6 py-2.5 rounded-full bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors">Sign up for free</button>
                 </div>
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2">

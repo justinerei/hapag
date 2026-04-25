@@ -36,8 +36,8 @@
             {{-- Split layout --}}
             <div class="flex" style="min-height:520px">
 
-                {{-- Left: Red branding panel --}}
-                <div class="hidden sm:flex w-[42%] bg-hapag-red flex-col px-8 py-10 text-white shrink-0">
+                {{-- Left: Green branding panel --}}
+                <div class="hidden sm:flex w-[42%] bg-green-600 flex-col px-8 py-10 text-white shrink-0">
                     <div class="mt-auto mb-10">
                         <h2 class="text-3xl font-extrabold leading-tight tracking-tight mb-3">
                             Bring your kitchen online.
@@ -52,17 +52,17 @@
                 <div class="flex-1 px-7 py-8 overflow-y-auto">
 
                     <h2 id="rsetup-modal-title"
-                        class="text-xl font-extrabold text-hapag-ink tracking-tight">
-                        Register your <span class="text-hapag-red">restaurant</span>
+                        class="text-xl font-extrabold text-gray-800 tracking-tight">
+                        Register your <span class="text-green-600">restaurant</span>
                     </h2>
-                    <p class="text-hapag-gray text-xs mt-0.5 mb-5 leading-snug">
+                    <p class="text-gray-500 text-xs mt-0.5 mb-5 leading-snug">
                         Once submitted, our team will review and approve your listing.
                     </p>
 
                     {{-- Validation errors --}}
                     @if($errors->any())
-                    <div class="mb-4 flex items-start gap-2.5 bg-red-50 border border-hapag-red/30
-                                text-hapag-red px-4 py-3 rounded-xl text-xs">
+                    <div class="mb-4 flex items-start gap-2.5 bg-red-50 border border-red-500/30
+                                text-red-500 px-4 py-3 rounded-xl text-xs">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 shrink-0"
                              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -82,32 +82,32 @@
                         {{-- Restaurant Name --}}
                         <div class="mb-3">
                             <label for="rsetup-name"
-                                   class="block text-xs font-semibold text-hapag-gray mb-1">
-                                Restaurant Name <span class="text-hapag-red">*</span>
+                                   class="block text-xs font-semibold text-gray-500 mb-1">
+                                Restaurant Name <span class="text-red-500">*</span>
                             </label>
                             <input id="rsetup-name" name="name" type="text"
                                    value="{{ old('name') }}"
                                    required
                                    placeholder="e.g. Burn's Kitchen"
-                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                          placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
-                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                          {{ $errors->has('name') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
+                                          placeholder:text-gray-400 outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                          {{ $errors->has('name') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                         </div>
 
                         {{-- Category + Municipality side by side --}}
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label for="rsetup-category"
-                                       class="block text-xs font-semibold text-hapag-gray mb-1">
-                                    Category <span class="text-hapag-red">*</span>
+                                       class="block text-xs font-semibold text-gray-500 mb-1">
+                                    Category <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
                                     <select id="rsetup-category" name="category_id" required
-                                            class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                            class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
                                                    appearance-none outline-none transition-colors duration-150
-                                                   focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                                   {{ $errors->has('category_id') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                                   focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                                   {{ $errors->has('category_id') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                                         <option value="" disabled {{ old('category_id') ? '' : 'selected' }}>Select category</option>
                                         @foreach($setupCategories as $cat)
                                             <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>
@@ -116,7 +116,7 @@
                                         @endforeach
                                     </select>
                                     <svg xmlns="http://www.w3.org/2000/svg"
-                                         class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hapag-gray"
+                                         class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"
                                          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -124,22 +124,22 @@
                             </div>
                             <div>
                                 <label for="rsetup-municipality"
-                                       class="block text-xs font-semibold text-hapag-gray mb-1">
-                                    Municipality <span class="text-hapag-red">*</span>
+                                       class="block text-xs font-semibold text-gray-500 mb-1">
+                                    Municipality <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
                                     <select id="rsetup-municipality" name="municipality" required
-                                            class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                            class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
                                                    appearance-none outline-none transition-colors duration-150
-                                                   focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                                   {{ $errors->has('municipality') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                                   focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                                   {{ $errors->has('municipality') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                                         <option value="" disabled {{ old('municipality') ? '' : 'selected' }}>Select municipality</option>
                                         @foreach(['Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba', 'San Pablo'] as $m)
                                             <option value="{{ $m }}" {{ old('municipality') === $m ? 'selected' : '' }}>{{ $m }}</option>
                                         @endforeach
                                     </select>
                                     <svg xmlns="http://www.w3.org/2000/svg"
-                                         class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hapag-gray"
+                                         class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"
                                          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -150,41 +150,41 @@
                         {{-- Description --}}
                         <div class="mb-3">
                             <label for="rsetup-description"
-                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                   class="block text-xs font-semibold text-gray-500 mb-1">
                                 Description
                             </label>
                             <textarea id="rsetup-description" name="description" rows="3"
                                       placeholder='e.g. "Filipino comfort food made with generations of love and tradition."'
-                                      class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                             placeholder:text-hapag-gray/50 outline-none transition-colors duration-150 resize-none
-                                             focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                             {{ $errors->has('description') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">{{ old('description') }}</textarea>
+                                      class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
+                                             placeholder:text-gray-400 outline-none transition-colors duration-150 resize-none
+                                             focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                             {{ $errors->has('description') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">{{ old('description') }}</textarea>
                         </div>
 
                         {{-- Image URL --}}
                         <div class="mb-5">
                             <label for="rsetup-image-url"
-                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                   class="block text-xs font-semibold text-gray-500 mb-1">
                                 Image URL
                             </label>
                             <input id="rsetup-image-url" name="image_url" type="url"
                                    value="{{ old('image_url') }}"
                                    placeholder="https://example.com/your-image.jpg"
-                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                          placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
-                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                          {{ $errors->has('image_url') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
+                                          placeholder:text-gray-400 outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                          {{ $errors->has('image_url') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                         </div>
 
                         <button type="submit"
-                                class="w-full py-3 rounded-xl font-bold text-white text-sm bg-hapag-ink
-                                       hover:bg-black transition-all duration-150
+                                class="w-full py-3 rounded-xl font-bold text-white text-sm bg-gray-800
+                                       hover:bg-gray-900 transition-all duration-150
                                        hover:-translate-y-0.5 hover:shadow-md">
                             Submit for Review
                         </button>
                     </form>
 
-                    <p class="text-center text-xs text-hapag-gray mt-3 leading-relaxed">
+                    <p class="text-center text-xs text-gray-500 mt-3 leading-relaxed">
                         Your restaurant will appear on Hapag once approved by our admin team.
                     </p>
                 </div>

@@ -11,7 +11,7 @@
           rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased text-hapag-ink min-h-screen flex flex-col bg-white">
+<body class="font-sans antialiased text-gray-800 min-h-screen flex flex-col bg-white">
 
 {{-- ══════════════════════════════════════════════════════════
      ANNOUNCEMENT BAR
@@ -28,7 +28,7 @@
     }
 @endphp
 <div id="announcement-bar"
-     class="bg-hapag-red text-white text-center text-sm py-2.5 px-4 relative">
+     class="bg-gray-800 text-white text-center text-sm py-2.5 px-4 relative">
     @if($globalVoucher)
         <a href="{{ route('restaurants.index') }}" class="font-semibold underline underline-offset-2">Claim</a>
         your {{ $annDiscount }} off for {{ $annMin }}!
@@ -50,22 +50,22 @@
      STICKY NAVBAR
 ══════════════════════════════════════════════════════════ --}}
 <nav id="main-nav"
-     class="sticky top-0 z-50 bg-white border-b border-hapag-cream2 shadow-sm h-14 flex items-center
+     class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm h-14 flex items-center
             transition-all duration-200">
     <div class="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
 
         {{-- Logo --}}
         <a href="{{ route('home') }}"
-           class="shrink-0 text-xl font-extrabold tracking-tight text-hapag-red mr-1">
+           class="shrink-0 text-xl font-extrabold tracking-tight text-green-600 mr-1">
             Hapag
         </a>
 
         {{-- Location pill --}}
         <div class="relative shrink-0" id="loc-wrapper">
             <button id="loc-btn"
-                    class="flex items-center gap-1.5 text-sm font-semibold text-hapag-ink
-                           hover:text-hapag-red transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-red shrink-0" fill="none"
+                    class="flex items-center gap-1.5 text-sm font-semibold text-gray-800
+                           hover:text-green-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600 shrink-0" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
@@ -74,8 +74,8 @@
                 <span id="loc-label" class="max-w-[120px] truncate">
                     {{ auth()->user()->municipality ?? 'Laguna' }}
                 </span>
-                <span class="text-hapag-gray font-normal">• Now</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-hapag-gray" fill="none"
+                <span class="text-gray-500 font-normal">• Now</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-500" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                 </svg>
@@ -83,11 +83,11 @@
 
             <div id="loc-menu"
                  class="hidden absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-xl
-                        border border-hapag-cream2 py-2 min-w-[180px] z-50">
+                        border border-gray-200 py-2 min-w-[180px] z-50">
                 @foreach(['Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba', 'San Pablo'] as $mun)
                 <button onclick="updateMunicipality('{{ $mun }}')"
-                        class="w-full text-left px-4 py-2 text-sm font-semibold text-hapag-ink
-                               hover:bg-hapag-cream transition-colors">
+                        class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-800
+                               hover:bg-gray-50 transition-colors">
                     {{ $mun }}
                 </button>
                 @endforeach
@@ -98,16 +98,16 @@
         <div class="flex-1 min-w-0">
             <div class="relative max-w-lg">
                 <svg xmlns="http://www.w3.org/2000/svg"
-                     class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-hapag-gray/50 pointer-events-none"
+                     class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none"
                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <input id="navbar-search" type="text"
                        placeholder="Search for restaurants, cuisines, or dishes..."
-                       class="w-full pl-10 pr-4 py-2 rounded-full bg-hapag-cream border border-hapag-cream2
-                              text-sm text-hapag-ink placeholder:text-hapag-gray/50
-                              focus:outline-none focus:ring-2 focus:ring-hapag-red/20 focus:border-hapag-red
+                       class="w-full pl-10 pr-4 py-2 rounded-full bg-gray-50 border border-gray-200
+                              text-sm text-gray-800 placeholder:text-gray-400
+                              focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500
                               transition-colors">
             </div>
         </div>
@@ -117,7 +117,7 @@
 
             {{-- Favourites --}}
             <a href="{{ route('favorites') }}"
-               class="p-2 rounded-full hover:bg-hapag-cream text-hapag-gray hover:text-hapag-red transition-colors"
+               class="p-2 rounded-full hover:bg-gray-50 text-gray-500 hover:text-red-500 transition-colors"
                title="Favourites">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -128,7 +128,7 @@
 
             {{-- Cart --}}
             <button id="cart-toggle-btn"
-               class="relative p-2 rounded-full hover:bg-hapag-cream text-hapag-gray hover:text-hapag-ink transition-colors"
+               class="relative p-2 rounded-full hover:bg-gray-50 text-gray-500 hover:text-gray-800 transition-colors"
                title="Cart">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -137,7 +137,7 @@
                 </svg>
                 <span id="cart-badge"
                       class="{{ $cartCount > 0 ? '' : 'hidden' }} absolute -top-0.5 -right-0.5
-                             bg-hapag-red text-white text-[10px] font-bold
+                             bg-orange-500 text-white text-[10px] font-bold
                              min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
                     {{ $cartCount }}
                 </span>
@@ -147,16 +147,16 @@
             <div class="relative" id="profile-wrapper">
                 <button id="profile-btn"
                         class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full
-                               hover:bg-hapag-cream transition-colors">
-                    <div class="w-8 h-8 rounded-full bg-hapag-red text-white flex items-center
+                               hover:bg-gray-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center
                                 justify-center text-sm font-bold shrink-0">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                     </div>
-                    <span class="hidden sm:block text-sm font-semibold text-hapag-ink
+                    <span class="hidden sm:block text-sm font-semibold text-gray-800
                                  max-w-[80px] truncate">
                         {{ explode(' ', auth()->user()->name)[0] }}
                     </span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-gray shrink-0" fill="none"
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 shrink-0" fill="none"
                          viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
@@ -164,15 +164,15 @@
 
                 <div id="profile-menu"
                      class="hidden absolute top-full right-0 mt-2 bg-white rounded-2xl shadow-xl
-                            border border-hapag-cream2 py-2 w-48 z-50">
-                    <div class="px-4 py-2 border-b border-hapag-cream2 mb-1">
-                        <p class="text-xs font-bold text-hapag-ink truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-hapag-gray truncate">{{ auth()->user()->email }}</p>
+                            border border-gray-200 py-2 w-48 z-50">
+                    <div class="px-4 py-2 border-b border-gray-200 mb-1">
+                        <p class="text-xs font-bold text-gray-800 truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ auth()->user()->email }}</p>
                     </div>
                     <a href="{{ route('orders.index') }}"
-                       class="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-hapag-ink
-                              hover:bg-hapag-cream transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-gray" fill="none"
+                       class="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-gray-800
+                              hover:bg-gray-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none"
                              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -180,21 +180,21 @@
                         My Orders
                     </a>
                     <a href="{{ route('profile.edit') }}"
-                       class="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-hapag-ink
-                              hover:bg-hapag-cream transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-gray" fill="none"
+                       class="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-gray-800
+                              hover:bg-gray-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none"
                              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
                         My Account
                     </a>
-                    <div class="border-t border-hapag-cream2 mt-1 pt-1">
+                    <div class="border-t border-gray-200 mt-1 pt-1">
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
                                     class="flex items-center gap-2.5 w-full px-4 py-2 text-sm font-semibold
-                                           text-hapag-red hover:bg-red-50 transition-colors">
+                                           text-red-500 hover:bg-red-50 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -221,37 +221,37 @@
             {{-- ── FLOATING FILTER SIDEBAR (sticky, indented) ────────────── --}}
             <aside id="sidebar"
                    class="hidden lg:block w-[220px] shrink-0 sticky top-20">
-                <div class="bg-white rounded-2xl border border-hapag-cream2 shadow-sm px-5 py-5 space-y-4">
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-5 space-y-4">
 
-                    <h2 class="text-lg font-extrabold text-hapag-ink">Filters</h2>
+                    <h2 class="text-lg font-extrabold text-gray-800">Filters</h2>
 
                     {{-- Sort by --}}
                     <div>
-                        <h3 class="text-xs font-bold text-hapag-ink mb-2.5">Sort by</h3>
+                        <h3 class="text-xs font-bold text-gray-800 mb-2.5">Sort by</h3>
                         <div class="space-y-2">
                             <label class="flex items-center gap-2.5 cursor-pointer">
                                 <input type="radio" name="sort-by" value="relevance" checked
-                                       class="w-4 h-4 text-hapag-ink border-gray-300 focus:ring-hapag-red/30"
+                                       class="w-4 h-4 text-gray-800 border-gray-300 focus:ring-green-500/30"
                                        onchange="applyFilters()">
-                                <span class="text-sm text-hapag-ink">Relevance</span>
+                                <span class="text-sm text-gray-800">Relevance</span>
                             </label>
                             <label class="flex items-center gap-2.5 cursor-pointer">
                                 <input type="radio" name="sort-by" value="newest"
-                                       class="w-4 h-4 text-hapag-ink border-gray-300 focus:ring-hapag-red/30"
+                                       class="w-4 h-4 text-gray-800 border-gray-300 focus:ring-green-500/30"
                                        onchange="applyFilters()">
-                                <span class="text-sm text-hapag-ink">Newest</span>
+                                <span class="text-sm text-gray-800">Newest</span>
                             </label>
                         </div>
                     </div>
 
                     {{-- Offers --}}
                     <div>
-                        <h3 class="text-xs font-bold text-hapag-red mb-2.5">Offers</h3>
+                        <h3 class="text-xs font-bold text-green-600 mb-2.5">Offers</h3>
                         <label class="flex items-center gap-2.5 cursor-pointer group">
                             <input id="has-deals-check" type="checkbox"
-                                   class="w-4 h-4 rounded text-hapag-red border-gray-300 focus:ring-hapag-red/30 cursor-pointer"
+                                   class="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer"
                                    onchange="applyFilters()">
-                            <span class="text-sm text-hapag-ink group-hover:text-hapag-red transition-colors">
+                            <span class="text-sm text-gray-800 group-hover:text-green-600 transition-colors">
                                 Has Active Deals
                             </span>
                         </label>
@@ -259,15 +259,15 @@
 
                     {{-- Cuisines --}}
                     <div>
-                        <h3 class="text-xs font-bold text-hapag-red mb-2.5">Cuisines</h3>
+                        <h3 class="text-xs font-bold text-green-600 mb-2.5">Cuisines</h3>
                         <div class="space-y-2">
                             @foreach($categories as $cat)
                             <label class="flex items-center gap-2.5 cursor-pointer group">
                                 <input type="checkbox" value="{{ $cat->id }}"
-                                       class="cuisine-check w-4 h-4 rounded text-hapag-red border-gray-300
-                                              focus:ring-hapag-red/30 cursor-pointer"
+                                       class="cuisine-check w-4 h-4 rounded text-green-500 border-gray-300
+                                              focus:ring-green-500/30 cursor-pointer"
                                        onchange="applyFilters()">
-                                <span class="text-sm text-hapag-ink group-hover:text-hapag-red transition-colors">
+                                <span class="text-sm text-gray-800 group-hover:text-green-600 transition-colors">
                                     {{ $cat->name }}
                                 </span>
                             </label>
@@ -315,7 +315,6 @@
                         <img src="{{ $weatherImg }}" alt="{{ $weatherTag }}"
                              class="absolute inset-0 w-full h-full object-cover object-right opacity-100">
 
-
                         {{-- Text content --}}
                         <div class="relative z-10 px-7 py-6 flex flex-col justify-center min-h-[170px]">
                             <p class="text-xl md:text-2xl font-extrabold text-white leading-snug">
@@ -336,7 +335,7 @@
 
                 {{-- ── Cuisines (rounded-square thumbnails) ───────────── --}}
                 <section>
-                    <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">Cuisines</h2>
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-4">Cuisines</h2>
                     @php
                         $cuisineImgs = [
                             'Filipino'  => 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=200&h=200&fit=crop',
@@ -362,12 +361,12 @@
                         <button class="cuisine-circle-btn shrink-0 flex flex-col items-center gap-2 group"
                                 data-cat-id="{{ $cat->id }}">
                             <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-transparent
-                                        group-hover:border-hapag-red transition-all duration-150 shadow-sm">
+                                        group-hover:border-green-600 transition-all duration-150 shadow-sm">
                                 <img src="{{ $img }}" alt="{{ $cat->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                      loading="lazy">
                             </div>
-                            <span class="text-xs font-semibold text-hapag-red
+                            <span class="text-xs font-semibold text-green-600
                                          text-center leading-tight max-w-[80px]">
                                 {{ $cat->name }}
                             </span>
@@ -379,7 +378,7 @@
                 {{-- ── Your Daily Deals ──────────────────────────────── --}}
                 @if($deals->isNotEmpty())
                 <section>
-                    <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">Your Daily Deals</h2>
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-4">Your Daily Deals</h2>
                     <div class="relative">
                         <div id="deals-scroll"
                              class="flex gap-4 overflow-x-auto pb-2" style="scrollbar-width:none;">
@@ -418,8 +417,8 @@
                         {{-- Scroll arrow --}}
                         <button onclick="scrollRow('deals-scroll', 1)"
                                 class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10
-                                       w-8 h-8 rounded-full bg-white shadow-md border border-hapag-cream2
-                                       items-center justify-center text-hapag-gray hover:text-hapag-ink transition-colors">
+                                       w-8 h-8 rounded-full bg-white shadow-md border border-gray-200
+                                       items-center justify-center text-gray-500 hover:text-gray-800 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -432,7 +431,7 @@
                 {{-- ── Popular In Your Area ──────────────────────────── --}}
                 @if($popular->isNotEmpty())
                 <section>
-                    <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">Popular In Your Area</h2>
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-4">Popular In Your Area</h2>
                     <div class="relative">
                         <div id="popular-scroll"
                              class="flex gap-4 overflow-x-auto pb-2" style="scrollbar-width:none;">
@@ -449,8 +448,8 @@
                         </div>
                         <button onclick="scrollRow('popular-scroll', 1)"
                                 class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10
-                                       w-8 h-8 rounded-full bg-white shadow-md border border-hapag-cream2
-                                       items-center justify-center text-hapag-gray hover:text-hapag-ink transition-colors">
+                                       w-8 h-8 rounded-full bg-white shadow-md border border-gray-200
+                                       items-center justify-center text-gray-500 hover:text-gray-800 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -462,12 +461,12 @@
 
                 {{-- ── All Restaurant ────────────────────────────────── --}}
                 <section class="pb-10">
-                    <h2 class="text-2xl font-extrabold text-hapag-ink mb-4">All Restaurant</h2>
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-4">All Restaurant</h2>
 
                     @if($restaurants->isEmpty())
                     <div class="text-center py-16">
                         <span class="text-5xl mb-4 block">🍽️</span>
-                        <p class="text-hapag-gray font-semibold">No restaurants available yet.</p>
+                        <p class="text-gray-500 font-semibold">No restaurants available yet.</p>
                     </div>
                     @else
                     <div id="all-restaurant-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -489,13 +488,13 @@
 
                     <div id="no-results" class="hidden text-center py-16">
                         <span class="text-4xl mb-3 block">🔍</span>
-                        <p class="text-hapag-gray font-semibold">No restaurants match your filters.</p>
+                        <p class="text-gray-500 font-semibold">No restaurants match your filters.</p>
                         <button onclick="document.querySelectorAll('.cuisine-check').forEach(c=>c.checked=false);
                                          document.getElementById('has-deals-check').checked=false;
                                          document.querySelector('input[name=sort-by][value=relevance]').checked=true;
                                          document.getElementById('navbar-search').value='';
                                          applyFilters();"
-                                class="mt-3 text-sm font-semibold text-hapag-red hover:underline">
+                                class="mt-3 text-sm font-semibold text-green-600 hover:underline">
                             Clear filters
                         </button>
                     </div>
@@ -513,65 +512,65 @@
 <div id="cart-overlay" class="fixed inset-0 z-[90] hidden">
     <div id="cart-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCartPanel()"></div>
     <div id="cart-panel" class="absolute top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col translate-x-full transition-transform duration-300 ease-out">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-hapag-cream2 shrink-0">
-            <button onclick="closeCartPanel()" class="w-9 h-9 rounded-full hover:bg-hapag-cream flex items-center justify-center text-hapag-ink transition-colors">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
+            <button onclick="closeCartPanel()" class="w-9 h-9 rounded-full hover:bg-gray-50 flex items-center justify-center text-gray-800 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-            <h2 class="text-base font-extrabold text-hapag-ink">Your Cart</h2>
+            <h2 class="text-base font-extrabold text-gray-800">Your Cart</h2>
             <div class="w-9"></div>
         </div>
-        <div id="cart-restaurant-info" class="px-5 py-3 border-b border-hapag-cream2 shrink-0 hidden">
-            <p id="cart-resto-name" class="text-sm font-bold text-hapag-ink"></p>
-            <p id="cart-resto-location" class="text-xs text-hapag-gray"></p>
+        <div id="cart-restaurant-info" class="px-5 py-3 border-b border-gray-200 shrink-0 hidden">
+            <p id="cart-resto-name" class="text-sm font-bold text-gray-800"></p>
+            <p id="cart-resto-location" class="text-xs text-gray-500"></p>
         </div>
         <div id="cart-items-list" class="flex-1 overflow-y-auto px-5 py-4 space-y-3"></div>
         <div id="cart-empty" class="flex-1 flex flex-col items-center justify-center px-5 hidden">
             <span class="text-5xl mb-3">🛒</span>
-            <p class="text-hapag-gray font-semibold text-sm">Your cart is empty</p>
-            <p class="text-hapag-gray text-xs mt-1">Add items from a restaurant to get started.</p>
+            <p class="text-gray-500 font-semibold text-sm">Your cart is empty</p>
+            <p class="text-gray-500 text-xs mt-1">Add items from a restaurant to get started.</p>
         </div>
 
         {{-- Promo / Voucher section --}}
-        <div id="cart-promo-section" class="border-t border-hapag-cream2 px-5 py-4 shrink-0 hidden">
-            <h3 class="text-sm font-bold text-hapag-ink mb-2">Apply a promo</h3>
+        <div id="cart-promo-section" class="border-t border-gray-200 px-5 py-4 shrink-0 hidden">
+            <h3 class="text-sm font-bold text-gray-800 mb-2">Apply a promo</h3>
             <div class="flex gap-2 mb-3">
                 <input id="promo-code-input" type="text" placeholder="Enter promo code"
-                       class="flex-1 px-3 py-2 rounded-xl border border-hapag-cream2 bg-hapag-cream text-sm text-hapag-ink placeholder:text-hapag-gray/50 focus:outline-none focus:ring-2 focus:ring-hapag-red/20 focus:border-hapag-red transition-colors uppercase">
+                       class="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors uppercase">
                 <button id="promo-apply-btn" onclick="applyPromoCode()"
-                        class="px-4 py-2 rounded-xl bg-hapag-red text-white text-xs font-bold hover:bg-red-700 transition-colors shrink-0">
+                        class="px-4 py-2 rounded-xl bg-gray-800 text-white text-xs font-bold hover:bg-gray-900 transition-colors shrink-0">
                     Apply
                 </button>
             </div>
             <div id="promo-message" class="hidden text-xs px-3 py-2 rounded-xl mb-3"></div>
             <div id="promo-applied" class="hidden flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-2">
                 <div class="flex items-center gap-2 min-w-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-hapag-teal shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     <div class="min-w-0">
-                        <p id="promo-applied-code" class="text-xs font-bold text-hapag-teal truncate"></p>
-                        <p id="promo-applied-discount" class="text-[10px] text-hapag-gray"></p>
+                        <p id="promo-applied-code" class="text-xs font-bold text-green-600 truncate"></p>
+                        <p id="promo-applied-discount" class="text-[10px] text-gray-500"></p>
                     </div>
                 </div>
-                <button onclick="removePromo()" class="text-hapag-red hover:text-red-700 shrink-0 p-1">
+                <button onclick="removePromo()" class="text-red-500 hover:text-red-700 shrink-0 p-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div id="promo-available-list" class="space-y-2 mt-2"></div>
         </div>
 
-        <div id="cart-footer" class="border-t border-hapag-cream2 px-5 py-4 shrink-0 hidden">
+        <div id="cart-footer" class="border-t border-gray-200 px-5 py-4 shrink-0 hidden">
             <div class="flex items-center justify-between mb-1">
-                <span class="text-sm text-hapag-gray">Subtotal</span>
-                <span id="cart-subtotal" class="text-sm font-mono text-hapag-gray">₱0.00</span>
+                <span class="text-sm text-gray-500">Subtotal</span>
+                <span id="cart-subtotal" class="text-sm font-mono text-gray-500">₱0.00</span>
             </div>
             <div id="cart-discount-row" class="hidden flex items-center justify-between mb-1">
-                <span class="text-sm text-hapag-teal font-semibold">Discount</span>
-                <span id="cart-discount" class="text-sm font-mono text-hapag-teal font-semibold">-₱0.00</span>
+                <span class="text-sm text-green-600 font-semibold">Discount</span>
+                <span id="cart-discount" class="text-sm font-mono text-green-600 font-semibold">-₱0.00</span>
             </div>
             <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-bold text-hapag-ink">Total</span>
-                <span id="cart-total" class="text-base font-extrabold font-mono text-hapag-ink">₱0.00</span>
+                <span class="text-sm font-bold text-gray-800">Total</span>
+                <span id="cart-total" class="text-base font-extrabold font-mono text-gray-800">₱0.00</span>
             </div>
-            <a href="{{ route('cart.index') }}" class="block w-full py-3.5 rounded-xl bg-hapag-ink text-white text-sm font-bold text-center hover:bg-black transition-colors">Go to checkout</a>
+            <a href="{{ route('cart.index') }}" class="block w-full py-3.5 rounded-xl bg-gray-800 text-white text-sm font-bold text-center hover:bg-gray-900 transition-colors">Go to checkout</a>
         </div>
     </div>
 </div>
@@ -579,7 +578,7 @@
 {{-- ══════════════════════════════════════════════════════════
      FOOTER
 ══════════════════════════════════════════════════════════ --}}
-<footer class="bg-hapag-ink text-white relative overflow-hidden">
+<footer class="bg-gray-800 text-white relative overflow-hidden">
     <div class="absolute bottom-0 left-0 right-0 flex items-end justify-center
                 pointer-events-none select-none overflow-hidden h-32">
         <span class="text-[10rem] font-extrabold tracking-tighter text-white/[0.04]
@@ -621,7 +620,7 @@
                     Your cart saves automatically — come back anytime.
                 </p>
                 <a href="{{ route('register') }}"
-                   class="inline-block bg-hapag-red hover:bg-red-700 text-white text-sm font-bold
+                   class="inline-block bg-green-500 hover:bg-green-600 text-white text-sm font-bold
                           px-5 py-2.5 rounded-full transition-colors">
                     Sign up for free
                 </a>
@@ -649,20 +648,20 @@
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
             </div>
-            <h3 class="font-bold text-hapag-ink text-base">Cart has items from another restaurant</h3>
+            <h3 class="font-bold text-gray-800 text-base">Cart has items from another restaurant</h3>
         </div>
-        <p id="conflict-msg" class="text-hapag-gray text-sm mb-5 leading-relaxed">
+        <p id="conflict-msg" class="text-gray-500 text-sm mb-5 leading-relaxed">
             Your cart already has items from a different restaurant. Clear it to add from this one?
         </p>
         <div class="flex gap-3">
             <button onclick="closeConflictModal()"
-                    class="flex-1 px-4 py-2.5 rounded-xl border border-hapag-cream2 text-sm font-semibold
-                           text-hapag-gray hover:bg-hapag-cream transition-colors">
+                    class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold
+                           text-gray-500 hover:bg-gray-50 transition-colors">
                 Cancel
             </button>
             <button id="conflict-confirm-btn"
-                    class="flex-1 px-4 py-2.5 rounded-xl bg-hapag-red text-white text-sm font-bold
-                           hover:bg-red-700 transition-colors">
+                    class="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 text-white text-sm font-bold
+                           hover:bg-gray-900 transition-colors">
                 Clear & Add
             </button>
         </div>
@@ -879,7 +878,7 @@
         var toast = document.createElement('div');
         toast.id = 'hapag-toast';
         toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white transition-all duration-300 opacity-0 -translate-y-4';
-        toast.style.background = isError ? '#E63946' : '#2A9D8F';
+        toast.style.background = isError ? '#EF4444' : '#22C55E';
         toast.innerHTML = '<div class="flex items-center gap-2">' +
             (isError
                 ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'
@@ -918,8 +917,8 @@
                 btn.dataset.favorited = data.favorited ? 'true' : 'false';
                 var svg = btn.querySelector('svg');
                 svg.setAttribute('fill', data.favorited ? 'currentColor' : 'none');
-                btn.classList.toggle('text-hapag-red', data.favorited);
-                btn.classList.toggle('text-hapag-gray', !data.favorited);
+                btn.classList.toggle('text-red-500', data.favorited);
+                btn.classList.toggle('text-gray-400', !data.favorited);
                 showToast(data.favorited ? 'Added to favorites!' : 'Removed from favorites.');
             }
         } catch (e) {
@@ -1008,20 +1007,20 @@
             }
 
             list.innerHTML = data.items.map(function (item) {
-                return '<div class="flex items-center gap-3 py-2 border-b border-hapag-cream2 last:border-0">' +
+                return '<div class="flex items-center gap-3 py-2 border-b border-gray-200 last:border-0">' +
                     '<div class="flex-1 min-w-0">' +
-                        '<p class="text-sm font-semibold text-hapag-ink truncate">' + item.name + '</p>' +
-                        '<p class="text-xs font-mono text-hapag-gray">₱' + item.price.toFixed(2) + '</p>' +
+                        '<p class="text-sm font-semibold text-gray-800 truncate">' + item.name + '</p>' +
+                        '<p class="text-xs font-mono text-gray-500">₱' + item.price.toFixed(2) + '</p>' +
                     '</div>' +
-                    '<div class="flex items-center gap-0 border border-hapag-cream2 rounded-full overflow-hidden shrink-0">' +
-                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity - 1) + ')" class="w-8 h-8 flex items-center justify-center text-hapag-ink hover:bg-hapag-cream transition-colors">' +
+                    '<div class="flex items-center gap-0 border border-gray-200 rounded-full overflow-hidden shrink-0">' +
+                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity - 1) + ')" class="w-8 h-8 flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors">' +
                             (item.quantity <= 1
-                                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-hapag-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
+                                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
                                 : '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>'
                             ) +
                         '</button>' +
-                        '<span class="w-6 text-center text-xs font-bold text-hapag-ink">' + item.quantity + '</span>' +
-                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity + 1) + ')" class="w-8 h-8 flex items-center justify-center text-hapag-ink hover:bg-hapag-cream transition-colors">' +
+                        '<span class="w-6 text-center text-xs font-bold text-gray-800">' + item.quantity + '</span>' +
+                        '<button onclick="updateCartItem(' + item.id + ', ' + (item.quantity + 1) + ')" class="w-8 h-8 flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors">' +
                             '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>' +
                         '</button>' +
                     '</div>' +
@@ -1100,7 +1099,7 @@
             if (!data.valid) {
                 if (!silent) {
                     msgEl.textContent = data.message;
-                    msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-hapag-red border border-red-200';
+                    msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-red-500 border border-red-200';
                     msgEl.classList.remove('hidden');
                     appliedPromoCode = null;
                     appliedDiscount = 0;
@@ -1130,7 +1129,7 @@
             console.error('Promo validation failed:', e);
             if (!silent) {
                 msgEl.textContent = 'Could not validate promo. Try again.';
-                msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-hapag-red border border-red-200';
+                msgEl.className = 'text-xs px-3 py-2 rounded-xl mb-3 bg-red-50 text-red-500 border border-red-200';
                 msgEl.classList.remove('hidden');
             }
         }

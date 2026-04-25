@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="font-sans antialiased bg-hapag-cream text-hapag-ink min-h-screen flex flex-col">
+<body class="font-sans antialiased bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
     {{-- Announcement bar slot (pushed from individual pages) --}}
     @stack('announcement')
@@ -27,7 +27,7 @@
     <nav id="hapag-nav"
          data-hero="{{ $heroMode ? 'true' : 'false' }}"
          class="sticky top-0 z-50 transition-all duration-300
-                {{ $heroMode ? '' : 'bg-white/85 backdrop-blur-md border-b border-hapag-cream2/70 shadow-sm' }}">
+                {{ $heroMode ? '' : 'bg-white/85 backdrop-blur-md border-b border-gray-200/70 shadow-sm' }}">
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -36,7 +36,7 @@
                 <a href="{{ route('home') }}" class="shrink-0">
                     <span id="nav-logo"
                           class="text-2xl font-bold tracking-tight transition-colors duration-300
-                                 {{ $heroMode ? 'text-hapag-ink' : 'text-hapag-red' }}">
+                                 {{ $heroMode ? 'text-gray-800' : 'text-green-600' }}">
                         Hapag
                     </span>
                 </a>
@@ -47,35 +47,35 @@
                             {{ $heroMode ? 'opacity-0 pointer-events-none' : 'opacity-100' }}">
                     <a href="{{ route('home') }}"
                        class="px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-150
-                              {{ request()->routeIs('home') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream' }}">
+                              {{ request()->routeIs('home') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50' }}">
                         Home
                     </a>
                     <a href="{{ route('restaurants.index') }}"
                        class="px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-150
-                              {{ request()->routeIs('restaurants.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream' }}">
+                              {{ request()->routeIs('restaurants.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50' }}">
                         Browse Restaurants
                     </a>
                     @auth
                         @if(auth()->user()->role === 'customer')
                             <a href="{{ route('orders.index') }}"
                                class="px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-150
-                                      {{ request()->routeIs('orders.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream' }}">
+                                      {{ request()->routeIs('orders.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50' }}">
                                 My Orders
                             </a>
                         @elseif(auth()->user()->role === 'owner')
                             <a href="{{ route('owner.dashboard') }}"
-                               class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream transition-colors duration-150">
+                               class="px-4 py-2 rounded-full text-sm font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors duration-150">
                                 My Restaurant
                             </a>
                         @elseif(auth()->user()->role === 'admin')
                             <a href="{{ route('admin.dashboard') }}"
-                               class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream transition-colors duration-150">
+                               class="px-4 py-2 rounded-full text-sm font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors duration-150">
                                 Admin Panel
                             </a>
                         @endif
                     @else
                         <a href="{{ route('restaurants.index') }}"
-                           class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink hover:bg-hapag-cream transition-colors duration-150">
+                           class="px-4 py-2 rounded-full text-sm font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors duration-150">
                             Menu
                         </a>
                     @endauth
@@ -90,14 +90,14 @@
                             @php $cartCount = \App\Models\CartItem::where('user_id', auth()->id())->sum('quantity'); @endphp
                             <a href="{{ route('cart.index') }}"
                                class="relative flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold
-                                      {{ request()->routeIs('cart.*') ? 'bg-hapag-red text-white' : 'bg-hapag-cream2/80 text-hapag-ink hover:bg-hapag-red hover:text-white' }}
+                                      {{ request()->routeIs('cart.*') ? 'bg-green-500 text-white' : 'bg-gray-100/80 text-gray-800 hover:bg-green-500 hover:text-white' }}
                                       transition-colors duration-150">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                                 <span class="hidden sm:inline">Cart</span>
                                 <span id="nav-cart-badge"
-                                      class="absolute -top-1 -right-1 bg-hapag-red text-white text-xs font-bold w-5 h-5 rounded-full items-center justify-center {{ $cartCount > 0 ? 'flex' : 'hidden' }}">
+                                      class="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full items-center justify-center {{ $cartCount > 0 ? 'flex' : 'hidden' }}">
                                     {{ $cartCount > 99 ? '99+' : $cartCount }}
                                 </span>
                             </a>
@@ -106,30 +106,30 @@
                         {{-- User dropdown --}}
                         <div class="relative" id="user-dd-root">
                             <button id="user-dd-btn"
-                                    class="flex items-center gap-2 px-3 py-2 rounded-full bg-hapag-cream2/80 hover:bg-hapag-cream2 text-sm font-semibold text-hapag-ink transition-colors duration-150">
+                                    class="flex items-center gap-2 px-3 py-2 rounded-full bg-gray-100/80 hover:bg-gray-100 text-sm font-semibold text-gray-800 transition-colors duration-150">
                                 <span class="hidden sm:block max-w-[120px] truncate">{{ auth()->user()->name }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" id="user-dd-caret"
-                                     class="h-4 w-4 text-hapag-gray transition-transform duration-200"
+                                     class="h-4 w-4 text-gray-500 transition-transform duration-200"
                                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
                             <div id="user-dd-menu"
-                                 class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-hapag-cream2 py-1 z-50">
-                                <div class="px-4 py-2.5 border-b border-hapag-cream2">
-                                    <p class="text-xs text-hapag-gray">Signed in as</p>
-                                    <p class="text-sm font-semibold text-hapag-ink truncate">{{ auth()->user()->email }}</p>
+                                 class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 py-1 z-50">
+                                <div class="px-4 py-2.5 border-b border-gray-200">
+                                    <p class="text-xs text-gray-500">Signed in as</p>
+                                    <p class="text-sm font-semibold text-gray-800 truncate">{{ auth()->user()->email }}</p>
                                 </div>
-                                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-hapag-ink hover:bg-hapag-cream transition-colors">Edit Profile</a>
+                                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 transition-colors">Edit Profile</a>
                                 @if(auth()->user()->role === 'owner')
-                                    <a href="{{ route('owner.dashboard') }}" class="block px-4 py-2 text-sm text-hapag-ink hover:bg-hapag-cream transition-colors">My Restaurant</a>
+                                    <a href="{{ route('owner.dashboard') }}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 transition-colors">My Restaurant</a>
                                 @elseif(auth()->user()->role === 'admin')
-                                    <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-hapag-ink hover:bg-hapag-cream transition-colors">Admin Panel</a>
+                                    <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 transition-colors">Admin Panel</a>
                                 @endif
-                                <div class="border-t border-hapag-cream2 mt-1 pt-1">
+                                <div class="border-t border-gray-200 mt-1 pt-1">
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-hapag-red hover:bg-red-50 font-semibold transition-colors">
+                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 font-semibold transition-colors">
                                             Log out
                                         </button>
                                     </form>
@@ -139,18 +139,18 @@
 
                     @else
                         <button onclick="openLoginModal()"
-                                class="px-4 py-2 rounded-full text-sm font-semibold text-hapag-gray hover:text-hapag-ink transition-colors duration-150">
+                                class="px-4 py-2 rounded-full text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors duration-150">
                             Sign In
                         </button>
                         <button onclick="openAuthModal()"
-                                class="px-5 py-2 rounded-full text-sm font-bold bg-hapag-red text-white hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+                                class="px-5 py-2 rounded-full text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                             Sign Up
                         </button>
                     @endauth
 
                     {{-- Mobile hamburger --}}
                     <button id="mobile-menu-btn"
-                            class="md:hidden ml-1 p-2 rounded-full text-hapag-gray hover:bg-hapag-cream2 transition-colors duration-150">
+                            class="md:hidden ml-1 p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-150">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
@@ -161,26 +161,26 @@
 
         {{-- Mobile menu --}}
         <div id="mobile-menu"
-             class="hidden border-t border-hapag-cream2/60 bg-white/95 backdrop-blur-md">
+             class="hidden border-t border-gray-200/60 bg-white/95 backdrop-blur-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1">
                 <a href="{{ route('home') }}"
                    class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                          {{ request()->routeIs('home') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Home</a>
+                          {{ request()->routeIs('home') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">Home</a>
                 <a href="{{ route('restaurants.index') }}"
                    class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                          {{ request()->routeIs('restaurants.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Browse Restaurants</a>
+                          {{ request()->routeIs('restaurants.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">Browse Restaurants</a>
                 @auth
                     <a href="{{ route('orders.index') }}"
                        class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                              {{ request()->routeIs('orders.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">My Orders</a>
+                              {{ request()->routeIs('orders.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">My Orders</a>
                     @if(auth()->user()->role === 'customer')
                         <a href="{{ route('cart.index') }}"
                            class="block px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                                  {{ request()->routeIs('cart.*') ? 'bg-hapag-cream2 text-hapag-ink' : 'text-hapag-gray hover:bg-hapag-cream' }}">Cart</a>
+                                  {{ request()->routeIs('cart.*') ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50' }}">Cart</a>
                     @endif
                 @else
                     <a href="{{ route('restaurants.index') }}"
-                       class="block px-4 py-2 rounded-xl text-sm font-semibold text-hapag-gray hover:bg-hapag-cream transition-colors">Menu</a>
+                       class="block px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors">Menu</a>
                 @endauth
             </div>
         </div>
@@ -189,7 +189,7 @@
     {{-- ── Flash messages ──────────────────────────────────────────────────── --}}
     @if(session('success'))
         <div id="flash-success" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            <div class="flex items-center gap-3 bg-teal-50 border border-hapag-teal text-hapag-teal px-5 py-3 rounded-2xl text-sm font-semibold">
+            <div class="flex items-center gap-3 bg-green-50 border border-green-500 text-green-700 px-5 py-3 rounded-2xl text-sm font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -199,7 +199,7 @@
     @endif
     @if(session('error') || $errors->any())
         <div id="flash-error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            <div class="flex items-center gap-3 bg-red-50 border border-hapag-red text-hapag-red px-5 py-3 rounded-2xl text-sm font-semibold">
+            <div class="flex items-center gap-3 bg-red-50 border border-red-500 text-red-500 px-5 py-3 rounded-2xl text-sm font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -218,7 +218,7 @@
     <main class="flex-1">{{ $slot }}</main>
 
     {{-- ── Footer ──────────────────────────────────────────────────────────── --}}
-    <footer class="bg-hapag-ink text-white relative overflow-hidden">
+    <footer class="bg-gray-800 text-white relative overflow-hidden">
         {{-- Large watermark text --}}
         <div class="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32">
             <span class="text-[10rem] font-extrabold tracking-tighter text-white/[0.04] leading-none -mb-6">hapag</span>
@@ -229,7 +229,7 @@
 
                 {{-- Brand --}}
                 <div>
-                    <h3 class="text-2xl font-bold text-hapag-red mb-3">Hapag</h3>
+                    <h3 class="text-2xl font-bold text-green-400 mb-3">Hapag</h3>
                     <p class="text-sm text-gray-400 leading-relaxed mb-3">
                         Good food, right to your table.<br>Serving Laguna province, Philippines.
                     </p>
@@ -262,7 +262,7 @@
                             Create a free account to start ordering from local Laguna restaurants. Your cart saves automatically.
                         </p>
                         <button onclick="openAuthModal()"
-                                class="px-6 py-2.5 rounded-full bg-hapag-red text-white text-sm font-bold hover:bg-red-700 transition-colors">
+                                class="px-6 py-2.5 rounded-full bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors">
                             Sign up for free
                         </button>
                     @else
@@ -294,15 +294,15 @@
 
             if (isHero) {
                 if (scrolled) {
-                    nav.classList.add('bg-white/85', 'backdrop-blur-md', 'border-b', 'border-hapag-cream2/70', 'shadow-sm');
+                    nav.classList.add('bg-white/85', 'backdrop-blur-md', 'border-b', 'border-gray-200/70', 'shadow-sm');
                     center.classList.remove('opacity-0', 'pointer-events-none');
                     center.classList.add('opacity-100');
-                    logo.classList.replace('text-hapag-ink', 'text-hapag-red');
+                    logo.classList.replace('text-gray-800', 'text-green-600');
                 } else {
-                    nav.classList.remove('bg-white/85', 'backdrop-blur-md', 'border-b', 'border-hapag-cream2/70', 'shadow-sm');
+                    nav.classList.remove('bg-white/85', 'backdrop-blur-md', 'border-b', 'border-gray-200/70', 'shadow-sm');
                     center.classList.add('opacity-0', 'pointer-events-none');
                     center.classList.remove('opacity-100');
-                    logo.classList.replace('text-hapag-red', 'text-hapag-ink');
+                    logo.classList.replace('text-green-600', 'text-gray-800');
                 }
             }
         }

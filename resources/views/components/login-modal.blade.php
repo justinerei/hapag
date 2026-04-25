@@ -34,8 +34,8 @@
             {{-- Split layout --}}
             <div class="flex" style="min-height:480px">
 
-                {{-- Left: Red branding panel --}}
-                <div class="hidden sm:flex w-[42%] bg-hapag-red flex-col px-8 py-10 text-white shrink-0">
+                {{-- Left: Green branding panel --}}
+                <div class="hidden sm:flex w-[42%] bg-green-600 flex-col px-8 py-10 text-white shrink-0">
                     <div class="mt-auto mb-10">
                         <h2 class="text-3xl font-extrabold leading-tight tracking-tight mb-3">
                             Good food is just a tap away.
@@ -50,17 +50,17 @@
                 <div class="flex-1 px-8 py-10 flex flex-col justify-center">
 
                     <h2 id="login-modal-title"
-                        class="text-2xl font-extrabold text-hapag-ink tracking-tight">
+                        class="text-2xl font-extrabold text-gray-800 tracking-tight">
                         Welcome back!
                     </h2>
-                    <p class="text-hapag-gray text-sm mt-1 mb-6 leading-snug">
+                    <p class="text-gray-500 text-sm mt-1 mb-6 leading-snug">
                         Sign in to your account to continue ordering from your favorite Laguna restaurants.
                     </p>
 
                     {{-- Session status (e.g. password reset success) --}}
                     @if(session('status'))
-                    <div class="mb-4 flex items-center gap-2.5 bg-teal-50 border border-hapag-teal
-                                text-hapag-teal px-4 py-3 rounded-xl text-xs font-semibold">
+                    <div class="mb-4 flex items-center gap-2.5 bg-green-50 border border-green-500
+                                text-green-700 px-4 py-3 rounded-xl text-xs font-semibold">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none"
                              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -71,8 +71,8 @@
 
                     {{-- Validation errors --}}
                     @if($errors->any())
-                    <div class="mb-4 flex items-start gap-2.5 bg-red-50 border border-hapag-red/30
-                                text-hapag-red px-4 py-3 rounded-xl text-xs">
+                    <div class="mb-4 flex items-start gap-2.5 bg-red-50 border border-red-500/30
+                                text-red-500 px-4 py-3 rounded-xl text-xs">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 shrink-0"
                              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -92,39 +92,39 @@
                         {{-- Email --}}
                         <div class="mb-4">
                             <label for="login-email"
-                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                   class="block text-xs font-semibold text-gray-500 mb-1">
                                 Email
                             </label>
                             <input id="login-email" name="email" type="email"
                                    value="{{ old('email') }}"
                                    required autocomplete="username"
                                    placeholder="e.g. johndoe@email.com"
-                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
-                                          placeholder:text-hapag-gray/50 outline-none transition-colors duration-150
-                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                          {{ $errors->has('email') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
+                                          placeholder:text-gray-400 outline-none transition-colors duration-150
+                                          focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                          {{ $errors->has('email') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                         </div>
 
                         {{-- Password --}}
                         <div class="mb-1">
                             <label for="login-password"
-                                   class="block text-xs font-semibold text-hapag-gray mb-1">
+                                   class="block text-xs font-semibold text-gray-500 mb-1">
                                 Password
                             </label>
                             <input id="login-password" name="password" type="password"
                                    required autocomplete="current-password"
                                    placeholder="Enter your password"
-                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-hapag-ink
+                                   class="w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800
                                           outline-none transition-colors duration-150
-                                          focus:ring-2 focus:ring-hapag-red/30 focus:border-hapag-red
-                                          {{ $errors->has('password') ? 'border-hapag-red bg-red-50' : 'border-hapag-cream2 bg-hapag-cream hover:border-hapag-gray/50' }}">
+                                          focus:ring-2 focus:ring-green-500/30 focus:border-green-500
+                                          {{ $errors->has('password') ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300' }}">
                         </div>
 
                         {{-- Forgot password --}}
                         @if(Route::has('password.request'))
                         <div class="text-right mb-4">
                             <a href="{{ route('password.request') }}"
-                               class="text-xs text-hapag-red hover:underline font-semibold">
+                               class="text-xs text-green-600 hover:underline font-semibold">
                                 Forgot your password?
                             </a>
                         </div>
@@ -133,26 +133,26 @@
                         {{-- Remember me --}}
                         <div class="flex items-center gap-2.5 mb-5">
                             <input id="login-remember" name="remember" type="checkbox"
-                                   class="w-4 h-4 rounded border-hapag-cream2 text-hapag-red
-                                          focus:ring-hapag-red/30 cursor-pointer">
+                                   class="w-4 h-4 rounded border-gray-200 text-green-500
+                                          focus:ring-green-500/30 cursor-pointer">
                             <label for="login-remember"
-                                   class="text-xs text-hapag-gray cursor-pointer select-none">
+                                   class="text-xs text-gray-500 cursor-pointer select-none">
                                 Remember me
                             </label>
                         </div>
 
                         <button type="submit"
-                                class="w-full py-3 rounded-xl font-bold text-white text-sm bg-hapag-ink
-                                       hover:bg-black transition-all duration-150
+                                class="w-full py-3 rounded-xl font-bold text-white text-sm bg-gray-800
+                                       hover:bg-gray-900 transition-all duration-150
                                        hover:-translate-y-0.5 hover:shadow-md">
                             Sign In
                         </button>
                     </form>
 
-                    <p class="text-center text-xs text-hapag-gray mt-4">
+                    <p class="text-center text-xs text-gray-500 mt-4">
                         Don't have an account?
                         <button onclick="closeLoginModal(); openAuthModal();"
-                                class="font-semibold text-hapag-ink hover:underline">
+                                class="font-semibold text-gray-800 hover:underline">
                             Sign Up
                         </button>
                     </p>

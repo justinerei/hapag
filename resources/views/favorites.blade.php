@@ -10,25 +10,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased text-hapag-ink min-h-screen flex flex-col bg-white">
+<body class="font-sans antialiased text-gray-800 min-h-screen flex flex-col bg-white">
 
 {{-- Navbar --}}
-<nav class="sticky top-0 z-50 bg-white border-b border-hapag-cream2 shadow-sm h-14 flex items-center">
+<nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm h-14 flex items-center">
     <div class="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
-        <a href="{{ route('home') }}" class="shrink-0 text-xl font-extrabold tracking-tight text-hapag-red mr-1">Hapag</a>
+        <a href="{{ route('home') }}" class="shrink-0 text-xl font-extrabold tracking-tight text-green-600 mr-1">Hapag</a>
         <div class="flex-1"></div>
         <div class="flex items-center gap-0.5 shrink-0">
-            <a href="{{ route('favorites') }}" class="p-2 rounded-full bg-hapag-cream text-hapag-red" title="Favourites">
+            <a href="{{ route('favorites') }}" class="p-2 rounded-full bg-gray-50 text-red-500" title="Favourites">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
             </a>
-            <a href="{{ route('cart.index') }}" class="relative p-2 rounded-full hover:bg-hapag-cream text-hapag-gray hover:text-hapag-ink transition-colors" title="Cart">
+            <a href="{{ route('cart.index') }}" class="relative p-2 rounded-full hover:bg-gray-50 text-gray-500 hover:text-gray-800 transition-colors" title="Cart">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 5H19m-9 0a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2z"/></svg>
-                <span id="cart-badge" class="{{ $cartCount > 0 ? '' : 'hidden' }} absolute -top-0.5 -right-0.5 bg-hapag-red text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">{{ $cartCount }}</span>
+                <span id="cart-badge" class="{{ $cartCount > 0 ? '' : 'hidden' }} absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">{{ $cartCount }}</span>
             </a>
             <div class="relative">
-                <a href="{{ route('profile.edit') }}" class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full hover:bg-hapag-cream transition-colors">
-                    <div class="w-8 h-8 rounded-full bg-hapag-red text-white flex items-center justify-center text-sm font-bold shrink-0">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
-                    <span class="hidden sm:block text-sm font-semibold text-hapag-ink max-w-[80px] truncate">{{ explode(' ', auth()->user()->name)[0] }}</span>
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full hover:bg-gray-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shrink-0">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
+                    <span class="hidden sm:block text-sm font-semibold text-gray-800 max-w-[80px] truncate">{{ explode(' ', auth()->user()->name)[0] }}</span>
                 </a>
             </div>
         </div>
@@ -40,13 +40,13 @@
     <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <div class="flex items-center gap-3 mb-6">
-            <a href="{{ route('home') }}" class="p-2 rounded-full hover:bg-hapag-cream text-hapag-gray hover:text-hapag-ink transition-colors">
+            <a href="{{ route('home') }}" class="p-2 rounded-full hover:bg-gray-50 text-gray-500 hover:text-gray-800 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </a>
-            <h1 class="text-2xl font-extrabold text-hapag-ink">
+            <h1 class="text-2xl font-extrabold text-gray-800">
                 Your Favorites
                 @if($restaurants->isNotEmpty())
-                <span class="text-hapag-gray font-semibold text-base ml-1">({{ $restaurants->count() }})</span>
+                <span class="text-gray-500 font-semibold text-base ml-1">({{ $restaurants->count() }})</span>
                 @endif
             </h1>
         </div>
@@ -54,19 +54,19 @@
         @if($restaurants->isEmpty())
         <div class="text-center py-20">
             <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-red-50 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-hapag-red" fill="none"
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                 </svg>
             </div>
-            <h2 class="text-xl font-extrabold text-hapag-ink mb-2">No favorites yet</h2>
-            <p class="text-hapag-gray text-sm leading-relaxed mb-6 max-w-sm mx-auto">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-2">No favorites yet</h2>
+            <p class="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm mx-auto">
                 Tap the heart icon on any restaurant to save it here for quick access.
             </p>
             <a href="{{ route('home') }}"
-               class="inline-block px-6 py-3 rounded-full bg-hapag-red text-white text-sm font-bold
-                      hover:bg-red-700 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+               class="inline-block px-6 py-3 rounded-full bg-green-500 text-white text-sm font-bold
+                      hover:bg-green-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
                 Browse Restaurants
             </a>
         </div>
@@ -89,7 +89,7 @@
 </div>
 
 {{-- Footer --}}
-<footer class="bg-hapag-ink text-white relative overflow-hidden mt-auto">
+<footer class="bg-gray-800 text-white relative overflow-hidden mt-auto">
     <div class="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32">
         <span class="text-[10rem] font-extrabold tracking-tighter text-white/[0.04] leading-none -mb-6">hapag</span>
     </div>
@@ -111,7 +111,7 @@
         var toast = document.createElement('div');
         toast.id = 'hapag-toast';
         toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white transition-all duration-300 opacity-0 -translate-y-4';
-        toast.style.background = isError ? '#E63946' : '#2A9D8F';
+        toast.style.background = isError ? '#EF4444' : '#22C55E';
         toast.innerHTML = '<div class="flex items-center gap-2">' +
             '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' +
             '<span>' + message + '</span></div>';
@@ -157,8 +157,8 @@
                     btn.dataset.favorited = 'true';
                     var svg = btn.querySelector('svg');
                     svg.setAttribute('fill', 'currentColor');
-                    btn.classList.add('text-hapag-red');
-                    btn.classList.remove('text-hapag-gray');
+                    btn.classList.add('text-red-500');
+                    btn.classList.remove('text-gray-400');
                     showToast('Added to favorites!');
                 }
             }

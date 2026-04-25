@@ -8,21 +8,21 @@
           hover:shadow-md transition-all duration-200">
 
     {{-- Image --}}
-    <div class="relative aspect-[4/3] bg-hapag-cream2 overflow-hidden rounded-2xl">
+    <div class="relative aspect-[4/3] bg-gray-100 overflow-hidden rounded-2xl">
         @if($restaurant->image_url)
             <img src="{{ $restaurant->image_url }}" alt="{{ $restaurant->name }}"
                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                  loading="lazy">
         @else
             <div class="w-full h-full flex items-center justify-center
-                        bg-gradient-to-br from-hapag-cream to-hapag-cream2">
+                        bg-gradient-to-br from-gray-50 to-gray-100">
                 <span class="text-5xl">{{ $restaurant->category?->icon ?? '🍽️' }}</span>
             </div>
         @endif
 
         {{-- PROMO badge --}}
         @if($hasPromo)
-        <span class="absolute top-2.5 left-2.5 bg-hapag-red text-white text-[10px] font-bold
+        <span class="absolute top-2.5 left-2.5 bg-orange-500 text-white text-[10px] font-bold
                      px-2 py-0.5 rounded-full uppercase tracking-wide">
             PROMO
         </span>
@@ -33,8 +33,8 @@
         <button class="heart-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-full
                        bg-white/90 backdrop-blur-sm shadow-sm
                        flex items-center justify-center transition-colors
-                       {{ $isFavorited ? 'text-hapag-red' : 'text-hapag-gray' }}
-                       hover:text-hapag-red"
+                       {{ $isFavorited ? 'text-red-500' : 'text-gray-400' }}
+                       hover:text-red-500"
                 data-restaurant-id="{{ $restaurant->id }}"
                 data-favorited="{{ $isFavorited ? 'true' : 'false' }}"
                 onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite(this);">
@@ -49,10 +49,10 @@
 
     {{-- Info --}}
     <div class="pt-2.5 pb-1">
-        <h3 class="font-bold text-hapag-ink text-sm leading-tight truncate
-                   group-hover:text-hapag-red transition-colors">
+        <h3 class="font-bold text-gray-800 text-sm leading-tight truncate
+                   group-hover:text-green-600 transition-colors">
             {{ $restaurant->name }} – {{ $restaurant->municipality }}
         </h3>
-        <p class="text-hapag-gray text-xs mt-0.5">5–15 min.</p>
+        <p class="text-gray-500 text-xs mt-0.5">5–15 min.</p>
     </div>
 </a>
