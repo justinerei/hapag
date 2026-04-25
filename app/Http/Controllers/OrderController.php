@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
@@ -14,7 +16,9 @@ class OrderController extends Controller
             ->latest()
             ->get();
 
-        return view('orders.index', compact('orders'));
+        $cartCount = CartItem::where('user_id', auth()->id())->sum('quantity');
+
+        return Inertia::render('Orders/Index', compact('orders', 'cartCount'));
     }
 
     public function updateStatus(Request $request, Order $order)
