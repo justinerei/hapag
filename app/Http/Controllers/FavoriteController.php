@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Favorite;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class FavoriteController extends Controller
 {
@@ -15,12 +16,13 @@ class FavoriteController extends Controller
         $restaurants = Restaurant::whereIn('id', $favoriteIds)
             ->where('status', 'active')
             ->with('category')
+            ->withCount('menuItems')
             ->orderBy('name')
             ->get();
 
         $cartCount = auth()->user()->cartItems()->sum('quantity');
 
-        return view('favorites', compact('restaurants', 'cartCount', 'favoriteIds'));
+        return Inertia::render('Favorites/Index', compact('restaurants', 'cartCount', 'favoriteIds'));
     }
 
     public function toggle(Request $request)
