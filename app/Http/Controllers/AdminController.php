@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
+use App\Models\Category;
 use App\Models\Restaurant;
 use App\Models\SystemSetting;
-use App\Models\User;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Inertia\Inertia;
 
 class AdminController extends Controller
 {
@@ -18,26 +19,19 @@ class AdminController extends Controller
             ->latest()
             ->get();
 
-        $allRestaurants = Restaurant::with('category', 'owner')
-            ->whereIn('status', ['active', 'rejected'])
-            ->latest()
+        $categories = Category::orderBy('name')->get();
+
+        $vouchers = Voucher::whereNull('restaurant_id')
+            ->orderByDesc('created_at')
             ->get();
 
-        $users = User::orderBy('role')->orderBy('name')->get();
-
-        $recentOrders = Order::with('user', 'restaurant')
-            ->latest()
-            ->limit(20)
-            ->get();
-
-        $lastBackup = SystemSetting::where('key', 'last_backup_at')->value('value');
+        $lastBackup     = SystemSetting::where('key', 'last_backup_at')->value('value');
         $lastBackupFile = SystemSetting::where('key', 'last_backup_file')->value('value');
 
-        return view('admin.dashboard', compact(
+        return Inertia::render('Admin/Dashboard', compact(
             'pendingRestaurants',
-            'allRestaurants',
-            'users',
-            'recentOrders',
+            'categories',
+            'vouchers',
             'lastBackup',
             'lastBackupFile',
         ));
