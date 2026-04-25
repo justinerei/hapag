@@ -66,27 +66,24 @@ class RestaurantController extends Controller
             })
             ->get();
 
-        // Cart data for logged-in users
-        $cartItems = [];
-        $cartCount = 0;
+        $cartCount   = 0;
         $favoriteIds = [];
         if (auth()->check()) {
-            $cartItems = \App\Models\CartItem::where('user_id', auth()->id())
-                ->with('menuItem.restaurant')
-                ->get();
-            $cartCount = $cartItems->sum('quantity');
-            $favoriteIds = \App\Models\Favorite::where('user_id', auth()->id())
+            $cartCount   = CartItem::where('user_id', auth()->id())->sum('quantity');
+            $favoriteIds = Favorite::where('user_id', auth()->id())
                 ->pluck('restaurant_id')->toArray();
         }
 
-        // All active restaurants for footer
-        $allRestaurants = Restaurant::where('status', 'active')->orderBy('name')->limit(5)->get();
-
-        return view('restaurants.show', compact(
-            'restaurant', 'menuItems', 'featuredItems',
-            'restaurantVouchers', 'allVouchers', 'cartItems', 'cartCount',
-            'allRestaurants', 'favoriteIds'
-        ));
+        return Inertia::render('Restaurants/Show', [
+            'restaurant'         => $restaurant,
+            'menuItems'          => $menuItems,
+            'featuredItems'      => $featuredItems,
+            'restaurantVouchers' => $restaurantVouchers,
+            'allVouchers'        => $allVouchers,
+            'cartCount'          => $cartCount,
+            'favoriteIds'        => $favoriteIds,
+            'isAuth'             => auth()->check(),
+        ]);
     }
 
     public function mapData()
