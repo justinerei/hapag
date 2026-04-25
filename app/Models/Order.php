@@ -14,18 +14,22 @@ class Order extends Model
         'restaurant_id',
         'total_amount',
         'discount_amount',
+        'delivery_fee',
         'final_amount',
         'voucher_id',
         'status',
+        'order_type',
+        'delivery_address',
         'pickup_note',
     ];
 
     protected function casts(): array
     {
         return [
-            'total_amount' => 'decimal:2',
+            'total_amount'    => 'decimal:2',
             'discount_amount' => 'decimal:2',
-            'final_amount' => 'decimal:2',
+            'delivery_fee'    => 'decimal:2',
+            'final_amount'    => 'decimal:2',
         ];
     }
 

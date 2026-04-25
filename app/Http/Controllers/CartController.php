@@ -10,6 +10,7 @@ use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class CartController extends Controller
 {
@@ -20,8 +21,9 @@ class CartController extends Controller
             ->get();
 
         $restaurant = $cartItems->first()?->menuItem->restaurant;
+        $cartCount  = $cartItems->sum('quantity');
 
-        return view('cart.index', compact('cartItems', 'restaurant'));
+        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount'));
     }
 
     public function json()
@@ -122,8 +124,10 @@ class CartController extends Controller
     public function checkout(Request $request)
     {
         $request->validate([
-            'voucher_code' => 'nullable|string|max:50',
-            'pickup_note'  => 'nullable|string|max:500',
+            'voucher_code'     => 'nullable|string|max:50',
+            'order_type'       => 'required|in:pickup,delivery',
+            'delivery_address' => 'required_if:order_type,delivery|nullable|string|max:500',
+            'pickup_note'      => 'nullable|string|max:500',
         ]);
 
         $user      = auth()->user();
@@ -136,10 +140,11 @@ class CartController extends Controller
         }
 
         $restaurantId = $cartItems->first()->menuItem->restaurant_id;
-        $totalAmount  = $cartItems->sum(fn ($i) => $i->menuItem->price * $i->quantity);
+        $subtotal     = $cartItems->sum(fn ($i) => $i->menuItem->price * $i->quantity);
+        $deliveryFee  = $request->order_type === 'delivery' ? 49.00 : 0.00;
 
         try {
-            DB::transaction(function () use ($request, $user, $cartItems, $restaurantId, $totalAmount) {
+            DB::transaction(function () use ($request, $user, $cartItems, $restaurantId, $subtotal, $deliveryFee) {
                 $voucher        = null;
                 $discountAmount = 0;
 
@@ -159,7 +164,7 @@ class CartController extends Controller
                     if (VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $user->id)->exists()) {
                         throw new \RuntimeException('You have already used this voucher.');
                     }
-                    if ($voucher->min_order_amount !== null && $totalAmount < $voucher->min_order_amount) {
+                    if ($voucher->min_order_amount !== null && $subtotal < $voucher->min_order_amount) {
                         throw new \RuntimeException(
                             'Minimum order of ₱' . number_format($voucher->min_order_amount, 2) . ' required for this voucher.'
                         );
@@ -169,23 +174,26 @@ class CartController extends Controller
                     }
 
                     $discountAmount = $voucher->type === 'percentage'
-                        ? $totalAmount * ($voucher->value / 100)
+                        ? $subtotal * ($voucher->value / 100)
                         : (float) $voucher->value;
 
-                    $discountAmount = min($discountAmount, $totalAmount);
+                    $discountAmount = min($discountAmount, $subtotal);
                 }
 
-                $finalAmount = max(0, $totalAmount - $discountAmount);
+                $finalAmount = max(0, $subtotal - $discountAmount) + $deliveryFee;
 
                 $order = Order::create([
-                    'user_id'         => $user->id,
-                    'restaurant_id'   => $restaurantId,
-                    'total_amount'    => $totalAmount,
-                    'discount_amount' => $discountAmount,
-                    'final_amount'    => $finalAmount,
-                    'voucher_id'      => $voucher?->id,
-                    'status'          => 'pending',
-                    'pickup_note'     => $request->pickup_note,
+                    'user_id'          => $user->id,
+                    'restaurant_id'    => $restaurantId,
+                    'total_amount'     => $subtotal,
+                    'discount_amount'  => $discountAmount,
+                    'delivery_fee'     => $deliveryFee,
+                    'final_amount'     => $finalAmount,
+                    'voucher_id'       => $voucher?->id,
+                    'status'           => 'pending',
+                    'order_type'       => $request->order_type,
+                    'delivery_address' => $request->order_type === 'delivery' ? $request->delivery_address : null,
+                    'pickup_note'      => $request->order_type === 'pickup' ? $request->pickup_note : null,
                 ]);
 
                 foreach ($cartItems as $item) {
@@ -214,6 +222,10 @@ class CartController extends Controller
             return back()->withErrors(['voucher' => $e->getMessage()]);
         }
 
-        return redirect()->route('orders.index')->with('success', 'Order placed! Pay on pickup.');
+        $successMsg = $request->order_type === 'delivery'
+            ? 'Order placed! Pay cash on delivery.'
+            : 'Order placed! Pay on pickup.';
+
+        return redirect()->route('orders.index')->with('success', $successMsg);
     }
 }
