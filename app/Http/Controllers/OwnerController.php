@@ -7,6 +7,7 @@ use App\Models\MenuItem;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class OwnerController extends Controller
 {
@@ -18,7 +19,7 @@ class OwnerController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
-        return view('owner.setup', compact('categories'));
+        return Inertia::render('Owner/Setup', compact('categories'));
     }
 
     public function storeSetup(Request $request)
