@@ -3,12 +3,82 @@
 namespace App\Http\Controllers;
 
 use App\Models\CartItem;
+use App\Models\Restaurant;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class VoucherController extends Controller
 {
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+
+        $data = $request->validate([
+            'code'             => ['required', 'string', 'max:50', 'unique:vouchers,code'],
+            'type'             => ['required', Rule::in(['percentage', 'fixed'])],
+            'value'            => ['required', 'numeric', 'min:0'],
+            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
+            'max_uses'         => ['nullable', 'integer', 'min:1'],
+            'is_active'        => ['boolean'],
+            'expires_at'       => ['nullable', 'date', 'after:today'],
+            'restaurant_id'    => ['nullable', 'exists:restaurants,id'],
+        ]);
+
+        if ($user->role === 'owner') {
+            abort_if(empty($data['restaurant_id']), 403);
+            $restaurant = Restaurant::findOrFail($data['restaurant_id']);
+            abort_if($restaurant->owner_id !== $user->id, 403);
+        }
+
+        $data['code']       = strtoupper($data['code']);
+        $data['created_by'] = $user->id;
+
+        $voucher = Voucher::create($data);
+
+        return response()->json(['created' => true, 'voucher' => $voucher]);
+    }
+
+    public function update(Request $request, Voucher $voucher)
+    {
+        $user = auth()->user();
+
+        if ($user->role === 'owner') {
+            abort_if($voucher->restaurant_id === null || $voucher->restaurant->owner_id !== $user->id, 403);
+        }
+
+        $data = $request->validate([
+            'code'             => ['required', 'string', 'max:50', Rule::unique('vouchers', 'code')->ignore($voucher->id)],
+            'type'             => ['required', Rule::in(['percentage', 'fixed'])],
+            'value'            => ['required', 'numeric', 'min:0'],
+            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
+            'max_uses'         => ['nullable', 'integer', 'min:1'],
+            'is_active'        => ['boolean'],
+            'expires_at'       => ['nullable', 'date'],
+            'restaurant_id'    => ['nullable', 'exists:restaurants,id'],
+        ]);
+
+        $data['code'] = strtoupper($data['code']);
+
+        $voucher->update($data);
+
+        return response()->json(['updated' => true, 'voucher' => $voucher->fresh()]);
+    }
+
+    public function destroy(Voucher $voucher)
+    {
+        $user = auth()->user();
+
+        if ($user->role === 'owner') {
+            abort_if($voucher->restaurant_id === null || $voucher->restaurant->owner_id !== $user->id, 403);
+        }
+
+        $voucher->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
     /**
      * AJAX voucher validation from the cart page.
      * Checks all 6 conditions. Does NOT create a VoucherUsage record.

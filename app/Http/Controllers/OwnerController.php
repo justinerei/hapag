@@ -69,14 +69,12 @@ class OwnerController extends Controller
             ->restaurants()
             ->with([
                 'menuItems' => fn ($q) => $q->orderBy('category')->orderBy('name'),
-                'orders'    => fn ($q) => $q->whereIn('status', ['pending', 'preparing'])
-                                            ->with('items.menuItem')
-                                            ->latest(),
+                'orders'    => fn ($q) => $q->with('user', 'items.menuItem')->latest(),
+                'vouchers'  => fn ($q) => $q->orderByDesc('created_at'),
             ])
-            ->withCount('menuItems')
             ->get();
 
-        return view('owner.dashboard', compact('restaurants'));
+        return Inertia::render('Owner/Dashboard', compact('restaurants'));
     }
 
     public function storeItem(Request $request)
