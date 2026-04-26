@@ -74,8 +74,13 @@ class OwnerController extends Controller
             ])
             ->get();
 
+        // If owner has no restaurants at all, send them to setup
+        if ($restaurants->isEmpty()) {
+            return redirect()->route('owner.setup');
+        }
+
         // If the owner has restaurants but ALL are pending, show the waiting page
-        if ($restaurants->isNotEmpty() && $restaurants->every(fn ($r) => $r->status === 'pending')) {
+        if ($restaurants->every(fn ($r) => $r->status === 'pending')) {
             return Inertia::render('Owner/PendingApproval', [
                 'restaurant' => $restaurants->first(),
             ]);
@@ -135,7 +140,6 @@ class OwnerController extends Controller
         try {
             $menuItem->delete();
         } catch (\Illuminate\Database\QueryException $e) {
-            // menu_items.id has restrictOnDelete on order_items — deletion blocked if used in orders
             return response()->json(
                 ['error' => 'This item cannot be deleted because it appears in existing orders. Deactivate it instead.'],
                 409

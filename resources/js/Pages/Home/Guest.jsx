@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import SignUpModal from '@/Components/SignUpModal';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ export default function GuestHome() {
     const [announcementVisible, setAnnouncementVisible] = useState(true);
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [signUpOpen, setSignUpOpen] = useState(false);
 
     useEffect(() => {
         function onScroll() { setScrolled(window.scrollY > 80); }
@@ -133,7 +135,7 @@ export default function GuestHome() {
                         </div>
                         <div className="flex items-center gap-2">
                             <Link href={route('login')} className="hidden sm:block px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">Sign In</Link>
-                            <Link href={route('register')} className="px-5 py-2.5 rounded-full text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">Sign Up</Link>
+                            <button onClick={() => setSignUpOpen(true)} className="px-5 py-2.5 rounded-full text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">Sign Up</button>
                             <button onClick={() => setMobileOpen((v) => !v)} className="md:hidden ml-1 p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -147,7 +149,7 @@ export default function GuestHome() {
                             <Link href={route('restaurants.index')} className="block px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors" onClick={() => setMobileOpen(false)}>Restaurants</Link>
                             <div className="border-t border-gray-200 pt-2 mt-2 flex gap-2">
                                 <Link href={route('login')} className="flex-1 text-center px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors" onClick={() => setMobileOpen(false)}>Sign In</Link>
-                                <Link href={route('register')} className="flex-1 text-center px-4 py-2 rounded-xl text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-colors" onClick={() => setMobileOpen(false)}>Sign Up</Link>
+                                <button onClick={() => { setMobileOpen(false); setSignUpOpen(true); }} className="flex-1 text-center px-4 py-2 rounded-xl text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-colors">Sign Up</button>
                             </div>
                         </div>
                     )}
@@ -365,7 +367,7 @@ export default function GuestHome() {
                                 <div className="relative max-w-lg">
                                     <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4">Get exclusive deals<br />by signing up!</h2>
                                     <p className="text-white/70 text-base leading-relaxed mb-8">Create your free account to unlock voucher codes, order from local Laguna restaurants, and pick up your food hassle-free.</p>
-                                    <Link href={route('register')} className="inline-block px-8 py-3.5 bg-green-500 text-white text-sm font-bold rounded-full hover:bg-green-600 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">Get Started</Link>
+                                    <button onClick={() => setSignUpOpen(true)} className="inline-block px-8 py-3.5 bg-green-500 text-white text-sm font-bold rounded-full hover:bg-green-600 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">Get Started</button>
                                 </div>
                             </div>
                         </div>
@@ -390,7 +392,7 @@ export default function GuestHome() {
                                     <li><Link href={route('home')} className="text-gray-400 hover:text-white transition-colors">Home</Link></li>
                                     <li><Link href={route('restaurants.index')} className="text-gray-400 hover:text-white transition-colors">Browse Restaurants</Link></li>
                                     <li><Link href={route('login')} className="text-gray-400 hover:text-white transition-colors">Sign In</Link></li>
-                                    <li><Link href={route('register')} className="text-gray-400 hover:text-white transition-colors">Create Account</Link></li>
+                                    <li><button onClick={() => setSignUpOpen(true)} className="text-gray-400 hover:text-white transition-colors">Create Account</button></li>
                                 </ul>
                             </div>
                             <div>
@@ -411,6 +413,8 @@ export default function GuestHome() {
                     </div>
                 </footer>
             </div>
+
+            <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} />
         </>
     );
 }

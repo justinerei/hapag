@@ -137,8 +137,8 @@ export default function Customer({
     const [toast, setToast] = useState(null);
     const [conflict, setConflict] = useState(null);
 
-    const { flash } = usePage().props;
-    const [showWelcome, setShowWelcome] = useState(() => !!flash?.registered);
+    const pageProps = usePage().props;
+    const [showWelcome, setShowWelcome] = useState(() => !!pageProps?.flash?.registered);
 
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
