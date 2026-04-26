@@ -116,7 +116,7 @@ function RoleSelection({ onSelect, onClose }) {
 
 // ── Registration Form Step (split-screen) ────────────────────────────────────
 
-function RegistrationForm({ role, onClose }) {
+function RegistrationForm({ role, onClose, onSwitchToSignIn }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         first_name: '',
         last_name: '',
@@ -235,7 +235,7 @@ function RegistrationForm({ role, onClose }) {
 
                         <p className="text-center text-xs text-gray-500">
                             Already have an account?{' '}
-                            <Link href={route('login')} className="font-semibold text-gray-800 hover:text-green-600 transition-colors underline">Login</Link>
+                            <button type="button" onClick={onSwitchToSignIn} className="font-semibold text-gray-800 hover:text-green-600 transition-colors underline">Login</button>
                         </p>
                     </form>
                 </div>
@@ -246,7 +246,7 @@ function RegistrationForm({ role, onClose }) {
 
 // ── Main Exported Modal ──────────────────────────────────────────────────────
 
-export default function SignUpModal({ show, onClose }) {
+export default function SignUpModal({ show, onClose, onSwitchToSignIn }) {
     const [step, setStep] = useState('role');    // 'role' | 'form'
     const [selectedRole, setSelectedRole] = useState(null);
 
@@ -263,13 +263,18 @@ export default function SignUpModal({ show, onClose }) {
         setStep('form');
     }
 
+    function handleSwitchToSignIn() {
+        handleClose();
+        if (onSwitchToSignIn) onSwitchToSignIn();
+    }
+
     return (
         <Backdrop onClick={handleClose}>
             {step === 'role' && (
                 <RoleSelection onSelect={handleRoleSelect} onClose={handleClose} />
             )}
             {step === 'form' && selectedRole && (
-                <RegistrationForm role={selectedRole} onClose={handleClose} />
+                <RegistrationForm role={selectedRole} onClose={handleClose} onSwitchToSignIn={handleSwitchToSignIn} />
             )}
         </Backdrop>
     );
