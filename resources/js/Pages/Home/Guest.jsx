@@ -93,7 +93,12 @@ export default function GuestHome() {
                 }
             `}</style>
 
-            <div className="min-h-screen flex flex-col bg-gray-50 font-sans antialiased text-gray-800">
+            <div className="min-h-screen flex flex-col font-sans antialiased text-gray-800 relative"
+                style={{
+                    backgroundImage: "url('/images/texturev2.png')",
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '1400px',
+                }}>
 
                 {/* ── Announcement Bar ─────────────────────────────────────── */}
                 {announcementVisible && (
@@ -149,14 +154,7 @@ export default function GuestHome() {
                 </div>
 
                 {/* ── Hero — texture fills the ENTIRE hero area edge-to-edge ── */}
-                <section
-                    className="relative"
-                    style={{
-                        backgroundImage: "url('/images/texturev2.png')",
-                        backgroundRepeat: 'repeat',
-                        backgroundSize: '1400px',
-                    }}
-                >
+                <section className="relative">
                     {/* Opacity layer — controls texture visibility at 60% */}
                     <div className="absolute inset-0 bg-gray-50/40 pointer-events-none" />
 
