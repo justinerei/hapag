@@ -74,6 +74,13 @@ class OwnerController extends Controller
             ])
             ->get();
 
+        // If the owner has restaurants but ALL are pending, show the waiting page
+        if ($restaurants->isNotEmpty() && $restaurants->every(fn ($r) => $r->status === 'pending')) {
+            return Inertia::render('Owner/PendingApproval', [
+                'restaurant' => $restaurants->first(),
+            ]);
+        }
+
         return Inertia::render('Owner/Dashboard', compact('restaurants'));
     }
 

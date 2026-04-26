@@ -18,7 +18,9 @@ class RegisteredUserController extends Controller
 {
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', [
+            'categories' => \App\Models\Category::orderBy('name')->get(),
+        ]);
     }
 
     /**
@@ -49,7 +51,7 @@ class RegisteredUserController extends Controller
 
         return match ($user->role) {
             'owner'  => redirect()->route('owner.setup'),
-            default  => redirect()->route('home'),
+            default  => redirect()->route('home')->with('registered', true),
         };
     }
 }

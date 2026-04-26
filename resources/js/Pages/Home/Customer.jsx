@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -137,6 +137,9 @@ export default function Customer({
     const [toast, setToast] = useState(null);
     const [conflict, setConflict] = useState(null);
 
+    const { flash } = usePage().props;
+    const [showWelcome, setShowWelcome] = useState(() => !!flash?.registered);
+
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
 
@@ -238,6 +241,32 @@ export default function Customer({
     return (
         <CustomerLayout cartCount={localCartCount}>
             <Head title="Home — Hapag" />
+
+            {/* ── Welcome Modal (new registration) ─────────────────────── */}
+            {showWelcome && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-6">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowWelcome(false)} />
+                    <div className="relative z-10 max-w-sm w-full bg-white rounded-2xl shadow-2xl text-center p-10" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-center mb-5">
+                            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-extrabold text-gray-800 mb-2">You're all set!</h2>
+                        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                            Your account has been created successfully. Start exploring restaurants and ordering your favorite dishes!
+                        </p>
+                        <button
+                            onClick={() => setShowWelcome(false)}
+                            className="w-full py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
+                        >
+                            Start Exploring
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ── Toast ─────────────────────────────────────────────────────── */}
             {toast && (
