@@ -68,12 +68,22 @@ class HomeController extends Controller
         $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
         $suggested  = Category::where('weather_tag', $weatherTag)->get();
 
+        // Weather-recommended menu items: dishes from restaurants whose cuisine matches the weather
+        $suggestedCategoryIds = $suggested->pluck('id');
+        $weatherItems = MenuItem::where('is_available', true)
+            ->whereHas('restaurant', fn ($q) => $q->where('status', 'active')->whereIn('category_id', $suggestedCategoryIds))
+            ->with('restaurant:id,name,municipality,image_url')
+            ->inRandomOrder()
+            ->limit(8)
+            ->get(['id', 'restaurant_id', 'name', 'description', 'price', 'category', 'image_url']);
+
         return Inertia::render('Home/Customer', [
             'restaurants'       => $restaurants,
             'categories'        => $categories,
             'weather'           => $weather,
             'weatherTag'        => $weatherTag,
             'suggested'         => $suggested,
+            'weatherItems'      => $weatherItems,
             'deals'             => $deals,
             'cartCount'         => $cartCount,
             'promoRestaurantIds'=> $promoRestaurantIds,
