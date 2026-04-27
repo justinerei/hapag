@@ -68,10 +68,16 @@ class RestaurantController extends Controller
 
         $cartCount   = 0;
         $favoriteIds = [];
+        $claimedCodes = [];
         if (auth()->check()) {
             $cartCount   = CartItem::where('user_id', auth()->id())->sum('quantity');
             $favoriteIds = Favorite::where('user_id', auth()->id())
                 ->pluck('restaurant_id')->toArray();
+            $claimedCodes = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->whereIn('voucher_id', $restaurantVouchers->pluck('id'))
+                ->join('vouchers', 'claimed_vouchers.voucher_id', '=', 'vouchers.id')
+                ->pluck('vouchers.code')
+                ->toArray();
         }
 
         return Inertia::render('Restaurants/Show', [
@@ -82,6 +88,7 @@ class RestaurantController extends Controller
             'allVouchers'        => $allVouchers,
             'cartCount'          => $cartCount,
             'favoriteIds'        => $favoriteIds,
+            'claimedCodes'       => $claimedCodes,
             'isAuth'             => auth()->check(),
         ]);
     }

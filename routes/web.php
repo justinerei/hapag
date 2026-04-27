@@ -73,6 +73,37 @@ Route::middleware('auth')->group(function () {
     // Voucher AJAX validation (cart page)
     Route::post('/vouchers/validate', [VoucherController::class, 'validate'])->name('vouchers.validate');
 
+    // Voucher claiming (menu page promos)
+    Route::post('/api/vouchers/claim', function (\Illuminate\Http\Request $request) {
+        $request->validate(['voucher_id' => 'required|exists:vouchers,id']);
+
+        $user    = auth()->user();
+        $voucher = \App\Models\Voucher::findOrFail($request->voucher_id);
+
+        if (! $voucher->is_active) {
+            return response()->json(['message' => 'This voucher is no longer active.'], 422);
+        }
+        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
+            return response()->json(['message' => 'This voucher has expired.'], 422);
+        }
+        if ($voucher->max_uses !== null && $voucher->used_count >= $voucher->max_uses) {
+            return response()->json(['message' => 'This voucher has reached its limit.'], 422);
+        }
+        if (\App\Models\VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $user->id)->exists()) {
+            return response()->json(['message' => 'You have already used this voucher.'], 422);
+        }
+        if (\App\Models\ClaimedVoucher::where('user_id', $user->id)->where('voucher_id', $voucher->id)->exists()) {
+            return response()->json(['message' => 'Already claimed.'], 422);
+        }
+
+        \App\Models\ClaimedVoucher::create([
+            'user_id'    => $user->id,
+            'voucher_id' => $voucher->id,
+        ]);
+
+        return response()->json(['claimed' => true, 'code' => $voucher->code]);
+    })->name('vouchers.claim');
+
     // AI food recommender (customer)
     Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend');
 });

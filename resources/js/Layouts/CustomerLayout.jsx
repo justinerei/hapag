@@ -214,7 +214,7 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
 // ── Main Layout ───────────────────────────────────────────────────────────────
 
-export default function CustomerLayout({ children, cartCount = 0, onSearch, onSearchSubmit, initialSearch = '' }) {
+export default function CustomerLayout({ children, cartCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
     const { auth } = usePage().props;
     const user = auth?.user ?? null;
 
@@ -380,29 +380,33 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                     </div>
 
                     {/* Desktop search with live dropdown */}
-                    <div className="flex-1 max-w-lg mx-auto hidden md:block">
-                        <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
-                    </div>
+                    {!hideSearch && (
+                        <div className="flex-1 max-w-lg mx-auto hidden md:block">
+                            <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
+                        </div>
+                    )}
 
                     {/* Right: icon buttons + profile */}
                     <div className="flex items-center gap-0.5 ml-auto">
 
                         {/* Mobile search toggle */}
-                        <button
-                            onClick={() => setMobileSearchOpen(v => !v)}
-                            className="md:hidden p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-                            title="Search"
-                        >
-                            {mobileSearchOpen ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                            )}
-                        </button>
+                        {!hideSearch && (
+                            <button
+                                onClick={() => setMobileSearchOpen(v => !v)}
+                                className="md:hidden p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                                title="Search"
+                            >
+                                {mobileSearchOpen ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                )}
+                            </button>
+                        )}
 
                         {/* Favorites */}
                         <Link
@@ -475,7 +479,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                 </div>
 
                 {/* Mobile search bar — slides down */}
-                {mobileSearchOpen && (
+                {!hideSearch && mobileSearchOpen && (
                     <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2.5">
                         <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
                     </div>
