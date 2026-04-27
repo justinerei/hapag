@@ -134,9 +134,9 @@ function RestaurantCard({ restaurant, hasPromo, isFavorited, onFavoriteToggle })
     return (
         <Link
             href={route('restaurants.show', restaurant.id)}
-            className="group block bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 border border-transparent hover:border-green-100"
+            className="group block"
         >
-            <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden rounded-t-2xl">
+            <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden rounded-xl">
                 {restaurant.image_url ? (
                     <img
                         src={restaurant.image_url}
@@ -150,7 +150,7 @@ function RestaurantCard({ restaurant, hasPromo, isFavorited, onFavoriteToggle })
                     </div>
                 )}
 
-                {/* Hover overlay gradient */}
+                {/* Hover overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 {hasPromo && (
@@ -173,12 +173,9 @@ function RestaurantCard({ restaurant, hasPromo, isFavorited, onFavoriteToggle })
                 </button>
             </div>
 
-            <div className="px-1 pt-2.5 pb-1.5 relative">
-                {/* Green accent line on hover */}
-                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-500 rounded-full transition-all duration-300 group-hover:w-full" />
-
-                <h3 className="font-bold text-gray-800 text-sm leading-tight truncate transition-colors duration-200 group-hover:text-green-600">
-                    {restaurant.name}
+            <div className="mt-2">
+                <h3 className="font-bold text-gray-800 text-sm leading-tight truncate group-hover:text-green-600 transition-colors duration-200">
+                    {restaurant.name}{restaurant.municipality ? ` – ${restaurant.municipality}` : ''}
                 </h3>
                 <p className="text-gray-400 text-xs mt-0.5">5–15 min.</p>
             </div>
@@ -602,7 +599,7 @@ export default function Customer({
     const city = weather?.name ?? 'Laguna';
 
     return (
-        <CustomerLayout cartCount={localCartCount} onSearch={setSearch}>
+        <CustomerLayout cartCount={localCartCount}>
             <Head title="Home — Hapag" />
             <WeatherAnimStyles />
 
@@ -922,22 +919,6 @@ export default function Customer({
 
                     {/* ── Main content ──────────────────────────────────── */}
                     <main className="flex-1 min-w-0 space-y-8">
-
-                        {/* Mobile search */}
-                        <div className="lg:hidden relative">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none"
-                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="Search for restaurants…"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                            />
-                        </div>
 
                         {/* ── Cuisines ─────────────────────────────────── */}
                         <section>

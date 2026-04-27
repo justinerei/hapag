@@ -93,10 +93,13 @@ class HomeController extends Controller
         ]);
     }
 
-    private function fetchWeather(): array
+    private function fetchWeather(?string $city = null): array
     {
+        $city = $city ?: (auth()->check() ? auth()->user()->municipality : null);
+        $city = $city ? "{$city},PH" : config('services.owm.city');
+
         $response = Http::timeout(5)->get(config('services.owm.url'), [
-            'q'     => config('services.owm.city'),
+            'q'     => $city,
             'appid' => config('services.owm.key'),
             'units' => 'metric',
         ]);

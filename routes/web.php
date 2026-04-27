@@ -10,6 +10,7 @@ use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\WeatherController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,10 @@ Route::get('/menu/{restaurant}', [RestaurantController::class, 'show'])->name('r
 
 Route::get('/api/restaurants/map', [RestaurantController::class, 'mapData'])->name('restaurants.map');
 Route::get('/api/weather', [WeatherController::class, 'index'])->name('weather');
+
+// Search
+Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::get('/api/search', [SearchController::class, 'query'])->name('search.query');
 
 // ── Role-based redirect after Breeze login ────────────────────────────────────
 
