@@ -18,7 +18,7 @@ function csrf() {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function CartIndex({ cartItems: initialItems, restaurant, cartCount: initialCount }) {
+export default function CartIndex({ cartItems: initialItems, restaurant, cartCount: initialCount, claimedVouchers = [] }) {
     const [items, setItems]               = useState(initialItems);
     const [orderType, setOrderType]       = useState('pickup');
     const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -376,6 +376,69 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                                 <span>{voucherStatus.message}</span>
                                             </>
                                         )}
+                                    </div>
+                                )}
+
+                                {/* Claimed vouchers */}
+                                {claimedVouchers.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Your claimed vouchers</p>
+                                        <div className="space-y-1.5">
+                                            {claimedVouchers.map(cv => {
+                                                const isSelected = voucherStatus?.valid && voucherStatus.code === cv.code;
+                                                const discLabel = cv.type === 'percentage'
+                                                    ? `${Number(cv.value).toFixed(0)}% off`
+                                                    : `₱${Number(cv.value).toFixed(0)} off`;
+                                                const meetsMin = cv.min_order_amount === null || subtotal >= Number(cv.min_order_amount);
+
+                                                return (
+                                                    <button
+                                                        key={cv.id}
+                                                        type="button"
+                                                        disabled={!meetsMin || isSelected}
+                                                        onClick={() => {
+                                                            setVoucherCode(cv.code);
+                                                            // Auto-apply
+                                                            setChecking(true);
+                                                            setVoucherStatus(null);
+                                                            fetch(route('vouchers.validate'), {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() },
+                                                                body: JSON.stringify({ code: cv.code }),
+                                                            })
+                                                                .then(r => r.json())
+                                                                .then(d => setVoucherStatus(d))
+                                                                .catch(() => setVoucherStatus({ valid: false, message: 'Validation failed.' }))
+                                                                .finally(() => setChecking(false));
+                                                        }}
+                                                        className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${
+                                                            isSelected
+                                                                ? 'border-green-500 bg-green-50'
+                                                                : meetsMin
+                                                                    ? 'border-gray-100 hover:border-green-300 hover:bg-green-50/50'
+                                                                    : 'border-gray-100 opacity-50 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-extrabold ${cv.is_global ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                            %
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-bold text-gray-800 truncate">{cv.code}</p>
+                                                            <p className="text-[10px] text-gray-400">
+                                                                {discLabel}
+                                                                {cv.is_global ? ' · All restaurants' : ` · ${cv.restaurant_name ?? 'This restaurant'}`}
+                                                                {cv.min_order_amount && !meetsMin ? ` · Min. ₱${Number(cv.min_order_amount).toFixed(0)}` : ''}
+                                                            </p>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 )}
                             </div>

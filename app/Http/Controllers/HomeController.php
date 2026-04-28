@@ -77,6 +77,15 @@ class HomeController extends Controller
             ->limit(8)
             ->get(['id', 'restaurant_id', 'name', 'description', 'price', 'category', 'image_url']);
 
+        // Claimed voucher codes for the current user
+        $claimedCodes = [];
+        if (auth()->check()) {
+            $claimedCodes = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->join('vouchers', 'claimed_vouchers.voucher_id', '=', 'vouchers.id')
+                ->pluck('vouchers.code')
+                ->toArray();
+        }
+
         return Inertia::render('Home/Customer', [
             'restaurants'       => $restaurants,
             'categories'        => $categories,
@@ -90,6 +99,7 @@ class HomeController extends Controller
             'popular'           => $popular,
             'featuredItemMap'   => $featuredItemMap,
             'favoriteIds'       => $favoriteIds,
+            'claimedCodes'      => $claimedCodes,
         ]);
     }
 

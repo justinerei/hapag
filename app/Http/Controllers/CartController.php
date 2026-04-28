@@ -23,7 +23,40 @@ class CartController extends Controller
         $restaurant = $cartItems->first()?->menuItem->restaurant;
         $cartCount  = $cartItems->sum('quantity');
 
-        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount'));
+        // Fetch claimed vouchers that are usable for this cart
+        $claimedVouchers = [];
+        if ($restaurant) {
+            $usedVoucherIds = VoucherUsage::where('user_id', auth()->id())
+                ->pluck('voucher_id')->toArray();
+
+            $claimedVouchers = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->with('voucher')
+                ->get()
+                ->filter(function ($cv) use ($restaurant, $usedVoucherIds) {
+                    $v = $cv->voucher;
+                    if (! $v || ! $v->is_active) return false;
+                    if ($v->expires_at && $v->expires_at->isPast()) return false;
+                    if ($v->max_uses !== null && $v->used_count >= $v->max_uses) return false;
+                    if (in_array($v->id, $usedVoucherIds)) return false;
+                    // Must be global OR match this restaurant
+                    if ($v->restaurant_id !== null && $v->restaurant_id !== $restaurant->id) return false;
+                    return true;
+                })
+                ->map(fn ($cv) => [
+                    'id'               => $cv->voucher->id,
+                    'code'             => $cv->voucher->code,
+                    'type'             => $cv->voucher->type,
+                    'value'            => $cv->voucher->value,
+                    'min_order_amount' => $cv->voucher->min_order_amount,
+                    'restaurant_id'    => $cv->voucher->restaurant_id,
+                    'restaurant_name'  => $cv->voucher->restaurant?->name,
+                    'is_global'        => $cv->voucher->restaurant_id === null,
+                ])
+                ->values()
+                ->toArray();
+        }
+
+        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount', 'claimedVouchers'));
     }
 
     public function json()
