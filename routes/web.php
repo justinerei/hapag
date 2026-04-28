@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
 
     // AI food recommender (customer)
     Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend');
+    Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
 });
 
 // ── Owner portal ──────────────────────────────────────────────────────────────

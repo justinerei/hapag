@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import AIChatWidget from '@/Components/AIChatWidget';
 
 const DELIVERY_FEE = 49;
 
@@ -47,6 +48,9 @@ export default function Show({
     const [cartItems, setCartItems] = useState([]);
     const [cartLoading, setCartLoading] = useState(true);
     const [orderType, setOrderType] = useState('pickup');
+    const [cutlery, setCutlery] = useState(false);
+
+    const SERVICE_FEE = 5;
 
     // Promo claiming — seeded from server, extended locally on claim
     const [claimedCodes, setClaimedCodes] = useState(() => [...serverClaimedCodes]);
@@ -92,7 +96,8 @@ export default function Show({
 
     const cartSubtotal = cartItems.reduce((sum, ci) => sum + ci.price * ci.quantity, 0);
     const deliveryFee = orderType === 'delivery' ? DELIVERY_FEE : 0;
-    const cartTotal = cartSubtotal + deliveryFee;
+    const serviceFee = cartItems.length > 0 ? SERVICE_FEE : 0;
+    const cartTotal = cartSubtotal + deliveryFee + serviceFee;
 
     // ── Fetch cart ──────────────────────────────────────────────────────────
     const fetchCart = useCallback(async () => {
@@ -538,24 +543,58 @@ export default function Show({
 
                             {/* Footer totals */}
                             {cartItems.length > 0 && (
-                                <div className="border-t border-gray-100 px-4 py-3 space-y-1">
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-gray-400">Subtotal</span>
-                                        <span className="font-semibold text-gray-800">{fmt(cartSubtotal)}</span>
-                                    </div>
-                                    {orderType === 'delivery' && (
+                                <div className="border-t border-gray-100 px-4 py-3 space-y-2">
+                                    {/* Fee breakdown */}
+                                    <div className="space-y-1.5">
                                         <div className="flex justify-between text-xs">
-                                            <span className="text-gray-400">Delivery fee</span>
-                                            <span className="font-semibold text-gray-800">{fmt(DELIVERY_FEE)}</span>
+                                            <span className="text-gray-400">Subtotal</span>
+                                            <span className="font-semibold text-gray-800">{fmt(cartSubtotal)}</span>
                                         </div>
-                                    )}
-                                    <div className="flex justify-between text-sm font-bold pt-2 border-t border-gray-100">
-                                        <span className="text-gray-800">Total <span className="text-[10px] font-normal text-gray-400">(incl. fees)</span></span>
-                                        <span className="text-gray-800">{fmt(cartTotal)}</span>
+                                        {orderType === 'delivery' && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-400">Standard delivery</span>
+                                                <span className="font-semibold text-gray-800">{fmt(DELIVERY_FEE)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400">Service fee</span>
+                                            <span className="font-semibold text-gray-800">{fmt(serviceFee)}</span>
+                                        </div>
                                     </div>
+
+                                    {/* Cutlery toggle */}
+                                    <div className="border-t border-gray-100 pt-2">
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m-4-8a8 8 0 100 16 8 8 0 000-16z"/>
+                                                    </svg>
+                                                    Cutlery
+                                                </p>
+                                                <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">No cutlery provided. Thanks for reducing waste!</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCutlery(v => !v)}
+                                                className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${cutlery ? 'bg-green-500' : 'bg-gray-200'}`}
+                                            >
+                                                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${cutlery ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Total */}
+                                    <div className="border-t border-gray-100 pt-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-bold text-gray-800">Total <span className="text-[10px] font-normal text-gray-400">(incl. fees and tax)</span></span>
+                                            <span className="text-sm font-extrabold text-green-600">{fmt(cartTotal)}</span>
+                                        </div>
+                                    </div>
+
                                     <Link
                                         href={`${route('cart.index')}?type=${orderType}`}
-                                        className="mt-2 block w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-bold text-center hover:bg-green-600 transition-colors"
+                                        className="block w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-bold text-center hover:bg-green-600 transition-colors"
                                     >
                                         Review payment and address
                                     </Link>
@@ -565,6 +604,9 @@ export default function Show({
                     </aside>
                 </div>
             </div>
+
+            {/* ── AI Chat (scoped to this restaurant) ─────────────── */}
+            {isAuth && <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />}
         </CustomerLayout>
     );
 }
