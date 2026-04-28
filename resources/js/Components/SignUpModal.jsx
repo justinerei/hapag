@@ -133,6 +133,11 @@ function RegistrationForm({ role, onClose, onSwitchToSignIn }) {
         e.preventDefault();
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
+            onSuccess: () => {
+                // Force a full page reload so the CSRF token, auth state,
+                // and all Inertia shared props are refreshed from scratch.
+                window.location.reload();
+            },
         });
     }
 

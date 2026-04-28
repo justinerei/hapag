@@ -43,6 +43,11 @@ export default function SignInModal({ show, onClose, onSwitchToSignUp }) {
         e.preventDefault();
         post(route('login'), {
             onFinish: () => reset('password'),
+            onSuccess: () => {
+                // Force a full page reload so the CSRF token, auth state,
+                // and all Inertia shared props are refreshed from scratch.
+                window.location.reload();
+            },
         });
     }
 
