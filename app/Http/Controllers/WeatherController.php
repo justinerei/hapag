@@ -8,8 +8,15 @@ class WeatherController extends Controller
 {
     public function index()
     {
+        // Use the logged-in user's municipality if available, otherwise fall back to config default
+        $city = null;
+        if (auth()->check() && auth()->user()->municipality) {
+            $city = auth()->user()->municipality . ',PH';
+        }
+        $city = $city ?: config('services.owm.city');
+
         $response = Http::timeout(5)->get(config('services.owm.url'), [
-            'q'     => config('services.owm.city'),
+            'q'     => $city,
             'appid' => config('services.owm.key'),
             'units' => 'metric',
         ]);
