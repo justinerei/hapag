@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 class AIController extends Controller
 {
-    // ── Customer: food recommender (legacy single-turn) ────────────────────────
+    // ── Customer: food recommender ────────────────────────────────────────────
 
     public function recommend(Request $request)
     {
@@ -18,9 +18,8 @@ class AIController extends Controller
             'restaurant_id' => 'nullable|exists:restaurants,id',
         ]);
 
-        // Scope to one restaurant if provided, otherwise sample across all active ones
         $itemQuery = MenuItem::where('is_available', true)
-            ->with('restaurant:id,name,municipality');
+            ->with('restaurant:id,name,municipality,image_url');
 
         if ($request->filled('restaurant_id')) {
             $itemQuery->where('restaurant_id', $request->restaurant_id);
@@ -40,101 +39,66 @@ class AIController extends Controller
         ))->join("\n");
 
         $systemPrompt = <<<PROMPT
-You are Hapag's friendly food recommender for restaurants in Laguna, Philippines.
-Given a customer's craving or preference, suggest 2–3 specific dishes from the menu list provided.
-Keep your reply conversational, warm, and under 120 words. Write in English.
-Always include the dish name, restaurant name, and price. Do not invent dishes not in the list.
-PROMPT;
+            You are Hapag's friendly food recommender for restaurants in Laguna, Philippines.
+            Given a customer's craving or preference, suggest 2–4 specific dishes from the menu list provided.
+
+            IMPORTANT: You MUST respond in valid JSON only. No markdown, no backticks, no extra text.
+            Use this exact format:
+            {
+            "intro": "A short, warm 1-2 sentence intro about why these picks are great. Skip if you have nothing meaningful beyond listing dishes.",
+            "picks": ["Exact Dish Name 1", "Exact Dish Name 2", "Exact Dish Name 3"]
+            }
+
+            Rules:
+            - "picks" must contain EXACT dish names from the menu list (case-sensitive match)
+            - "intro" should be conversational and brief (under 30 words). Set to "" if unnecessary.
+            - Do NOT invent dish names not in the list
+            - 2-4 picks maximum
+            PROMPT;
 
         $userPrompt = "Customer says: \"{$request->prompt}\"\n\nAvailable menu items:\n{$menuList}";
 
-        $reply = $this->callGroq($systemPrompt, $userPrompt);
+        $rawReply = $this->callGroq($systemPrompt, $userPrompt);
 
-        if ($reply === null) {
+        if ($rawReply === null) {
             return response()->json(['error' => 'AI service is unavailable. Please try again later.'], 503);
         }
 
-        return response()->json(['recommendation' => $reply]);
-    }
+        // Parse the AI JSON response
+        $cleaned = trim($rawReply);
+        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
+        $cleaned = preg_replace('/\s*```$/', '', $cleaned);
 
-    // ── Customer: multi-turn chatbot ───────────────────────────────────────────
+        $parsed = json_decode($cleaned, true);
 
-    public function chat(Request $request)
-    {
-        $request->validate([
-            'messages'      => 'required|array|min:1|max:20',
-            'messages.*.role'    => 'required|in:user,assistant',
-            'messages.*.content' => 'required|string|max:2000',
-            'restaurant_id' => 'nullable|exists:restaurants,id',
+        if (! $parsed || ! isset($parsed['picks']) || ! is_array($parsed['picks'])) {
+            // Fallback: return raw text if AI didn't follow format
+            return response()->json([
+                'intro' => $rawReply,
+                'dishes' => [],
+            ]);
+        }
+
+        // Match pick names to actual menu items
+        $pickNames = collect($parsed['picks'])->map(fn ($n) => mb_strtolower(trim($n)));
+        $matchedDishes = $items->filter(function ($item) use ($pickNames) {
+            return $pickNames->contains(mb_strtolower($item->name));
+        })->unique('id')->values()->map(fn ($i) => [
+            'id'              => $i->id,
+            'name'            => $i->name,
+            'price'           => (float) $i->price,
+            'description'     => $i->description,
+            'category'        => $i->category,
+            'image_url'       => $i->image_url,
+            'restaurant_id'   => $i->restaurant->id,
+            'restaurant_name' => $i->restaurant->name,
+            'municipality'    => $i->restaurant->municipality,
         ]);
 
-        $itemQuery = MenuItem::where('is_available', true)
-            ->with('restaurant:id,name,municipality');
-
-        if ($request->filled('restaurant_id')) {
-            $itemQuery->where('restaurant_id', $request->restaurant_id);
-            $restaurant = Restaurant::find($request->restaurant_id);
-            $scopeLabel = $restaurant ? "You are currently helping a customer browsing \"{$restaurant->name}\"." : '';
-        } else {
-            $itemQuery->whereHas('restaurant', fn ($q) => $q->where('status', 'active'));
-            $scopeLabel = 'The customer is browsing all restaurants on Hapag.';
-        }
-
-        $items = $itemQuery->inRandomOrder()->limit(80)->get();
-
-        $menuList = $items->map(fn ($i) => sprintf(
-            '- %s (₱%.0f) at %s, %s [%s]',
-            $i->name, $i->price, $i->restaurant->name ?? 'Unknown', $i->restaurant->municipality ?? '', $i->category
-        ))->join("\n");
-
-        // Build restaurant list for context
-        $restaurantList = Restaurant::where('status', 'active')
-            ->with('category')
-            ->get()
-            ->map(fn ($r) => sprintf('- %s (%s) in %s', $r->name, $r->category->name ?? 'General', $r->municipality))
-            ->join("\n");
-
-        $systemPrompt = <<<PROMPT
-You are **Hapag AI**, a friendly and knowledgeable food assistant for Hapag — a food ordering platform serving Laguna, Philippines.
-
-{$scopeLabel}
-
-Your job:
-• Help customers discover dishes, pick restaurants, and decide what to order.
-• Be conversational, warm, and concise (under 150 words per reply).
-• When recommending, always cite the exact dish name, price, and restaurant from the menu list.
-• Never invent dishes or restaurants not in the provided lists.
-• If the customer asks something unrelated to food or restaurants, politely redirect.
-• You can answer follow-up questions and have a natural back-and-forth conversation.
-• If asked about dietary needs, allergies, or budget, filter recommendations accordingly.
-• Use a friendly, casual Filipino-English tone when it feels natural (e.g. "Solid choice!", "Masarap 'yan!").
-
-Available restaurants:
-{$restaurantList}
-
-Available menu items:
-{$menuList}
-PROMPT;
-
-        // Build messages array for the API
-        $apiMessages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-        ];
-
-        foreach ($request->messages as $msg) {
-            $apiMessages[] = [
-                'role'    => $msg['role'],
-                'content' => $msg['content'],
-            ];
-        }
-
-        $reply = $this->callGroqMultiTurn($apiMessages);
-
-        if ($reply === null) {
-            return response()->json(['error' => 'AI service is unavailable. Please try again later.'], 503);
-        }
-
-        return response()->json(['reply' => $reply]);
+        return response()->json([
+            'intro'  => $parsed['intro'] ?? '',
+            'dishes' => $matchedDishes,
+        ]);
     }
 
     // ── Owner: menu item description generator ───────────────────────────────
@@ -169,7 +133,7 @@ PROMPT;
         return response()->json(['description' => $reply]);
     }
 
-    // ── Shared GROQ helpers ────────────────────────────────────────────────────
+    // ── Shared GROQ helper ────────────────────────────────────────────────────
 
     private function callGroq(string $systemPrompt, string $userPrompt): ?string
     {
@@ -186,50 +150,9 @@ PROMPT;
             ]);
 
         if ($response->failed()) {
-            \Log::error('Groq API failed', [
-                'status' => $response->status(),
-                'body'   => $response->body(),
-            ]);
             return null;
         }
 
         return $response->json('choices.0.message.content');
-    }
-
-    private function callGroqMultiTurn(array $messages): ?string
-    {
-        $maxRetries = 2;
-
-        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
-            $response = Http::timeout(20)
-                ->withToken(config('services.groq.key'))
-                ->post(config('services.groq.url'), [
-                    'model'       => config('services.groq.model'),
-                    'messages'    => $messages,
-                    'max_tokens'  => 300,
-                    'temperature' => 0.7,
-                ]);
-
-            if ($response->successful()) {
-                return $response->json('choices.0.message.content');
-            }
-
-            // If rate-limited (429), wait and retry
-            if ($response->status() === 429 && $attempt < $maxRetries) {
-                $wait = (int) ($response->header('retry-after') ?? ($attempt + 1) * 2);
-                \Log::warning("Groq rate-limited, retrying in {$wait}s (attempt " . ($attempt + 1) . ")");
-                sleep(min($wait, 5));
-                continue;
-            }
-
-            \Log::error('Groq multi-turn API failed', [
-                'status'  => $response->status(),
-                'body'    => $response->body(),
-                'attempt' => $attempt + 1,
-            ]);
-            return null;
-        }
-
-        return null;
     }
 }

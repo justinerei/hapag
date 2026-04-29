@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
-import AIChatWidget from '@/Components/AIChatWidget';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -288,6 +287,262 @@ function VoucherCard({ deal }) {
     );
 }
 
+
+// ── AI Chat Floating Widget ───────────────────────────────────────────────────
+
+function AIChatWidget() {
+    const [open, setOpen] = useState(false);
+    const [prompt, setPrompt] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null); // { intro, dishes }
+    const [error, setError] = useState('');
+    const [addingId, setAddingId] = useState(null);
+    const inputRef = useRef(null);
+    const bodyRef = useRef(null);
+
+    useEffect(() => {
+        if (open && inputRef.current) inputRef.current.focus();
+    }, [open]);
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (!prompt.trim() || loading) return;
+        setLoading(true);
+        setResult(null);
+        setError('');
+        try {
+            const res = await fetch(route('ai.recommend'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                body: JSON.stringify({ prompt: prompt.trim() }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                if (data.dishes && data.dishes.length > 0) {
+                    setResult({ intro: data.intro || '', dishes: data.dishes });
+                } else if (data.intro) {
+                    setResult({ intro: data.intro, dishes: [] });
+                } else if (data.recommendation) {
+                    // Fallback for old format
+                    setResult({ intro: data.recommendation, dishes: [] });
+                } else {
+                    setError('No recommendations found. Try a different craving!');
+                }
+            } else {
+                setError(data.error || 'Something went wrong.');
+            }
+        } catch {
+            setError('Could not connect to AI. Try again.');
+        }
+        setLoading(false);
+        setTimeout(() => bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+    }
+
+    async function quickAdd(dishId) {
+        setAddingId(dishId);
+        try {
+            const res = await fetch(route('cart.add'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                body: JSON.stringify({ menu_item_id: dishId, quantity: 1 }),
+            });
+            if (res.ok) {
+                setAddingId('done-' + dishId);
+                setTimeout(() => setAddingId(null), 1500);
+            } else if (res.status === 409) {
+                setAddingId(null);
+                setError('Your cart has items from another restaurant. Clear it first.');
+                setTimeout(() => setError(''), 3000);
+            }
+        } catch {
+            setAddingId(null);
+        }
+    }
+
+    function reset() {
+        setResult(null);
+        setError('');
+        setPrompt('');
+    }
+
+    const suggestions = ['Masarap na sabaw', 'Something sweet', 'Budget meal under ₱100', 'Best for rainy day'];
+
+    return (
+        <>
+            {/* Floating button */}
+            <button
+                onClick={() => setOpen(v => !v)}
+                className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 flex items-center justify-center ${open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                aria-label="AI Food Recommender"
+            >
+                {open ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+                )}
+            </button>
+
+            {/* Chat panel */}
+            {open && (
+                <div className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col" style={{ maxHeight: '560px' }}>
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 px-5 py-4 shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-bold text-sm">Hapag AI</h3>
+                                    <p className="text-white/60 text-[11px]">Tell me what you're craving</p>
+                                </div>
+                            </div>
+                            {result && (
+                                <button onClick={reset} className="text-white/60 hover:text-white text-[10px] font-semibold px-2 py-1 rounded-full border border-white/20 hover:border-white/40 transition-colors">
+                                    New search
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Body */}
+                    <div ref={bodyRef} className="flex-1 overflow-y-auto p-4 space-y-3" style={{ minHeight: '200px' }}>
+                        {/* Empty state — suggestions */}
+                        {!result && !loading && !error && (
+                            <div>
+                                <p className="text-gray-500 text-xs mb-3">Try asking:</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {suggestions.map(s => (
+                                        <button key={s} onClick={() => setPrompt(s)} className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-50 hover:text-green-600 hover:border-green-100 transition-colors">
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Loading */}
+                        {loading && (
+                            <div className="flex items-center gap-2 text-gray-400 text-sm py-6 justify-center">
+                                <div className="flex gap-1">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                </div>
+                                <span className="text-xs">Finding the best dishes for you…</span>
+                            </div>
+                        )}
+
+                        {/* Error */}
+                        {error && (
+                            <div className="bg-red-50 rounded-xl p-3 border border-red-100">
+                                <p className="text-red-600 text-xs">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Result — intro + dish cards */}
+                        {result && (
+                            <>
+                                {/* Intro text */}
+                                {result.intro && (
+                                    <div className="bg-green-50 rounded-xl px-3.5 py-2.5 border border-green-100">
+                                        <p className="text-gray-700 text-xs leading-relaxed">{result.intro}</p>
+                                    </div>
+                                )}
+
+                                {/* Dish cards */}
+                                {result.dishes.length > 0 && (
+                                    <div className="space-y-2">
+                                        {result.dishes.map(dish => {
+                                            const isAdding = addingId === dish.id;
+                                            const isDone = addingId === 'done-' + dish.id;
+                                            return (
+                                                <div key={dish.id} className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                                                    <Link href={route('restaurants.show', dish.restaurant_id)} className="flex">
+                                                        {/* Image */}
+                                                        <div className="w-20 h-20 shrink-0 bg-gray-100 overflow-hidden">
+                                                            {dish.image_url ? (
+                                                                <img src={dish.image_url} alt={dish.name} className="w-full h-full object-cover" loading="lazy" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
+                                                            )}
+                                                        </div>
+                                                        {/* Info */}
+                                                        <div className="flex-1 p-2.5 min-w-0 flex flex-col justify-between">
+                                                            <div>
+                                                                <h4 className="text-xs font-bold text-gray-800 leading-tight truncate">{dish.name}</h4>
+                                                                <p className="text-[10px] text-gray-400 truncate mt-0.5">{dish.restaurant_name} · {dish.municipality}</p>
+                                                            </div>
+                                                            <div className="flex items-center justify-between mt-1">
+                                                                <span className="text-xs font-extrabold text-green-600">₱{Number(dish.price).toFixed(0)}</span>
+                                                                {dish.category && <span className="text-[9px] text-gray-300 font-medium">{dish.category}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                    {/* Add to cart button */}
+                                                    <div className="border-t border-gray-50 px-2.5 py-1.5">
+                                                        <button
+                                                            type="button"
+                                                            disabled={isAdding || isDone}
+                                                            onClick={(e) => { e.preventDefault(); quickAdd(dish.id); }}
+                                                            className={`w-full py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                                                isDone
+                                                                    ? 'bg-green-50 text-green-600 border border-green-100'
+                                                                    : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-50 hover:text-green-600 hover:border-green-100'
+                                                            } ${isAdding ? 'opacity-60' : ''}`}
+                                                        >
+                                                            {isDone ? (
+                                                                <span className="flex items-center justify-center gap-1">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                                    Added to cart
+                                                                </span>
+                                                            ) : isAdding ? 'Adding…' : (
+                                                                <span className="flex items-center justify-center gap-1">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                                    Add to cart
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Fallback: intro only, no cards */}
+                                {result.dishes.length === 0 && result.intro && (
+                                    <p className="text-gray-400 text-[10px] text-center mt-1">No specific dishes matched. Try rephrasing your craving!</p>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Input */}
+                    <form onSubmit={handleSubmit} className="border-t border-gray-100 p-3 flex gap-2 shrink-0">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={prompt}
+                            onChange={e => setPrompt(e.target.value)}
+                            placeholder="I'm craving…"
+                            className="flex-1 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
+                            maxLength={300}
+                            disabled={loading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading || !prompt.trim()}
+                            className="w-10 h-10 rounded-xl bg-green-500 text-white flex items-center justify-center hover:bg-green-600 disabled:opacity-40 disabled:hover:bg-green-500 transition-all shrink-0"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        </button>
+                    </form>
+                </div>
+            )}
+        </>
+    );
+}
 
 
 // ── CSS Animations ────────────────────────────────────────────────────────────
