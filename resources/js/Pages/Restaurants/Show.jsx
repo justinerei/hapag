@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import AIChatWidget from '@/Components/AIChatWidget';
 
 const DELIVERY_FEE = 49;
 
@@ -603,6 +604,9 @@ export default function Show({
                     </aside>
                 </div>
             </div>
+
+            {/* ── AI Chat (scoped to this restaurant) ─────────────── */}
+            {isAuth && <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />}
         </CustomerLayout>
     );
 }
