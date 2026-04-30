@@ -168,32 +168,41 @@ class CartController extends Controller
         $restaurant = $cartItems->first()->menuItem->restaurant;
         $cartCount  = $cartItems->sum('quantity');
 
-        // Fetch claimed vouchers that are usable for this cart
-        $usedVoucherIds = VoucherUsage::where('user_id', auth()->id())
+        // Fetch user's used and claimed voucher IDs
+        $usedVoucherIds    = VoucherUsage::where('user_id', auth()->id())
+            ->pluck('voucher_id')->toArray();
+        $claimedVoucherIds = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
             ->pluck('voucher_id')->toArray();
 
-        $claimedVouchers = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
-            ->with('voucher')
-            ->get()
-            ->filter(function ($cv) use ($restaurant, $usedVoucherIds) {
-                $v = $cv->voucher;
-                if (! $v || ! $v->is_active) return false;
-                if ($v->expires_at && $v->expires_at->isPast()) return false;
-                if ($v->max_uses !== null && $v->used_count >= $v->max_uses) return false;
-                if (in_array($v->id, $usedVoucherIds)) return false;
-                if ($v->restaurant_id !== null && $v->restaurant_id !== $restaurant->id) return false;
-                return true;
+        // Fetch ALL valid vouchers (global + this restaurant's), marking which are claimed
+        $allVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) use ($restaurant) {
+                $q->whereNull('restaurant_id')
+                  ->orWhere('restaurant_id', $restaurant->id);
             })
-            ->map(fn ($cv) => [
-                'id'               => $cv->voucher->id,
-                'code'             => $cv->voucher->code,
-                'type'             => $cv->voucher->type,
-                'value'            => $cv->voucher->value,
-                'min_order_amount' => $cv->voucher->min_order_amount,
-                'restaurant_id'    => $cv->voucher->restaurant_id,
-                'restaurant_name'  => $cv->voucher->restaurant?->name,
-                'is_global'        => $cv->voucher->restaurant_id === null,
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('max_uses')
+                  ->orWhereColumn('used_count', '<', 'max_uses');
+            })
+            ->whereNotIn('id', $usedVoucherIds)
+            ->with('restaurant:id,name')
+            ->get()
+            ->map(fn ($v) => [
+                'id'               => $v->id,
+                'code'             => $v->code,
+                'type'             => $v->type,
+                'value'            => $v->value,
+                'min_order_amount' => $v->min_order_amount,
+                'restaurant_id'    => $v->restaurant_id,
+                'restaurant_name'  => $v->restaurant?->name,
+                'is_global'        => $v->restaurant_id === null,
+                'is_claimed'       => in_array($v->id, $claimedVoucherIds),
             ])
+            ->sortByDesc('is_claimed') // claimed first
             ->values()
             ->toArray();
 
@@ -201,7 +210,7 @@ class CartController extends Controller
             'cartItems'        => $cartItems,
             'restaurant'       => $restaurant,
             'cartCount'        => $cartCount,
-            'claimedVouchers'  => $claimedVouchers,
+            'allVouchers'      => $allVouchers,
             'orderType'        => $request->query('type', 'pickup'),
         ]);
     }

@@ -1,6 +1,7 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ function VoucherIcon({ className = 'h-4 w-4' }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function CheckoutIndex({ cartItems, restaurant, cartCount, claimedVouchers = [], orderType: initialOrderType }) {
+export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVouchers = [], orderType: initialOrderType }) {
     const { auth } = usePage().props;
     const user = auth?.user;
 
@@ -107,95 +108,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, claime
     const [submitting, setSubmitting]           = useState(false);
     const [toast, setToast]                     = useState(null);
     const toastTimer = useRef(null);
-    const mapRef     = useRef(null);
-    const markerRef  = useRef(null);
 
     const timeSlots = useMemo(() => generateTimeSlots(), []);
-
-    // ── Leaflet map for delivery address ───────────────────────────────────
-    // Loads Leaflet CSS + JS via CDN, initializes a draggable-marker map,
-    // and reverse-geocodes pin location via Nominatim (free, no API key).
-
-    const reverseGeocode = useCallback(async (lat, lng) => {
-        try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                { headers: { 'Accept-Language': 'en' } }
-            );
-            const data = await res.json();
-            if (data?.display_name) {
-                setDeliveryAddress(data.display_name);
-            }
-        } catch {
-            // Nominatim failed — user can still type manually
-        }
-    }, []);
-
-    useEffect(() => {
-        if (orderType !== 'delivery') return;
-
-        // Don't re-initialize if already loaded
-        if (mapRef.current) return;
-
-        // Load Leaflet CSS
-        if (!document.querySelector('link[href*="leaflet"]')) {
-            const css = document.createElement('link');
-            css.rel = 'stylesheet';
-            css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-            document.head.appendChild(css);
-        }
-
-        // Load Leaflet JS
-        const loadLeaflet = () => {
-            return new Promise((resolve) => {
-                if (window.L) { resolve(window.L); return; }
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-                script.onload = () => resolve(window.L);
-                document.head.appendChild(script);
-            });
-        };
-
-        // Small delay to ensure the DOM container is mounted
-        const timer = setTimeout(async () => {
-            const L = await loadLeaflet();
-            const container = document.getElementById('delivery-map');
-            if (!container || mapRef.current) return;
-
-            // Default center: restaurant location, fallback to San Pablo
-            const defaultLat = restaurant?.lat ? Number(restaurant.lat) : 14.0687;
-            const defaultLng = restaurant?.lng ? Number(restaurant.lng) : 121.3254;
-
-            const map = L.map(container, { scrollWheelZoom: true }).setView([defaultLat, defaultLng], 15);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 19,
-            }).addTo(map);
-
-            const marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
-            markerRef.current = marker;
-
-            // On marker drag end — reverse geocode
-            marker.on('dragend', () => {
-                const pos = marker.getLatLng();
-                reverseGeocode(pos.lat, pos.lng);
-            });
-
-            // On map click — move marker and reverse geocode
-            map.on('click', (e) => {
-                marker.setLatLng(e.latlng);
-                reverseGeocode(e.latlng.lat, e.latlng.lng);
-            });
-
-            mapRef.current = map;
-
-            // Fix leaflet rendering in hidden/resized containers
-            setTimeout(() => map.invalidateSize(), 200);
-        }, 150);
-
-        return () => clearTimeout(timer);
-    }, [orderType, restaurant, reverseGeocode]);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -477,38 +391,19 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, claime
                             {/* ── DELIVERY VIEW ──────────────────────────────── */}
                             {orderType === 'delivery' && (
                                 <div className="p-5 space-y-5">
-                                    {/* Delivery address */}
+                                    {/* Delivery address autocomplete */}
                                     <div>
                                         <h2 className="text-lg font-extrabold text-gray-800 mb-3">Delivery address</h2>
-                                        <p className="text-xs text-gray-500 mb-3">
-                                            Drag the pin or click on the map to set your delivery location. The address will auto-fill below.
-                                        </p>
-
-                                        {/* Leaflet map container */}
-                                        <div
-                                            id="delivery-map"
-                                            className="w-full h-56 rounded-xl border border-gray-200 overflow-hidden bg-gray-100 mb-3"
-                                            style={{ zIndex: 0 }}
+                                        <AddressAutocomplete
+                                            value={deliveryAddress}
+                                            onChange={(fullAddress, municipality) => {
+                                                setDeliveryAddress(fullAddress);
+                                                // municipality is extracted automatically for filtering
+                                            }}
+                                            placeholder="Search your street, barangay, or landmark..."
+                                            hint="Start typing and pick from the suggestions"
+                                            autoFocus
                                         />
-
-                                        {/* Address display / manual override */}
-                                        <div className="flex items-start gap-3">
-                                            <div className="mt-2.5 text-green-500 shrink-0">
-                                                <LocationIcon className="h-5 w-5" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <input
-                                                    type="text"
-                                                    value={deliveryAddress}
-                                                    onChange={e => setDeliveryAddress(e.target.value)}
-                                                    placeholder="Your address will appear here after placing the pin…"
-                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                                />
-                                                <p className="text-[11px] text-gray-400 mt-1.5 ml-0.5">
-                                                    You can also type or edit your address manually.
-                                                </p>
-                                            </div>
-                                        </div>
                                     </div>
 
                                     <div className="border-t border-gray-100" />
@@ -642,37 +537,60 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, claime
                                                 </p>
                                             )}
 
-                                            {/* Claimed vouchers */}
-                                            {claimedVouchers.length > 0 && (
+                                            {/* Available vouchers — claimed first with emphasis */}
+                                            {allVouchers.length > 0 && (
                                                 <div className="pt-2 border-t border-gray-100">
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Your claimed vouchers</p>
-                                                    <div className="space-y-1.5">
-                                                        {claimedVouchers.map(cv => {
-                                                            const discLabel = cv.type === 'percentage'
-                                                                ? `${Number(cv.value).toFixed(0)}% off`
-                                                                : `₱${Number(cv.value).toFixed(0)} off`;
-                                                            const meetsMin = cv.min_order_amount === null || subtotal >= Number(cv.min_order_amount);
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Available vouchers</p>
+                                                    <div className="space-y-1.5 max-h-52 overflow-y-auto pr-0.5">
+                                                        {allVouchers.map(v => {
+                                                            const discLabel = v.type === 'percentage'
+                                                                ? `${Number(v.value).toFixed(0)}% off`
+                                                                : `₱${Number(v.value).toFixed(0)} off`;
+                                                            const meetsMin = v.min_order_amount === null || subtotal >= Number(v.min_order_amount);
 
                                                             return (
                                                                 <button
-                                                                    key={cv.id}
+                                                                    key={v.id}
                                                                     type="button"
                                                                     disabled={!meetsMin}
-                                                                    onClick={() => applyVoucher(cv.code)}
+                                                                    onClick={() => applyVoucher(v.code)}
                                                                     className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${
-                                                                        meetsMin
-                                                                            ? 'border-gray-100 hover:border-green-300 hover:bg-green-50/50'
-                                                                            : 'border-gray-100 opacity-50 cursor-not-allowed'
+                                                                        v.is_claimed
+                                                                            ? meetsMin
+                                                                                ? 'border-green-200 bg-green-50/40 hover:border-green-400 hover:bg-green-50'
+                                                                                : 'border-green-100 bg-green-50/20 opacity-50 cursor-not-allowed'
+                                                                            : meetsMin
+                                                                                ? 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                                                                                : 'border-gray-100 opacity-40 cursor-not-allowed'
                                                                     }`}
                                                                 >
-                                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-extrabold ${cv.is_global ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                                                                        %
+                                                                    {/* Icon badge */}
+                                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-extrabold ${
+                                                                        v.is_claimed
+                                                                            ? 'bg-green-500 text-white'
+                                                                            : v.is_global
+                                                                                ? 'bg-gray-100 text-gray-500'
+                                                                                : 'bg-orange-100 text-orange-600'
+                                                                    }`}>
+                                                                        {v.type === 'percentage' ? '%' : '₱'}
                                                                     </div>
+
+                                                                    {/* Label */}
                                                                     <div className="flex-1 min-w-0">
-                                                                        <p className="text-xs font-bold text-gray-800 truncate">{cv.code}</p>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <p className={`text-xs font-bold truncate ${v.is_claimed ? 'text-green-700' : 'text-gray-800'}`}>
+                                                                                {v.code}
+                                                                            </p>
+                                                                            {v.is_claimed && (
+                                                                                <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-500 text-[8px] font-bold text-white uppercase tracking-wide">
+                                                                                    Claimed
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                         <p className="text-[10px] text-gray-400">
                                                                             {discLabel}
-                                                                            {cv.min_order_amount && !meetsMin ? ` · Min. ₱${Number(cv.min_order_amount).toFixed(0)}` : ''}
+                                                                            {v.restaurant_name ? ` · ${v.restaurant_name}` : ' · All restaurants'}
+                                                                            {v.min_order_amount && !meetsMin ? ` · Min. ₱${Number(v.min_order_amount).toFixed(0)}` : ''}
                                                                         </p>
                                                                     </div>
                                                                 </button>
