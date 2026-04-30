@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
+import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
 const MUNICIPALITIES = [
     'Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba',
@@ -228,14 +229,12 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
     // Location selector
     const [locationOpen, setLocationOpen] = useState(false);
     const [updatingLocation, setUpdatingLocation] = useState(false);
-    const locationRef = useRef(null);
     const profileRef = useRef(null);
 
     // Close dropdowns on outside click
     useEffect(() => {
         function onClickOutside(e) {
             if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
-            if (locationRef.current && !locationRef.current.contains(e.target)) setLocationOpen(false);
         }
         document.addEventListener('mousedown', onClickOutside);
         return () => document.removeEventListener('mousedown', onClickOutside);
@@ -261,7 +260,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
             await fetch(route('profile.municipality'), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-                body: JSON.stringify({ municipality: m }),
+                body: JSON.stringify({ municipality: m, address: null }),
             });
             setLocationOpen(false);
             router.reload();
@@ -337,47 +336,103 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                         Hapag
                     </Link>
 
-                    {/* Location pill */}
-                    <div className="relative hidden sm:block shrink-0" ref={locationRef}>
+                    {/* Location pill — shows address or municipality */}
+                    <div className="hidden sm:block shrink-0">
                         <button
-                            onClick={() => setLocationOpen(v => !v)}
+                            onClick={() => setLocationOpen(true)}
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-gray-50 transition-colors text-sm"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
-                            <span className="font-semibold text-gray-800">{municipality}</span>
+                            <span className="font-semibold text-gray-800 max-w-[160px] truncate">
+                                {user.address || municipality}
+                            </span>
                             <span className="text-gray-300">·</span>
-                            <span className="text-gray-400">Now</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-gray-400 transition-transform duration-200 ${locationOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <span className="text-gray-400 shrink-0">Now</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-
-                        {locationOpen && (
-                            <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-52 z-50">
-                                <p className="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Location</p>
-                                {MUNICIPALITIES.map(m => (
-                                    <button
-                                        key={m}
-                                        onClick={() => changeMunicipality(m)}
-                                        disabled={updatingLocation}
-                                        className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between ${
-                                            m === municipality ? 'text-green-600 font-bold bg-green-50' : 'text-gray-700 hover:bg-gray-50 font-medium'
-                                        } ${updatingLocation ? 'opacity-50' : ''}`}
-                                    >
-                                        <span>{m}</span>
-                                        {m === municipality && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                                            </svg>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
+
+                    {/* Address search overlay — positioned below navbar, Foodpanda-style */}
+                    {locationOpen && (
+                        <>
+                            {/* Dim overlay — only covers content below navbar */}
+                            <div
+                                className="fixed inset-0 top-14 bg-black/40 z-[60]"
+                                onClick={() => setLocationOpen(false)}
+                            />
+
+                            {/* Panel — anchored right below the navbar */}
+                            <div className="fixed top-14 left-0 right-0 z-[70] flex justify-center">
+                                <div className="w-full max-w-xl bg-white shadow-2xl border-t border-gray-100 rounded-b-2xl">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                                        <h2 className="text-sm font-extrabold text-gray-800">Enter your address</h2>
+                                        <button
+                                            onClick={() => setLocationOpen(false)}
+                                            className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {/* Autocomplete input */}
+                                    <div className="px-5 pb-3">
+                                        <AddressAutocomplete
+                                            value=""
+                                            onChange={async (fullAddress, extractedMunicipality) => {
+                                                // Only save when user actually selected a suggestion
+                                                if (!fullAddress || !extractedMunicipality) return;
+                                                setUpdatingLocation(true);
+                                                try {
+                                                    await fetch(route('profile.municipality'), {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                                                        body: JSON.stringify({
+                                                            municipality: extractedMunicipality,
+                                                            address: fullAddress,
+                                                        }),
+                                                    });
+                                                    setLocationOpen(false);
+                                                    router.reload();
+                                                } catch { /* ignore */ }
+                                                setUpdatingLocation(false);
+                                            }}
+                                            placeholder="Search street, barangay, or landmark..."
+                                            autoFocus
+                                        />
+                                    </div>
+
+                                    {/* Quick municipality picks */}
+                                    <div className="border-t border-gray-100 px-5 pt-3 pb-4">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Popular locations</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {MUNICIPALITIES.map(m => (
+                                                <button
+                                                    key={m}
+                                                    onClick={() => changeMunicipality(m)}
+                                                    disabled={updatingLocation}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                        m === municipality
+                                                            ? 'bg-green-500 text-white'
+                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                    } ${updatingLocation ? 'opacity-50' : ''}`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* Desktop search with live dropdown */}
                     {!hideSearch && (

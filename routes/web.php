@@ -56,8 +56,14 @@ Route::middleware('auth')->group(function () {
 
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
-        $request->validate(['municipality' => ['required', 'string', 'max:255']]);
-        auth()->user()->update(['municipality' => $request->municipality]);
+        $request->validate([
+            'municipality' => ['required', 'string', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
+        ]);
+        auth()->user()->update([
+            'municipality' => $request->municipality,
+            'address'      => $request->address,
+        ]);
         return response()->json(['ok' => true]);
     })->name('profile.municipality');
 

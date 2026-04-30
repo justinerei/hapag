@@ -23,9 +23,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  * ─── PROPS ────────────────────────────────────────────────────────────────────
  *
  *   value        (string)   – controlled input value (the full address text)
- *   onChange      (fn)       – called with (fullAddress, municipality) on selection
- *                              or manual typing. municipality may be null if
- *                              it can't be extracted from the Nominatim result.
+ *   onChange      (fn)       – called with (fullAddress, municipality) on SELECTION only.
+ *                              Fires when user picks a suggestion or clears the input.
+ *   onType        (fn)       – called with (typedText) on every keystroke.
+ *                              Use this if you need the live typed value (e.g. manual address entry).
  *   placeholder   (string)   – input placeholder text
  *   label         (string)   – optional label above the input
  *   hint          (string)   – optional hint text below the input
@@ -42,7 +43,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  *   3. Suggestions appear in a dropdown below the input
  *   4. On selection → full display_name goes to input, municipality extracted
  *      from Nominatim's address breakdown (city / town / municipality field)
- *   5. User can also type freely — onChange fires with (typedText, null)
+ *   5. User can also type freely — onType fires with (typedText) on each keystroke.
+ *      onChange ONLY fires when a suggestion is selected or the input is cleared.
  *
  * ─── NOMINATIM NOTES ──────────────────────────────────────────────────────────
  *
@@ -197,6 +199,7 @@ const DEFAULT_INPUT_CLS = [
 export default function AddressAutocomplete({
     value = '',
     onChange,
+    onType,
     placeholder = 'Search address in Laguna...',
     label,
     hint,
@@ -309,7 +312,8 @@ export default function AddressAutocomplete({
     function handleInputChange(e) {
         const val = e.target.value;
         setQuery(val);
-        onChange?.(val, null); // fire with null municipality during typing
+        // Only fire onType for manual typing — onChange is reserved for selection only
+        if (onType) onType(val);
         searchNominatim(val);
     }
 
@@ -321,6 +325,15 @@ export default function AddressAutocomplete({
         setSuggestions([]);
         setOpen(false);
         onChange?.(fullAddress, municipality);
+    }
+
+    function handleClear() {
+        setQuery('');
+        setSuggestions([]);
+        setOpen(false);
+        if (onType) onType('');
+        onChange?.('', null);
+        inputRef.current?.focus();
     }
 
     function handleKeyDown(e) {
@@ -381,13 +394,7 @@ export default function AddressAutocomplete({
                 {query && !disabled && (
                     <button
                         type="button"
-                        onClick={() => {
-                            setQuery('');
-                            setSuggestions([]);
-                            setOpen(false);
-                            onChange?.('', null);
-                            inputRef.current?.focus();
-                        }}
+                        onClick={handleClear}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
                         aria-label="Clear address"
                     >
