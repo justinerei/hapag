@@ -162,4 +162,38 @@ class OwnerController extends Controller
     {
         abort_if($menuItem->restaurant->owner_id !== auth()->id(), 403);
     }
+
+    public function updateSettings(Request $request, Restaurant $restaurant)
+    {
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+
+        $data = $request->validate([
+            'name'         => ['required', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:1000'],
+            'municipality' => ['required', 'string', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
+            'image_url'    => ['nullable', 'url', 'max:500'],
+            'opening_time' => ['nullable', 'string', 'max:10'],
+            'closing_time' => ['nullable', 'string', 'max:10'],
+        ]);
+
+        $coords = [
+            'Santa Cruz' => [14.2794, 121.4117],
+            'Pagsanjan'  => [14.2713, 121.4559],
+            'Los Baños'  => [14.1692, 121.2436],
+            'Calamba'    => [14.2116, 121.1653],
+            'San Pablo'  => [14.0688, 121.3224],
+            'Bay'        => [14.1791, 121.2840],
+            'Nagcarlan'  => [14.1390, 121.4180],
+            'Pila'       => [14.2300, 121.3670],
+        ];
+
+        if (isset($coords[$data['municipality']])) {
+            [$data['lat'], $data['lng']] = $coords[$data['municipality']];
+        }
+
+        $restaurant->update($data);
+
+        return response()->json(['updated' => true, 'restaurant' => $restaurant->fresh()]);
+    }
 }
