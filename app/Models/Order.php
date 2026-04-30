@@ -21,6 +21,7 @@ class Order extends Model
         'order_type',
         'delivery_address',
         'pickup_note',
+        'scheduled_at',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class Order extends Model
             'discount_amount' => 'decimal:2',
             'delivery_fee'    => 'decimal:2',
             'final_amount'    => 'decimal:2',
+            'scheduled_at'    => 'datetime',
         ];
     }
 

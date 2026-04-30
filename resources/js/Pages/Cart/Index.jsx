@@ -2,32 +2,21 @@ import { useState, useMemo, useRef } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-
 const DELIVERY_FEE = 49;
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
 function fmt(price) {
-    return '₱ ' + Number(price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '₱ ' + Number(price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function csrf() {
     return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
-
-export default function CartIndex({ cartItems: initialItems, restaurant, cartCount: initialCount, claimedVouchers = [] }) {
-    const [items, setItems]               = useState(initialItems);
-    const [orderType, setOrderType]       = useState('pickup');
-    const [deliveryAddress, setDeliveryAddress] = useState('');
-    const [pickupNote, setPickupNote]     = useState('');
-    const [voucherCode, setVoucherCode]   = useState('');
-    const [voucherStatus, setVoucherStatus] = useState(null);
-    const [checking, setChecking]         = useState(false);
-    const [submitting, setSubmitting]     = useState(false);
-    const [toast, setToast]               = useState(null);
+export default function CartIndex({ cartItems: initialItems, restaurant, cartCount: initialCount, orderType: initialType }) {
+    const [items, setItems]         = useState(initialItems);
+    const [orderType, setOrderType] = useState(initialType || 'pickup');
+    const [submitting, setSubmitting] = useState(false);
+    const [toast, setToast]         = useState(null);
     const toastTimer = useRef(null);
 
     function showToast(message, isError = false) {
@@ -36,24 +25,20 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
         toastTimer.current = setTimeout(() => setToast(null), 3000);
     }
 
-    // ── Derived totals ─────────────────────────────────────────────────────────
-
     const subtotal = useMemo(
         () => items.reduce((sum, i) => sum + Number(i.menu_item.price) * i.quantity, 0),
         [items],
     );
-    const discount    = voucherStatus?.valid ? Number(voucherStatus.discount) : 0;
     const deliveryFee = orderType === 'delivery' ? DELIVERY_FEE : 0;
-    const total       = Math.max(0, subtotal - discount) + deliveryFee;
+    const total       = subtotal + deliveryFee;
     const localCount  = items.reduce((s, i) => s + i.quantity, 0);
 
-    // ── Cart mutations ─────────────────────────────────────────────────────────
+    // ── Cart mutations ─────────────────────────────────────────────────────
 
     async function updateQty(cartItemId, newQty) {
         if (newQty < 1 || newQty > 99) return;
         const prev = items;
         setItems(cur => cur.map(i => i.id === cartItemId ? { ...i, quantity: newQty } : i));
-        setVoucherStatus(null);
         try {
             const res = await fetch(route('cart.update', cartItemId), {
                 method: 'PATCH',
@@ -70,7 +55,6 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
     async function removeItem(cartItemId) {
         const prev = items;
         setItems(cur => cur.filter(i => i.id !== cartItemId));
-        setVoucherStatus(null);
         try {
             const res = await fetch(route('cart.remove', cartItemId), {
                 method: 'DELETE',
@@ -91,7 +75,6 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
             });
             if (res.ok) {
                 setItems([]);
-                setVoucherStatus(null);
             } else {
                 showToast('Could not clear cart.', true);
             }
@@ -100,54 +83,9 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
         }
     }
 
-    // ── Voucher ────────────────────────────────────────────────────────────────
-
-    async function applyVoucher(e) {
-        e.preventDefault();
-        if (!voucherCode.trim()) return;
-        setChecking(true);
-        setVoucherStatus(null);
-        try {
-            const res = await fetch(route('vouchers.validate'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() },
-                body: JSON.stringify({ code: voucherCode.trim() }),
-            });
-            const data = await res.json();
-            setVoucherStatus(data);
-        } catch {
-            setVoucherStatus({ valid: false, message: 'Could not validate voucher.' });
-        } finally {
-            setChecking(false);
-        }
-    }
-
-    // ── Checkout ───────────────────────────────────────────────────────────────
-
-    function handleCheckout() {
-        if (items.length === 0) return;
-        if (orderType === 'delivery' && !deliveryAddress.trim()) {
-            showToast('Please enter your delivery address.', true);
-            return;
-        }
+    function proceedToCheckout() {
         setSubmitting(true);
-        router.post(
-            route('cart.checkout'),
-            {
-                voucher_code:     voucherStatus?.valid ? voucherStatus.code : undefined,
-                order_type:       orderType,
-                delivery_address: orderType === 'delivery' ? deliveryAddress.trim() : undefined,
-                pickup_note:      orderType === 'pickup' && pickupNote.trim() ? pickupNote.trim() : undefined,
-            },
-            {
-                onError: (errors) => {
-                    const msg = errors.voucher || errors.cart || 'Checkout failed. Please try again.';
-                    showToast(msg, true);
-                    setSubmitting(false);
-                },
-                onFinish: () => setSubmitting(false),
-            },
-        );
+        router.visit(route('checkout') + '?type=' + orderType);
     }
 
     const isEmpty = items.length === 0;
@@ -156,7 +94,7 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
         <CustomerLayout cartCount={localCount}>
             <Head title="Your Cart — Hapag" />
 
-            {/* ── Toast ─────────────────────────────────────────────────────── */}
+            {/* Toast */}
             {toast && (
                 <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white pointer-events-none ${toast.isError ? 'bg-red-500' : 'bg-green-500'}`}>
                     <span>{toast.message}</span>
@@ -165,7 +103,7 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
 
             <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-                {/* ── Page header ───────────────────────────────────────────── */}
+                {/* Page header */}
                 <div className="mb-6">
                     {restaurant && (
                         <Link
@@ -184,7 +122,7 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                     )}
                 </div>
 
-                {/* ── Empty state ────────────────────────────────────────────── */}
+                {/* Empty state */}
                 {isEmpty ? (
                     <div className="text-center py-24">
                         <span className="text-6xl block mb-4">🛒</span>
@@ -200,9 +138,8 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                 ) : (
                     <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
 
-                        {/* ── Left: Items ───────────────────────────────────── */}
+                        {/* Left: Items list */}
                         <div className="lg:col-span-2 space-y-3 mb-8 lg:mb-0">
-
                             {items.map(item => (
                                 <div
                                     key={item.id}
@@ -275,20 +212,24 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                             </div>
                         </div>
 
-                        {/* ── Right: Summary sidebar ────────────────────────── */}
+                        {/* Right: Order summary sidebar */}
                         <div className="lg:col-span-1 space-y-4">
 
-                            {/* Order Type */}
+                            {/* Order Type Toggle */}
                             <div className="bg-white border border-gray-200 rounded-2xl p-5">
                                 <h2 className="font-bold text-gray-800 text-sm mb-3">Order Type</h2>
                                 <div className="space-y-2">
                                     {[
-                                        { value: 'pickup',   label: 'Pickup',   sub: 'Pick up at the restaurant — free' },
-                                        { value: 'delivery', label: 'Delivery', sub: `Flat delivery fee of ${fmt(DELIVERY_FEE)}` },
+                                        { value: 'pickup',   label: 'Pick-up',  sub: 'Pick up at the restaurant — free', icon: '🏪' },
+                                        { value: 'delivery', label: 'Delivery', sub: `Flat delivery fee of ${fmt(DELIVERY_FEE)}`, icon: '🛵' },
                                     ].map(opt => (
                                         <label
                                             key={opt.value}
-                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${orderType === opt.value ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                            className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150 ${
+                                                orderType === opt.value
+                                                    ? 'border-green-500 bg-green-50 shadow-sm'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
                                         >
                                             <input
                                                 type="radio"
@@ -298,6 +239,7 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                                 onChange={() => setOrderType(opt.value)}
                                                 className="accent-green-500"
                                             />
+                                            <span className="text-xl">{opt.icon}</span>
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
                                                 <p className="text-xs text-gray-500">{opt.sub}</p>
@@ -305,145 +247,9 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                         </label>
                                     ))}
                                 </div>
-
-                                {/* Conditional note / address field */}
-                                <div className="mt-3">
-                                    {orderType === 'delivery' ? (
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                                Delivery Address <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={deliveryAddress}
-                                                onChange={e => setDeliveryAddress(e.target.value)}
-                                                placeholder="House no., street, barangay, municipality"
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                                Pickup Note <span className="text-gray-400 font-normal">(optional)</span>
-                                            </label>
-                                            <textarea
-                                                value={pickupNote}
-                                                onChange={e => setPickupNote(e.target.value)}
-                                                placeholder="Any special instructions for pickup?"
-                                                rows={2}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors resize-none"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
                             </div>
 
-                            {/* Promo Code */}
-                            <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                                <h2 className="font-bold text-gray-800 text-sm mb-3">Promo Code</h2>
-                                <form onSubmit={applyVoucher} className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={voucherCode}
-                                        onChange={e => { setVoucherCode(e.target.value.toUpperCase()); setVoucherStatus(null); }}
-                                        placeholder="Enter code"
-                                        maxLength={50}
-                                        className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={checking || !voucherCode.trim()}
-                                        className="px-4 py-2 rounded-xl bg-gray-800 text-white text-sm font-bold hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                                    >
-                                        {checking ? '…' : 'Apply'}
-                                    </button>
-                                </form>
-
-                                {voucherStatus && (
-                                    <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${voucherStatus.valid ? 'text-green-600' : 'text-red-500'}`}>
-                                        {voucherStatus.valid ? (
-                                            <>
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                                <span>Code applied — you save {fmt(voucherStatus.discount)}!</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                                <span>{voucherStatus.message}</span>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Claimed vouchers */}
-                                {claimedVouchers.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-gray-100">
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Your claimed vouchers</p>
-                                        <div className="space-y-1.5">
-                                            {claimedVouchers.map(cv => {
-                                                const isSelected = voucherStatus?.valid && voucherStatus.code === cv.code;
-                                                const discLabel = cv.type === 'percentage'
-                                                    ? `${Number(cv.value).toFixed(0)}% off`
-                                                    : `₱${Number(cv.value).toFixed(0)} off`;
-                                                const meetsMin = cv.min_order_amount === null || subtotal >= Number(cv.min_order_amount);
-
-                                                return (
-                                                    <button
-                                                        key={cv.id}
-                                                        type="button"
-                                                        disabled={!meetsMin || isSelected}
-                                                        onClick={() => {
-                                                            setVoucherCode(cv.code);
-                                                            // Auto-apply
-                                                            setChecking(true);
-                                                            setVoucherStatus(null);
-                                                            fetch(route('vouchers.validate'), {
-                                                                method: 'POST',
-                                                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() },
-                                                                body: JSON.stringify({ code: cv.code }),
-                                                            })
-                                                                .then(r => r.json())
-                                                                .then(d => setVoucherStatus(d))
-                                                                .catch(() => setVoucherStatus({ valid: false, message: 'Validation failed.' }))
-                                                                .finally(() => setChecking(false));
-                                                        }}
-                                                        className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${
-                                                            isSelected
-                                                                ? 'border-green-500 bg-green-50'
-                                                                : meetsMin
-                                                                    ? 'border-gray-100 hover:border-green-300 hover:bg-green-50/50'
-                                                                    : 'border-gray-100 opacity-50 cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-extrabold ${cv.is_global ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                                                            %
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-bold text-gray-800 truncate">{cv.code}</p>
-                                                            <p className="text-[10px] text-gray-400">
-                                                                {discLabel}
-                                                                {cv.is_global ? ' · All restaurants' : ` · ${cv.restaurant_name ?? 'This restaurant'}`}
-                                                                {cv.min_order_amount && !meetsMin ? ` · Min. ₱${Number(cv.min_order_amount).toFixed(0)}` : ''}
-                                                            </p>
-                                                        </div>
-                                                        {isSelected && (
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                                                            </svg>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Order Summary */}
+                            {/* Quick Order Summary */}
                             <div className="bg-white border border-gray-200 rounded-2xl p-5">
                                 <h2 className="font-bold text-gray-800 text-sm mb-3">Order Summary</h2>
                                 <div className="space-y-2 text-sm">
@@ -451,12 +257,6 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                         <span>Subtotal ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
                                         <span className="font-semibold text-gray-800 tabular-nums">{fmt(subtotal)}</span>
                                     </div>
-                                    {discount > 0 && (
-                                        <div className="flex justify-between text-green-600">
-                                            <span>Promo ({voucherStatus.code})</span>
-                                            <span className="font-semibold tabular-nums">− {fmt(discount)}</span>
-                                        </div>
-                                    )}
                                     {orderType === 'delivery' && (
                                         <div className="flex justify-between text-gray-600">
                                             <span>Delivery Fee</span>
@@ -468,21 +268,30 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                     <span className="font-extrabold text-gray-800">Total</span>
                                     <span className="font-extrabold text-lg text-gray-800 tabular-nums">{fmt(total)}</span>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-2">
+                                <p className="text-[11px] text-gray-400 mt-2">
                                     {orderType === 'delivery'
                                         ? 'Pay cash upon delivery to your door.'
                                         : 'Pay cash on pickup at the restaurant.'}
                                 </p>
                             </div>
 
-                            {/* Checkout button */}
+                            {/* Proceed to Checkout button */}
                             <button
                                 type="button"
-                                onClick={handleCheckout}
-                                disabled={submitting || (orderType === 'delivery' && !deliveryAddress.trim())}
-                                className="w-full py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
+                                onClick={proceedToCheckout}
+                                disabled={submitting}
+                                className="w-full py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                             >
-                                {submitting ? 'Placing order…' : `Place Order · ${fmt(total)}`}
+                                {submitting ? (
+                                    'Loading checkout…'
+                                ) : (
+                                    <>
+                                        Review & Place Order
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

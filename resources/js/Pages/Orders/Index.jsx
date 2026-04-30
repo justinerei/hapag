@@ -145,6 +145,23 @@ function OrderCard({ order, isExpanded, onToggle }) {
                         </div>
                     )}
 
+                    {/* Scheduled pickup */}
+                    {order.order_type === 'pickup' && order.scheduled_at && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <p className="text-xs font-bold text-blue-700">Scheduled Pickup</p>
+                                <p className="text-sm text-blue-600">
+                                    {new Date(order.scheduled_at).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    {' at '}
+                                    {new Date(order.scheduled_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Pricing breakdown */}
                     <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
                         <div className="flex justify-between text-gray-500">

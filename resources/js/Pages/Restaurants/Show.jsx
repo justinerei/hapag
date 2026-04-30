@@ -50,8 +50,6 @@ export default function Show({
     const [orderType, setOrderType] = useState('pickup');
     const [cutlery, setCutlery] = useState(false);
 
-    const SERVICE_FEE = 5;
-
     // Promo claiming — seeded from server, extended locally on claim
     const [claimedCodes, setClaimedCodes] = useState(() => [...serverClaimedCodes]);
 
@@ -96,8 +94,7 @@ export default function Show({
 
     const cartSubtotal = cartItems.reduce((sum, ci) => sum + ci.price * ci.quantity, 0);
     const deliveryFee = orderType === 'delivery' ? DELIVERY_FEE : 0;
-    const serviceFee = cartItems.length > 0 ? SERVICE_FEE : 0;
-    const cartTotal = cartSubtotal + deliveryFee + serviceFee;
+    const cartTotal = cartSubtotal + deliveryFee;
 
     // ── Fetch cart ──────────────────────────────────────────────────────────
     const fetchCart = useCallback(async () => {
@@ -556,10 +553,6 @@ export default function Show({
                                                 <span className="font-semibold text-gray-800">{fmt(DELIVERY_FEE)}</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-gray-400">Service fee</span>
-                                            <span className="font-semibold text-gray-800">{fmt(serviceFee)}</span>
-                                        </div>
                                     </div>
 
                                     {/* Cutlery toggle */}
@@ -587,7 +580,7 @@ export default function Show({
                                     {/* Total */}
                                     <div className="border-t border-gray-100 pt-2">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-sm font-bold text-gray-800">Total <span className="text-[10px] font-normal text-gray-400">(incl. fees and tax)</span></span>
+                                            <span className="text-sm font-bold text-gray-800">Total</span>
                                             <span className="text-sm font-extrabold text-green-600">{fmt(cartTotal)}</span>
                                         </div>
                                     </div>

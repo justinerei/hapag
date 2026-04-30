@@ -587,6 +587,16 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                                             </div>
                                         )}
 
+                                        {/* Scheduled pickup */}
+                                        {order.order_type === 'pickup' && order.scheduled_at && (
+                                            <div className="flex items-center gap-1.5 text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-3 py-1.5 mb-3">
+                                                <span className="font-bold">⏰ Scheduled:</span>
+                                                {new Date(order.scheduled_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                                {' at '}
+                                                {new Date(order.scheduled_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                            </div>
+                                        )}
+
                                         {/* Items */}
                                         <ul className="text-xs text-gray-500 space-y-0.5 mb-3">
                                             {order.items?.map(oi => (

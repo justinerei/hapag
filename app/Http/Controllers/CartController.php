@@ -14,7 +14,7 @@ use Inertia\Inertia;
 
 class CartController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $cartItems = CartItem::where('user_id', auth()->id())
             ->with(['menuItem.restaurant'])
@@ -22,6 +22,7 @@ class CartController extends Controller
 
         $restaurant = $cartItems->first()?->menuItem->restaurant;
         $cartCount  = $cartItems->sum('quantity');
+        $orderType  = in_array($request->query('type'), ['pickup', 'delivery']) ? $request->query('type') : 'pickup';
 
         // Fetch claimed vouchers that are usable for this cart
         $claimedVouchers = [];
@@ -56,7 +57,7 @@ class CartController extends Controller
                 ->toArray();
         }
 
-        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount', 'claimedVouchers'));
+        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount', 'claimedVouchers', 'orderType'));
     }
 
     public function json()
@@ -154,6 +155,57 @@ class CartController extends Controller
         return response()->json(['cleared' => true]);
     }
 
+    public function checkoutPage(Request $request)
+    {
+        $cartItems = CartItem::where('user_id', auth()->id())
+            ->with(['menuItem.restaurant'])
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.index');
+        }
+
+        $restaurant = $cartItems->first()->menuItem->restaurant;
+        $cartCount  = $cartItems->sum('quantity');
+
+        // Fetch claimed vouchers that are usable for this cart
+        $usedVoucherIds = VoucherUsage::where('user_id', auth()->id())
+            ->pluck('voucher_id')->toArray();
+
+        $claimedVouchers = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+            ->with('voucher')
+            ->get()
+            ->filter(function ($cv) use ($restaurant, $usedVoucherIds) {
+                $v = $cv->voucher;
+                if (! $v || ! $v->is_active) return false;
+                if ($v->expires_at && $v->expires_at->isPast()) return false;
+                if ($v->max_uses !== null && $v->used_count >= $v->max_uses) return false;
+                if (in_array($v->id, $usedVoucherIds)) return false;
+                if ($v->restaurant_id !== null && $v->restaurant_id !== $restaurant->id) return false;
+                return true;
+            })
+            ->map(fn ($cv) => [
+                'id'               => $cv->voucher->id,
+                'code'             => $cv->voucher->code,
+                'type'             => $cv->voucher->type,
+                'value'            => $cv->voucher->value,
+                'min_order_amount' => $cv->voucher->min_order_amount,
+                'restaurant_id'    => $cv->voucher->restaurant_id,
+                'restaurant_name'  => $cv->voucher->restaurant?->name,
+                'is_global'        => $cv->voucher->restaurant_id === null,
+            ])
+            ->values()
+            ->toArray();
+
+        return Inertia::render('Checkout/Index', [
+            'cartItems'        => $cartItems,
+            'restaurant'       => $restaurant,
+            'cartCount'        => $cartCount,
+            'claimedVouchers'  => $claimedVouchers,
+            'orderType'        => $request->query('type', 'pickup'),
+        ]);
+    }
+
     public function checkout(Request $request)
     {
         $request->validate([
@@ -161,6 +213,7 @@ class CartController extends Controller
             'order_type'       => 'required|in:pickup,delivery',
             'delivery_address' => 'required_if:order_type,delivery|nullable|string|max:500',
             'pickup_note'      => 'nullable|string|max:500',
+            'scheduled_at'     => 'nullable|date|after:now',
         ]);
 
         $user      = auth()->user();
@@ -227,6 +280,7 @@ class CartController extends Controller
                     'order_type'       => $request->order_type,
                     'delivery_address' => $request->order_type === 'delivery' ? $request->delivery_address : null,
                     'pickup_note'      => $request->order_type === 'pickup' ? $request->pickup_note : null,
+                    'scheduled_at'     => $request->scheduled_at,
                 ]);
 
                 foreach ($cartItems as $item) {
