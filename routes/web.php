@@ -56,14 +56,8 @@ Route::middleware('auth')->group(function () {
 
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
-        $request->validate([
-            'municipality' => ['required', 'string', 'max:255'],
-            'address'      => ['nullable', 'string', 'max:500'],
-        ]);
-        auth()->user()->update([
-            'municipality' => $request->municipality,
-            'address'      => $request->address,
-        ]);
+        $request->validate(['municipality' => ['required', 'string', 'max:255']]);
+        auth()->user()->update(['municipality' => $request->municipality]);
         return response()->json(['ok' => true]);
     })->name('profile.municipality');
 
@@ -143,6 +137,9 @@ Route::middleware(['auth', 'role:owner'])
 
         // AI description generator
         Route::post('/ai/describe', [AIController::class, 'describe'])->name('ai.describe');
+
+        // Restaurant settings
+        Route::patch('/restaurants/{restaurant}/settings', [OwnerController::class, 'updateSettings'])->name('settings.update');
     });
 
 // ── Admin panel ───────────────────────────────────────────────────────────────
