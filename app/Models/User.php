@@ -20,12 +20,17 @@ class User extends Authenticatable
         'role',
         'municipality',
         'address',
+        'avatar_url',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
+
+    // Ensure avatar_url is included when the model is serialized (e.g. for Inertia)
+    //   the accessor in JSON/array output sent to Inertia
+    protected $appends = ['avatar_url'];
 
     protected function casts(): array
     {
@@ -83,5 +88,12 @@ class User extends Authenticatable
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $raw = $this->attributes['avatar_url'] ?? null;
+        if (!$raw) return null;
+        return asset('storage/' . $raw);
     }
 }

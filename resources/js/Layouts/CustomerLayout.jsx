@@ -80,7 +80,7 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
     const showDropdown = focused && query.length >= 2 && results;
     const hasResults = results && (results.restaurants?.length > 0 || results.dishes?.length > 0);
-
+    
     return (
         <div className="relative" ref={wrapperRef}>
             <form onSubmit={handleSubmit}>
@@ -496,8 +496,12 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                 onClick={() => setProfileOpen(v => !v)}
                                 className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full hover:bg-gray-50 transition-colors"
                             >
-                                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
-                                    {initial}
+                                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                                    {user.avatar_url ? (
+                                        <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        initial
+                                    )}
                                 </div>
                                 <span className="hidden sm:block text-sm font-semibold text-gray-800 max-w-[80px] truncate">
                                     {firstName}
