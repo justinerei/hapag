@@ -1,6 +1,9 @@
 // resources/js/app.jsx
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/react';
+import { route } from 'ziggy-js';
+
+window.route = route;
 
 createInertiaApp({
     // Resolves 'Home/Guest' → resources/js/Pages/Home/Guest.jsx

@@ -10,18 +10,54 @@ use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class CartController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $cartItems = CartItem::where('user_id', auth()->id())
             ->with(['menuItem.restaurant'])
             ->get();
 
         $restaurant = $cartItems->first()?->menuItem->restaurant;
+        $cartCount  = $cartItems->sum('quantity');
+        $orderType  = in_array($request->query('type'), ['pickup', 'delivery']) ? $request->query('type') : 'pickup';
 
-        return view('cart.index', compact('cartItems', 'restaurant'));
+        // Fetch claimed vouchers that are usable for this cart
+        $claimedVouchers = [];
+        if ($restaurant) {
+            $usedVoucherIds = VoucherUsage::where('user_id', auth()->id())
+                ->pluck('voucher_id')->toArray();
+
+            $claimedVouchers = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->with('voucher')
+                ->get()
+                ->filter(function ($cv) use ($restaurant, $usedVoucherIds) {
+                    $v = $cv->voucher;
+                    if (! $v || ! $v->is_active) return false;
+                    if ($v->expires_at && $v->expires_at->isPast()) return false;
+                    if ($v->max_uses !== null && $v->used_count >= $v->max_uses) return false;
+                    if (in_array($v->id, $usedVoucherIds)) return false;
+                    // Must be global OR match this restaurant
+                    if ($v->restaurant_id !== null && $v->restaurant_id !== $restaurant->id) return false;
+                    return true;
+                })
+                ->map(fn ($cv) => [
+                    'id'               => $cv->voucher->id,
+                    'code'             => $cv->voucher->code,
+                    'type'             => $cv->voucher->type,
+                    'value'            => $cv->voucher->value,
+                    'min_order_amount' => $cv->voucher->min_order_amount,
+                    'restaurant_id'    => $cv->voucher->restaurant_id,
+                    'restaurant_name'  => $cv->voucher->restaurant?->name,
+                    'is_global'        => $cv->voucher->restaurant_id === null,
+                ])
+                ->values()
+                ->toArray();
+        }
+
+        return Inertia::render('Cart/Index', compact('cartItems', 'restaurant', 'cartCount', 'claimedVouchers', 'orderType'));
     }
 
     public function json()
@@ -119,11 +155,74 @@ class CartController extends Controller
         return response()->json(['cleared' => true]);
     }
 
+    public function checkoutPage(Request $request)
+    {
+        $cartItems = CartItem::where('user_id', auth()->id())
+            ->with(['menuItem.restaurant'])
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.index');
+        }
+
+        $restaurant = $cartItems->first()->menuItem->restaurant;
+        $cartCount  = $cartItems->sum('quantity');
+
+        // Fetch user's used and claimed voucher IDs
+        $usedVoucherIds    = VoucherUsage::where('user_id', auth()->id())
+            ->pluck('voucher_id')->toArray();
+        $claimedVoucherIds = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+            ->pluck('voucher_id')->toArray();
+
+        // Fetch ALL valid vouchers (global + this restaurant's), marking which are claimed
+        $allVouchers = \App\Models\Voucher::where('is_active', true)
+            ->where(function ($q) use ($restaurant) {
+                $q->whereNull('restaurant_id')
+                  ->orWhere('restaurant_id', $restaurant->id);
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('max_uses')
+                  ->orWhereColumn('used_count', '<', 'max_uses');
+            })
+            ->whereNotIn('id', $usedVoucherIds)
+            ->with('restaurant:id,name')
+            ->get()
+            ->map(fn ($v) => [
+                'id'               => $v->id,
+                'code'             => $v->code,
+                'type'             => $v->type,
+                'value'            => $v->value,
+                'min_order_amount' => $v->min_order_amount,
+                'restaurant_id'    => $v->restaurant_id,
+                'restaurant_name'  => $v->restaurant?->name,
+                'is_global'        => $v->restaurant_id === null,
+                'is_claimed'       => in_array($v->id, $claimedVoucherIds),
+            ])
+            ->sortByDesc('is_claimed') // claimed first
+            ->values()
+            ->toArray();
+
+        return Inertia::render('Checkout/Index', [
+            'cartItems'        => $cartItems,
+            'restaurant'       => $restaurant,
+            'cartCount'        => $cartCount,
+            'allVouchers'      => $allVouchers,
+            'orderType'        => $request->query('type', 'pickup'),
+        ]);
+    }
+
     public function checkout(Request $request)
     {
         $request->validate([
-            'voucher_code' => 'nullable|string|max:50',
-            'pickup_note'  => 'nullable|string|max:500',
+            'voucher_code'     => 'nullable|string|max:50',
+            'order_type'       => 'required|in:pickup,delivery',
+            'delivery_address' => 'required_if:order_type,delivery|nullable|string|max:500',
+            'pickup_note'      => 'nullable|string|max:500',
+            'scheduled_at'     => 'nullable|date|after:now',
         ]);
 
         $user      = auth()->user();
@@ -136,10 +235,11 @@ class CartController extends Controller
         }
 
         $restaurantId = $cartItems->first()->menuItem->restaurant_id;
-        $totalAmount  = $cartItems->sum(fn ($i) => $i->menuItem->price * $i->quantity);
+        $subtotal     = $cartItems->sum(fn ($i) => $i->menuItem->price * $i->quantity);
+        $deliveryFee  = $request->order_type === 'delivery' ? 49.00 : 0.00;
 
         try {
-            DB::transaction(function () use ($request, $user, $cartItems, $restaurantId, $totalAmount) {
+            DB::transaction(function () use ($request, $user, $cartItems, $restaurantId, $subtotal, $deliveryFee) {
                 $voucher        = null;
                 $discountAmount = 0;
 
@@ -159,7 +259,7 @@ class CartController extends Controller
                     if (VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $user->id)->exists()) {
                         throw new \RuntimeException('You have already used this voucher.');
                     }
-                    if ($voucher->min_order_amount !== null && $totalAmount < $voucher->min_order_amount) {
+                    if ($voucher->min_order_amount !== null && $subtotal < $voucher->min_order_amount) {
                         throw new \RuntimeException(
                             'Minimum order of ₱' . number_format($voucher->min_order_amount, 2) . ' required for this voucher.'
                         );
@@ -169,23 +269,27 @@ class CartController extends Controller
                     }
 
                     $discountAmount = $voucher->type === 'percentage'
-                        ? $totalAmount * ($voucher->value / 100)
+                        ? $subtotal * ($voucher->value / 100)
                         : (float) $voucher->value;
 
-                    $discountAmount = min($discountAmount, $totalAmount);
+                    $discountAmount = min($discountAmount, $subtotal);
                 }
 
-                $finalAmount = max(0, $totalAmount - $discountAmount);
+                $finalAmount = max(0, $subtotal - $discountAmount) + $deliveryFee;
 
                 $order = Order::create([
-                    'user_id'         => $user->id,
-                    'restaurant_id'   => $restaurantId,
-                    'total_amount'    => $totalAmount,
-                    'discount_amount' => $discountAmount,
-                    'final_amount'    => $finalAmount,
-                    'voucher_id'      => $voucher?->id,
-                    'status'          => 'pending',
-                    'pickup_note'     => $request->pickup_note,
+                    'user_id'          => $user->id,
+                    'restaurant_id'    => $restaurantId,
+                    'total_amount'     => $subtotal,
+                    'discount_amount'  => $discountAmount,
+                    'delivery_fee'     => $deliveryFee,
+                    'final_amount'     => $finalAmount,
+                    'voucher_id'       => $voucher?->id,
+                    'status'           => 'pending',
+                    'order_type'       => $request->order_type,
+                    'delivery_address' => $request->order_type === 'delivery' ? $request->delivery_address : null,
+                    'pickup_note'      => $request->order_type === 'pickup' ? $request->pickup_note : null,
+                    'scheduled_at'     => $request->scheduled_at,
                 ]);
 
                 foreach ($cartItems as $item) {
@@ -214,6 +318,10 @@ class CartController extends Controller
             return back()->withErrors(['voucher' => $e->getMessage()]);
         }
 
-        return redirect()->route('orders.index')->with('success', 'Order placed! Pay on pickup.');
+        $successMsg = $request->order_type === 'delivery'
+            ? 'Order placed! Pay cash on delivery.'
+            : 'Order placed! Pay on pickup.';
+
+        return redirect()->route('orders.index')->with('success', $successMsg);
     }
 }

@@ -11,12 +11,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
-    public function create(): RedirectResponse
+    public function create(): Response
     {
-        return redirect()->route('home');
+        return Inertia::render('Auth/Register', [
+            'categories' => \App\Models\Category::orderBy('name')->get(),
+        ]);
     }
 
     /**
@@ -47,7 +51,7 @@ class RegisteredUserController extends Controller
 
         return match ($user->role) {
             'owner'  => redirect()->route('owner.setup'),
-            default  => redirect()->route('home'),
+            default  => redirect()->route('home')->with('registered', true),
         };
     }
 }

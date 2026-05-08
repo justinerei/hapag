@@ -7,6 +7,7 @@ use App\Models\MenuItem;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class OwnerController extends Controller
 {
@@ -18,7 +19,7 @@ class OwnerController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
-        return view('owner.setup', compact('categories'));
+        return Inertia::render('Owner/Setup', compact('categories'));
     }
 
     public function storeSetup(Request $request)
@@ -68,14 +69,24 @@ class OwnerController extends Controller
             ->restaurants()
             ->with([
                 'menuItems' => fn ($q) => $q->orderBy('category')->orderBy('name'),
-                'orders'    => fn ($q) => $q->whereIn('status', ['pending', 'preparing'])
-                                            ->with('items.menuItem')
-                                            ->latest(),
+                'orders'    => fn ($q) => $q->with('user', 'items.menuItem')->latest(),
+                'vouchers'  => fn ($q) => $q->orderByDesc('created_at'),
             ])
-            ->withCount('menuItems')
             ->get();
 
-        return view('owner.dashboard', compact('restaurants'));
+        // If owner has no restaurants at all, send them to setup
+        if ($restaurants->isEmpty()) {
+            return redirect()->route('owner.setup');
+        }
+
+        // If the owner has restaurants but ALL are pending, show the waiting page
+        if ($restaurants->every(fn ($r) => $r->status === 'pending')) {
+            return Inertia::render('Owner/PendingApproval', [
+                'restaurant' => $restaurants->first(),
+            ]);
+        }
+
+        return Inertia::render('Owner/Dashboard', compact('restaurants'));
     }
 
     public function storeItem(Request $request)
@@ -129,7 +140,6 @@ class OwnerController extends Controller
         try {
             $menuItem->delete();
         } catch (\Illuminate\Database\QueryException $e) {
-            // menu_items.id has restrictOnDelete on order_items — deletion blocked if used in orders
             return response()->json(
                 ['error' => 'This item cannot be deleted because it appears in existing orders. Deactivate it instead.'],
                 409
@@ -151,5 +161,39 @@ class OwnerController extends Controller
     private function authorizeItem(MenuItem $menuItem): void
     {
         abort_if($menuItem->restaurant->owner_id !== auth()->id(), 403);
+    }
+
+    public function updateSettings(Request $request, Restaurant $restaurant)
+    {
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+
+        $data = $request->validate([
+            'name'         => ['required', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:1000'],
+            'municipality' => ['required', 'string', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
+            'image_url'    => ['nullable', 'url', 'max:500'],
+            'opening_time' => ['nullable', 'string', 'max:10'],
+            'closing_time' => ['nullable', 'string', 'max:10'],
+        ]);
+
+        $coords = [
+            'Santa Cruz' => [14.2794, 121.4117],
+            'Pagsanjan'  => [14.2713, 121.4559],
+            'Los Baños'  => [14.1692, 121.2436],
+            'Calamba'    => [14.2116, 121.1653],
+            'San Pablo'  => [14.0688, 121.3224],
+            'Bay'        => [14.1791, 121.2840],
+            'Nagcarlan'  => [14.1390, 121.4180],
+            'Pila'       => [14.2300, 121.3670],
+        ];
+
+        if (isset($coords[$data['municipality']])) {
+            [$data['lat'], $data['lng']] = $coords[$data['municipality']];
+        }
+
+        $restaurant->update($data);
+
+        return response()->json(['updated' => true, 'restaurant' => $restaurant->fresh()]);
     }
 }

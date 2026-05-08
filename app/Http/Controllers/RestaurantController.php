@@ -2,46 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\Favorite;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class RestaurantController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $query = Restaurant::with('category')
+        $restaurants = Restaurant::with('category')
+            ->withCount('menuItems')
             ->where('status', 'active')
-            ->orderBy('name');
+            ->orderBy('name')
+            ->get();
 
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        $categories = Category::orderBy('name')->get();
+
+        $cartCount   = 0;
+        $favoriteIds = [];
+        if (auth()->check()) {
+            $cartCount   = CartItem::where('user_id', auth()->id())->sum('quantity');
+            $favoriteIds = Favorite::where('user_id', auth()->id())
+                ->pluck('restaurant_id')->toArray();
         }
 
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-
-        $restaurants = $query->get();
-        $categories  = Category::orderBy('name')->get();
-
-        if ($request->ajax()) {
-            return response()->json([
-                'restaurants' => $restaurants->map(fn ($r) => [
-                    'id'           => $r->id,
-                    'name'         => $r->name,
-                    'description'  => $r->description,
-                    'municipality' => $r->municipality,
-                    'image_url'    => $r->image_url,
-                    'category'     => [
-                        'name' => $r->category->name,
-                        'icon' => $r->category->icon,
-                    ],
-                ]),
-            ]);
-        }
-
-        return view('restaurants.index', compact('restaurants', 'categories'));
+        return Inertia::render('Restaurants/Index', compact('restaurants', 'categories', 'cartCount', 'favoriteIds'));
     }
 
     public function show(Restaurant $restaurant)
@@ -78,27 +66,31 @@ class RestaurantController extends Controller
             })
             ->get();
 
-        // Cart data for logged-in users
-        $cartItems = [];
-        $cartCount = 0;
+        $cartCount   = 0;
         $favoriteIds = [];
+        $claimedCodes = [];
         if (auth()->check()) {
-            $cartItems = \App\Models\CartItem::where('user_id', auth()->id())
-                ->with('menuItem.restaurant')
-                ->get();
-            $cartCount = $cartItems->sum('quantity');
-            $favoriteIds = \App\Models\Favorite::where('user_id', auth()->id())
+            $cartCount   = CartItem::where('user_id', auth()->id())->sum('quantity');
+            $favoriteIds = Favorite::where('user_id', auth()->id())
                 ->pluck('restaurant_id')->toArray();
+            $claimedCodes = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->whereIn('voucher_id', $restaurantVouchers->pluck('id'))
+                ->join('vouchers', 'claimed_vouchers.voucher_id', '=', 'vouchers.id')
+                ->pluck('vouchers.code')
+                ->toArray();
         }
 
-        // All active restaurants for footer
-        $allRestaurants = Restaurant::where('status', 'active')->orderBy('name')->limit(5)->get();
-
-        return view('restaurants.show', compact(
-            'restaurant', 'menuItems', 'featuredItems',
-            'restaurantVouchers', 'allVouchers', 'cartItems', 'cartCount',
-            'allRestaurants', 'favoriteIds'
-        ));
+        return Inertia::render('Restaurants/Show', [
+            'restaurant'         => $restaurant,
+            'menuItems'          => $menuItems,
+            'featuredItems'      => $featuredItems,
+            'restaurantVouchers' => $restaurantVouchers,
+            'allVouchers'        => $allVouchers,
+            'cartCount'          => $cartCount,
+            'favoriteIds'        => $favoriteIds,
+            'claimedCodes'       => $claimedCodes,
+            'isAuth'             => auth()->check(),
+        ]);
     }
 
     public function mapData()

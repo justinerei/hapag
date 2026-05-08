@@ -10,6 +10,7 @@ use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\WeatherController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,10 @@ Route::get('/menu/{restaurant}', [RestaurantController::class, 'show'])->name('r
 
 Route::get('/api/restaurants/map', [RestaurantController::class, 'mapData'])->name('restaurants.map');
 Route::get('/api/weather', [WeatherController::class, 'index'])->name('weather');
+
+// Search
+Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::get('/api/search', [SearchController::class, 'query'])->name('search.query');
 
 // ── Role-based redirect after Breeze login ────────────────────────────────────
 
@@ -41,6 +46,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -59,6 +66,7 @@ Route::middleware('auth')->group(function () {
     // Cart — clear before {cartItem} so DELETE /cart is never mistaken for a model route
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::get('/cart/json', [CartController::class, 'json'])->name('cart.json');
+    Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('checkout');
     Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
@@ -68,8 +76,40 @@ Route::middleware('auth')->group(function () {
     // Voucher AJAX validation (cart page)
     Route::post('/vouchers/validate', [VoucherController::class, 'validate'])->name('vouchers.validate');
 
+    // Voucher claiming (menu page promos)
+    Route::post('/api/vouchers/claim', function (\Illuminate\Http\Request $request) {
+        $request->validate(['voucher_id' => 'required|exists:vouchers,id']);
+
+        $user    = auth()->user();
+        $voucher = \App\Models\Voucher::findOrFail($request->voucher_id);
+
+        if (! $voucher->is_active) {
+            return response()->json(['message' => 'This voucher is no longer active.'], 422);
+        }
+        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
+            return response()->json(['message' => 'This voucher has expired.'], 422);
+        }
+        if ($voucher->max_uses !== null && $voucher->used_count >= $voucher->max_uses) {
+            return response()->json(['message' => 'This voucher has reached its limit.'], 422);
+        }
+        if (\App\Models\VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $user->id)->exists()) {
+            return response()->json(['message' => 'You have already used this voucher.'], 422);
+        }
+        if (\App\Models\ClaimedVoucher::where('user_id', $user->id)->where('voucher_id', $voucher->id)->exists()) {
+            return response()->json(['message' => 'Already claimed.'], 422);
+        }
+
+        \App\Models\ClaimedVoucher::create([
+            'user_id'    => $user->id,
+            'voucher_id' => $voucher->id,
+        ]);
+
+        return response()->json(['claimed' => true, 'code' => $voucher->code]);
+    })->name('vouchers.claim');
+
     // AI food recommender (customer)
     Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend');
+    Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
 });
 
 // ── Owner portal ──────────────────────────────────────────────────────────────
@@ -99,6 +139,9 @@ Route::middleware(['auth', 'role:owner'])
 
         // AI description generator
         Route::post('/ai/describe', [AIController::class, 'describe'])->name('ai.describe');
+
+        // Restaurant settings
+        Route::patch('/restaurants/{restaurant}/settings', [OwnerController::class, 'updateSettings'])->name('settings.update');
     });
 
 // ── Admin panel ───────────────────────────────────────────────────────────────

@@ -35,9 +35,27 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
-            //
+            'auth' => [
+                'user' => $user ? [
+                    'id'           => $user->id,
+                    'name'         => $user->name,
+                    'email'        => $user->email,
+                    'role'         => $user->role,
+                    'municipality' => $user->municipality,
+                    'address'      => $user->address,
+                    // ← THIS is what was missing — explicitly passes the
+                    //   computed avatar_url to every Inertia page/component
+                    'avatar_url'   => $user->avatar_url,
+                ] : null,
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error'   => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

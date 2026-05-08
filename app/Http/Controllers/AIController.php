@@ -18,9 +18,8 @@ class AIController extends Controller
             'restaurant_id' => 'nullable|exists:restaurants,id',
         ]);
 
-        // Scope to one restaurant if provided, otherwise sample across all active ones
         $itemQuery = MenuItem::where('is_available', true)
-            ->with('restaurant:id,name,municipality');
+            ->with('restaurant:id,name,municipality,image_url');
 
         if ($request->filled('restaurant_id')) {
             $itemQuery->where('restaurant_id', $request->restaurant_id);
@@ -40,21 +39,66 @@ class AIController extends Controller
         ))->join("\n");
 
         $systemPrompt = <<<PROMPT
-You are Hapag's friendly food recommender for restaurants in Laguna, Philippines.
-Given a customer's craving or preference, suggest 2–3 specific dishes from the menu list provided.
-Keep your reply conversational, warm, and under 120 words. Write in English.
-Always include the dish name, restaurant name, and price. Do not invent dishes not in the list.
-PROMPT;
+            You are Hapag's friendly food recommender for restaurants in Laguna, Philippines.
+            Given a customer's craving or preference, suggest 2–4 specific dishes from the menu list provided.
+
+            IMPORTANT: You MUST respond in valid JSON only. No markdown, no backticks, no extra text.
+            Use this exact format:
+            {
+            "intro": "A short, warm 1-2 sentence intro about why these picks are great. Skip if you have nothing meaningful beyond listing dishes.",
+            "picks": ["Exact Dish Name 1", "Exact Dish Name 2", "Exact Dish Name 3"]
+            }
+
+            Rules:
+            - "picks" must contain EXACT dish names from the menu list (case-sensitive match)
+            - "intro" should be conversational and brief (under 30 words). Set to "" if unnecessary.
+            - Do NOT invent dish names not in the list
+            - 2-4 picks maximum
+            PROMPT;
 
         $userPrompt = "Customer says: \"{$request->prompt}\"\n\nAvailable menu items:\n{$menuList}";
 
-        $reply = $this->callGroq($systemPrompt, $userPrompt);
+        $rawReply = $this->callGroq($systemPrompt, $userPrompt);
 
-        if ($reply === null) {
+        if ($rawReply === null) {
             return response()->json(['error' => 'AI service is unavailable. Please try again later.'], 503);
         }
 
-        return response()->json(['recommendation' => $reply]);
+        // Parse the AI JSON response
+        $cleaned = trim($rawReply);
+        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
+        $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+
+        $parsed = json_decode($cleaned, true);
+
+        if (! $parsed || ! isset($parsed['picks']) || ! is_array($parsed['picks'])) {
+            // Fallback: return raw text if AI didn't follow format
+            return response()->json([
+                'intro' => $rawReply,
+                'dishes' => [],
+            ]);
+        }
+
+        // Match pick names to actual menu items
+        $pickNames = collect($parsed['picks'])->map(fn ($n) => mb_strtolower(trim($n)));
+        $matchedDishes = $items->filter(function ($item) use ($pickNames) {
+            return $pickNames->contains(mb_strtolower($item->name));
+        })->unique('id')->values()->map(fn ($i) => [
+            'id'              => $i->id,
+            'name'            => $i->name,
+            'price'           => (float) $i->price,
+            'description'     => $i->description,
+            'category'        => $i->category,
+            'image_url'       => $i->image_url,
+            'restaurant_id'   => $i->restaurant->id,
+            'restaurant_name' => $i->restaurant->name,
+            'municipality'    => $i->restaurant->municipality,
+        ]);
+
+        return response()->json([
+            'intro'  => $parsed['intro'] ?? '',
+            'dishes' => $matchedDishes,
+        ]);
     }
 
     // ── Owner: menu item description generator ───────────────────────────────

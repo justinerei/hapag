@@ -68,25 +68,48 @@ class HomeController extends Controller
         $weatherTag = empty($weather) ? 'hot' : $this->resolveTag($weather);
         $suggested  = Category::where('weather_tag', $weatherTag)->get();
 
+        // Weather-recommended menu items: dishes from restaurants whose cuisine matches the weather
+        $suggestedCategoryIds = $suggested->pluck('id');
+        $weatherItems = MenuItem::where('is_available', true)
+            ->whereHas('restaurant', fn ($q) => $q->where('status', 'active')->whereIn('category_id', $suggestedCategoryIds))
+            ->with('restaurant:id,name,municipality,image_url')
+            ->inRandomOrder()
+            ->limit(8)
+            ->get(['id', 'restaurant_id', 'name', 'description', 'price', 'category', 'image_url']);
+
+        // Claimed voucher codes for the current user
+        $claimedCodes = [];
+        if (auth()->check()) {
+            $claimedCodes = \App\Models\ClaimedVoucher::where('user_id', auth()->id())
+                ->join('vouchers', 'claimed_vouchers.voucher_id', '=', 'vouchers.id')
+                ->pluck('vouchers.code')
+                ->toArray();
+        }
+
         return Inertia::render('Home/Customer', [
             'restaurants'       => $restaurants,
             'categories'        => $categories,
             'weather'           => $weather,
             'weatherTag'        => $weatherTag,
             'suggested'         => $suggested,
+            'weatherItems'      => $weatherItems,
             'deals'             => $deals,
             'cartCount'         => $cartCount,
             'promoRestaurantIds'=> $promoRestaurantIds,
             'popular'           => $popular,
             'featuredItemMap'   => $featuredItemMap,
             'favoriteIds'       => $favoriteIds,
+            'claimedCodes'      => $claimedCodes,
         ]);
     }
 
-    private function fetchWeather(): array
+    private function fetchWeather(?string $city = null): array
     {
+        $city = $city ?: (auth()->check() ? auth()->user()->municipality : null);
+        $city = $city ? "{$city},PH" : config('services.owm.city');
+
         $response = Http::timeout(5)->get(config('services.owm.url'), [
-            'q'     => config('services.owm.city'),
+            'q'     => $city,
             'appid' => config('services.owm.key'),
             'units' => 'metric',
         ]);
