@@ -327,6 +327,62 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
     );
 }
 
+// ─── Confirm Modal ────────────────────────────────────────────────────────────
+
+function ConfirmModal({ title, message, confirmLabel = 'Delete', confirmAccent = 'red', icon, onConfirm, onCancel }) {
+    const accents = {
+        red:    { btn: 'bg-red-500 hover:bg-red-600 shadow-red-200',    icon: 'bg-red-100 text-red-500'    },
+        orange: { btn: 'bg-orange-500 hover:bg-orange-600 shadow-orange-200', icon: 'bg-orange-100 text-orange-500' },
+    };
+    const a = accents[confirmAccent] ?? accents.red;
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 16 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center text-center gap-4"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Icon */}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${a.icon}`}>
+                    {icon ?? (
+                        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                    )}
+                </div>
+                {/* Text */}
+                <div>
+                    <h3 className="text-base font-extrabold text-gray-800 mb-1">{title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{message}</p>
+                </div>
+                {/* Actions */}
+                <div className="flex gap-3 w-full pt-1">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className={`flex-1 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm transition-colors ${a.btn}`}
+                    >
+                        {confirmLabel}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
 function OrderCard({ order, onAdvance }) {
@@ -1022,6 +1078,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
     const [sidebarOpen, setSidebarOpen]   = useState(false);
     const [itemModal, setItemModal]       = useState(null);
     const [voucherModal, setVoucherModal] = useState(null);
+    const [confirmModal, setConfirmModal] = useState(null); // { title, message, confirmLabel, confirmAccent, onConfirm }
 
     const restaurant = restaurants.find(r => r.id === selectedId) ?? restaurants[0] ?? null;
 
@@ -1036,9 +1093,17 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
     async function toggleItem(item) {
         try { const d = await apiFetch(route('owner.items.toggle', item.id), 'PATCH'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.map(i => i.id === item.id ? { ...i, is_available: d.is_available } : i) })); } catch { }
     }
-    async function deleteItem(item) {
-        if (!confirm(`Delete "${item.name}"?`)) return;
-        try { await apiFetch(route('owner.items.destroy', item.id), 'DELETE'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== item.id) })); } catch (e) { if (e?.data?.error) alert(e.data.error); }
+    function deleteItem(item) {
+        setConfirmModal({
+            title: 'Delete Menu Item',
+            message: `"${item.name}" will be permanently removed from your menu. This cannot be undone.`,
+            confirmLabel: 'Delete Item',
+            confirmAccent: 'red',
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try { await apiFetch(route('owner.items.destroy', item.id), 'DELETE'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== item.id) })); } catch (e) { if (e?.data?.error) alert(e.data.error); }
+            },
+        });
     }
     function onItemSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, menu_items: mode === 'add' ? [...r.menu_items, saved] : r.menu_items.map(i => i.id === saved.id ? saved : i) }));
@@ -1048,9 +1113,17 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
         const next = NEXT_STATUS[order.status]; if (!next) return;
         try { const d = await apiFetch(route('owner.orders.status', order.id), 'PATCH', { status: next }); patchRestaurant(r => ({ ...r, orders: r.orders.map(o => o.id === order.id ? { ...o, status: d.status } : o) })); } catch { }
     }
-    async function deleteVoucher(v) {
-        if (!confirm(`Delete voucher "${v.code}"?`)) return;
-        try { await apiFetch(route('owner.vouchers.destroy', v.id), 'DELETE'); patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== v.id) })); } catch { }
+    function deleteVoucher(v) {
+        setConfirmModal({
+            title: 'Delete Voucher',
+            message: `Voucher "${v.code}" will be permanently deleted and can no longer be used by customers.`,
+            confirmLabel: 'Delete Voucher',
+            confirmAccent: 'red',
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try { await apiFetch(route('owner.vouchers.destroy', v.id), 'DELETE'); patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== v.id) })); } catch { }
+            },
+        });
     }
     function onVoucherSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, vouchers: mode === 'add' ? [saved, ...r.vouchers] : r.vouchers.map(v => v.id === saved.id ? saved : v) }));
@@ -1082,9 +1155,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                 {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
                 {/* ── Sidebar ── */}
-                <aside className={`fixed top-0 left-0 h-full z-50 w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:z-auto`}>
-
-                    {/* Logo */}
+                <aside className={`fixed top-0 left-0 h-full z-50 w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto`}>
                     <div className="h-16 flex items-center px-5 border-b border-gray-100">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-sm shadow-green-200">
@@ -1216,6 +1287,19 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         restaurantId={restaurant.id}
                         onClose={() => setVoucherModal(null)}
                         onSaved={onVoucherSaved}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {confirmModal !== null && (
+                    <ConfirmModal
+                        key="confirm-modal"
+                        title={confirmModal.title}
+                        message={confirmModal.message}
+                        confirmLabel={confirmModal.confirmLabel}
+                        confirmAccent={confirmModal.confirmAccent}
+                        onConfirm={confirmModal.onConfirm}
+                        onCancel={() => setConfirmModal(null)}
                     />
                 )}
             </AnimatePresence>

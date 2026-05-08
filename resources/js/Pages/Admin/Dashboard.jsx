@@ -726,7 +726,7 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
     const top3   = (topVouchers ?? []).slice(0, 3);
-    const maxUsed = Math.max(...(top3.map(v => Number(v.used_count ?? 0))), 1);
+
 
     return (
         <motion.div
@@ -766,7 +766,7 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
                             <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-700"
-                                    style={{ width: `${Math.min(100, (Number(v.used_count ?? 0) / maxUsed) * 100)}%` }}
+                                   style={{ width: `${Math.min(100, (Number(v.used_count ?? 0) / (v.max_uses ?? v.used_count ?? 1)) * 100)}%` }}
                                 />
                             </div>
                         </div>
