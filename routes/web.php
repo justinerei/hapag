@@ -107,8 +107,16 @@ Route::middleware('auth')->group(function () {
         return response()->json(['claimed' => true, 'code' => $voucher->code]);
     })->name('vouchers.claim');
 
-    // AI food recommender (customer)
-    Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend');
+    // Notifications — mark as read
+    Route::post('/notifications/read', function () {
+        auth()->user()->unreadNotifications->markAsRead();
+        return back();
+    })->name('notifications.read');
+
+    Route::post('/notifications/{id}/read', function (string $id) {
+        auth()->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
+        return back();
+    })->name('notifications.read.one');
     Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
 });
 
