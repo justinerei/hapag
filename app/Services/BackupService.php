@@ -13,7 +13,6 @@ class BackupService
         $cfg = config('database.connections.mysql');
 
         $filename  = 'hapag_backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
-        $backupDir = storage_path('app/backups');
 
         Storage::disk('local')->makeDirectory('backups');
 
@@ -41,10 +40,19 @@ class BackupService
             throw new \RuntimeException('mysqldump failed: ' . $process->getErrorOutput());
         }
 
-        file_put_contents(
-            $backupDir . DIRECTORY_SEPARATOR . $filename,
-            $process->getOutput()
-        );
+        $output = $process->getOutput();
+
+        if (trim($output) === '') {
+            throw new \RuntimeException('mysqldump produced empty output. Backup aborted.');
+        }
+
+        $filePath = Storage::disk('local')->path('backups/' . $filename);
+
+        $written = file_put_contents($filePath, $output);
+
+        if ($written === false) {
+            throw new \RuntimeException('Failed to write backup file: ' . $filePath);
+        }
 
         $now = now()->toDateTimeString();
 
@@ -62,7 +70,7 @@ class BackupService
 
         return [
             'filename'       => $filename,
-            'path'           => $backupDir . DIRECTORY_SEPARATOR . $filename,
+            'path'           => $filePath,
             'last_backup_at' => $now,
         ];
     }
