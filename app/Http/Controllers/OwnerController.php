@@ -42,6 +42,9 @@ class OwnerController extends Controller
             'Los Baños'   => [14.1692, 121.2436],
             'Calamba'     => [14.2116, 121.1653],
             'San Pablo'   => [14.0688, 121.3224],
+            'Bay'         => [14.1791, 121.2840],
+            'Nagcarlan'   => [14.1390, 121.4180],
+            'Pila'        => [14.2300, 121.3670],
         ];
 
         [$lat, $lng] = $coords[$data['municipality']] ?? [14.2794, 121.4117];

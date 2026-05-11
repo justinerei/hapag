@@ -16,7 +16,6 @@ class Voucher extends Model
         'value',
         'min_order_amount',
         'max_uses',
-        'used_count',
         'restaurant_id',
         'created_by',
         'is_active',
