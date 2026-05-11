@@ -19,6 +19,7 @@ class BackupCommandTest extends TestCase
         });
 
         $this->artisan('backup:database')
+             ->expectsOutput('Backup complete: hapag_backup_2026-05-11_07-00-00.sql')
              ->assertExitCode(0);
     }
 
@@ -31,6 +32,20 @@ class BackupCommandTest extends TestCase
         });
 
         $this->artisan('backup:database')
+             ->expectsOutput('Backup failed: mysqldump failed: Access denied')
+             ->assertExitCode(1);
+    }
+
+    public function test_backup_command_handles_unexpected_exceptions(): void
+    {
+        $this->mock(BackupService::class, function ($mock) {
+            $mock->shouldReceive('run')->once()->andThrow(
+                new \LogicException('Invalid process configuration')
+            );
+        });
+
+        $this->artisan('backup:database')
+             ->expectsOutput('Backup failed: Invalid process configuration')
              ->assertExitCode(1);
     }
 }

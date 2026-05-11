@@ -18,7 +18,7 @@ class BackupDatabase extends Command
             Log::info('Backup succeeded: ' . $result['filename']);
             $this->info('Backup complete: ' . $result['filename']);
             return self::SUCCESS;
-        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
             Log::error('Backup failed: ' . $e->getMessage());
             $this->error('Backup failed: ' . $e->getMessage());
             return self::FAILURE;
