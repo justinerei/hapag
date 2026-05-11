@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+// ── NEW ───────────────────────────────────────────────────────────────────────
+import { useOrderNotifications } from '@/Hooks/useOrderNotifications';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,17 @@ const STATUS_LABELS = {
     ready:     'Ready',
     cancelled: 'Cancelled',
 };
+
+// ── NEW: friendly messages for each status transition ─────────────────────────
+const STATUS_CHANGE_MESSAGES = {
+    pending_preparing: '👨‍🍳 Your order is now being prepared!',
+    preparing_ready:   '✅ Your order is ready for pickup!',
+    pending_ready:     '✅ Your order is ready!',
+};
+function getChangeMessage(from, to) {
+    return STATUS_CHANGE_MESSAGES[`${from}_${to}`]
+        ?? `📦 Order status updated to ${STATUS_LABELS[to] ?? to}.`;
+}
 
 const TIMELINE_STEPS = [
     {
@@ -99,7 +112,7 @@ function StatusTimeline({ status }) {
                             <div className={`
                                 relative z-10 w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all duration-300
                                 ${isDone    ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : ''}
-                               ${isActive ? 'bg-green-600 text-white shadow-md shadow-green-600/20 scale-105' : ''}
+                                ${isActive  ? 'bg-green-600 text-white shadow-md shadow-green-600/20 scale-105' : ''}
                                 ${isPending ? 'bg-white border-2 border-gray-200 text-gray-300 shadow-sm' : ''}
                             `}>
                                 {isActive && (
@@ -233,12 +246,7 @@ function OrderCard({ order, isExpanded, onToggle }) {
                                 <div key={item.id} className="flex items-center gap-3">
                                     <div className="w-10 h-10 shrink-0 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
                                         {item.menu_item?.image_url ? (
-                                            <img
-                                                src={item.menu_item.image_url}
-                                                alt={item.menu_item.name}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
+                                            <img src={item.menu_item.image_url} alt={item.menu_item.name} className="w-full h-full object-cover" loading="lazy" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-sm">🍽️</div>
                                         )}
@@ -352,26 +360,50 @@ const TABS = [
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function OrdersIndex({ orders, cartCount = 0 }) {
+export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     const { flash } = usePage().props;
-    const [activeTab, setActiveTab]   = useState('active');
-    const [expanded, setExpanded]     = useState(() => new Set());
-    const [toast, setToast]           = useState(null);
-    const toastTimer = useRef(null);
 
-    function showToast(message, isError = false) {
+    // ── NEW: local orders state so polling can update the list live ───────────
+    const [orders, setOrders] = useState(initialOrders);
+
+    const [activeTab, setActiveTab] = useState('active');
+    const [expanded, setExpanded]   = useState(() => new Set());
+    const [toast, setToast]         = useState(null);
+    const toastTimer                = useRef(null);
+
+    // ── NEW: pass isOnOrdersPage=true → badge auto-clears on mount ───────────
+    const { latestChange } = useOrderNotifications(true);
+
+    function showToast(message, isError = false, isStatus = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
-        setToast({ message, isError });
-        toastTimer.current = setTimeout(() => setToast(null), 4000);
+        setToast({ message, isError, isStatus });
+        toastTimer.current = setTimeout(() => setToast(null), 5000);
     }
 
-    // Show flash message from checkout redirect
+    // Flash messages from checkout redirect
     useEffect(() => {
         if (flash?.success) showToast(flash.success);
         if (flash?.error)   showToast(flash.error, true);
     }, [flash?.success, flash?.error]);
 
-   
+    // ── NEW: when a status change is detected, show toast + reload orders ─────
+    useEffect(() => {
+        if (!latestChange) return;
+        showToast(getChangeMessage(latestChange.from, latestChange.to), false, true);
+        router.reload({ only: ['orders'], onSuccess: (page) => {
+            setOrders(page.props.orders);
+        }});
+    }, [latestChange]);
+
+    // ── NEW: background Inertia reload every 15s to keep order list fresh ─────
+    useEffect(() => {
+        const id = setInterval(() => {
+            router.reload({ only: ['orders'], onSuccess: (page) => {
+                setOrders(page.props.orders);
+            }});
+        }, 15_000);
+        return () => clearInterval(id);
+    }, []);
 
     useEffect(() => {
         const hasActive = orders.some(o => o.status === 'pending' || o.status === 'preparing');
@@ -393,15 +425,27 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
     const readyCount  = orders.filter(o => o.status === 'ready').length;
 
     return (
-        <CustomerLayout cartCount={cartCount}>
+        // ── NEW: orderNotifCount=0 because we're already on this page ─────────
+        <CustomerLayout cartCount={cartCount} orderNotifCount={0}>
             <Head title="My Orders — Hapag" />
 
-            {/* ── Toast ─────────────────────────────────────────────────────── */}
+            {/* ── Toast (updated to support isStatus blue variant) ───────────── */}
             {toast && (
-                <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white pointer-events-none ${toast.isError ? 'bg-red-500' : 'bg-green-500'}`}>
+                <div className={`
+                    fixed top-20 left-1/2 -translate-x-1/2 z-[200]
+                    flex items-center gap-2.5 px-6 py-3.5 rounded-2xl shadow-xl
+                    text-sm font-bold text-white pointer-events-none
+                    ${toast.isError  ? 'bg-red-500'  : ''}
+                    ${toast.isStatus ? 'bg-blue-600' : ''}
+                    ${!toast.isError && !toast.isStatus ? 'bg-green-500' : ''}
+                `}>
                     {toast.isError ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    ) : toast.isStatus ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -419,6 +463,8 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
                     <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">My Orders</h1>
                     <p className="text-gray-500 text-sm mt-0.5">
                         {orders.length} {orders.length === 1 ? 'order' : 'orders'} total
+                        {/* ── NEW: subtle live indicator ── */}
+                        <span className="ml-2 text-gray-300 text-xs">· updates every 15s</span>
                     </p>
                 </div>
 
@@ -474,6 +520,13 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
                     /* This is the section updated for responsive multi-column layout */
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 items-start">
                         {filteredOrders.map(order => (
+                            <div key={order.id} className="break-inside-avoid mb-4">
+                                <OrderCard
+                                    order={order}
+                                    isExpanded={expanded.has(order.id)}
+                                    onToggle={() => toggle(order.id)}
+                                />
+                            </div>
                             <OrderCard
                                 key={order.id}
                                 order={order}
