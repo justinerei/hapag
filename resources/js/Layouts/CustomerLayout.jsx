@@ -215,10 +215,7 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
 // ── Main Layout ───────────────────────────────────────────────────────────────
 
-// ── CHANGE 1 of 4: Added `orderNotifCount = 0` prop ──────────────────────────
 export default function CustomerLayout({ children, cartCount = 0, orderNotifCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
-    const { auth } = usePage().props;
-export default function CustomerLayout({ children, cartCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
     const { auth, notifications: initialNotifications = [] } = usePage().props;
     const user = auth?.user ?? null;
 
@@ -606,5 +603,5 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
 
             <main className="flex-1">{children}</main>
         </div>
-    );
+     );
 }

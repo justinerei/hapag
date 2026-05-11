@@ -118,6 +118,16 @@ Route::middleware('auth')->group(function () {
         return back();
     })->name('notifications.read.one');
     Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
+
+    // Order status polling for customer notifications
+    Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
+        $orders = $request->user()
+            ->orders()
+            ->whereIn('status', ['pending', 'preparing', 'ready'])
+            ->select('id', 'status')
+            ->get();
+        return response()->json(['orders' => $orders]);
+    })->name('api.orders.statuses');
 });
 
 // ── Owner portal ──────────────────────────────────────────────────────────────
@@ -179,16 +189,3 @@ Route::middleware(['auth', 'role:admin'])
     });
 
 require __DIR__.'/auth.php';
-
-// My orders
-Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-
-// ── NEW: Order status polling for customer notifications ──────────────────
-Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
-    $orders = $request->user()
-        ->orders()
-        ->whereIn('status', ['pending', 'preparing', 'ready'])
-        ->select('id', 'status')
-        ->get();
-    return response()->json(['orders' => $orders]);
-})->name('api.orders.statuses');

@@ -527,12 +527,6 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                                     onToggle={() => toggle(order.id)}
                                 />
                             </div>
-                            <OrderCard
-                                key={order.id}
-                                order={order}
-                                isExpanded={expanded.has(order.id)}
-                                onToggle={() => toggle(order.id)}
-                            />
                         ))}
                     </div>
                 )}
