@@ -223,7 +223,9 @@ Route::middleware(['auth', 'role:admin'])
         Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy'])->name('vouchers.destroy');
 
         // DB backup
-        Route::post('/backup', [AdminController::class, 'backup'])->name('backup');
+        Route::post('/backup',              [AdminController::class, 'backup'])        ->name('backup');
+        Route::get('/backups',              [AdminController::class, 'listBackups'])   ->name('backups.list');
+        Route::get('/backups/{filename}',   [AdminController::class, 'downloadBackup'])->name('backups.download');
     });
 
 require __DIR__.'/auth.php';
