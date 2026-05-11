@@ -226,6 +226,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     const [scrolled, setScrolled] = useState(false);
     const [bellOpen, setBellOpen] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
+    const [unreadCount, setUnreadCount] = useState(initialNotifications.length);
     const bellRef = useRef(null);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
@@ -267,6 +268,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                 },
                 ...prev,
             ]);
+            setUnreadCount(prev => prev + 1);
         });
         return () => {
             window.Echo.leave('customer.' + user.id);
@@ -491,15 +493,17 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                     onClick={() => {
                                         const opening = !bellOpen;
                                         setBellOpen(opening);
-                                        if (opening && notifications.length > 0) {
-                                            setNotifications([]);
-                                            fetch(route('notifications.read'), {
-                                                method: 'POST',
-                                                headers: {
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                                                    'X-Requested-With': 'XMLHttpRequest',
-                                                },
-                                            });
+                                        if (opening) {
+                                            setUnreadCount(0);
+                                            if (notifications.length > 0) {
+                                                fetch(route('notifications.read'), {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                                                        'X-Requested-With': 'XMLHttpRequest',
+                                                    },
+                                                });
+                                            }
                                         }
                                     }}
                                     className="relative p-2 rounded-full transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50"
@@ -508,9 +512,9 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                     </svg>
-                                    {notifications.length > 0 && (
+                                    {unreadCount > 0 && (
                                         <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 leading-none">
-                                            {notifications.length > 9 ? '9+' : notifications.length}
+                                            {unreadCount > 9 ? '9+' : unreadCount}
                                         </span>
                                     )}
                                 </button>

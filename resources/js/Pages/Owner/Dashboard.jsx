@@ -1148,12 +1148,28 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
     const [newOrderCount, setNewOrderCount] = useState(0);
     const [orderToast, setOrderToast]       = useState(null);
     const orderToastTimer                   = useRef(null);
+    const [ownerBellOpen, setOwnerBellOpen]           = useState(false);
+    const [ownerNotifications, setOwnerNotifications] = useState([]);
+    const [ownerUnread, setOwnerUnread]               = useState(0);
+    const ownerBellRef                                = useRef(null);
 
     useEffect(() => {
         if (!auth?.user?.id) return;
         const channel = window.Echo.private('owner.' + auth.user.id);
         channel.listen('.new-order', (event) => {
             setNewOrderCount(prev => prev + 1);
+            setOwnerUnread(prev => prev + 1);
+            setOwnerNotifications(prev => [
+                {
+                    id: Date.now(),
+                    order_id: event.order_id,
+                    customer_name: event.customer_name,
+                    order_type: event.order_type,
+                    total: event.total,
+                    received_at: 'just now',
+                },
+                ...prev,
+            ]);
             if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
             setOrderToast(event);
             orderToastTimer.current = setTimeout(() => setOrderToast(null), 5000);
@@ -1182,6 +1198,16 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
         };
     }, [auth?.user?.id]);
 
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (ownerBellRef.current && !ownerBellRef.current.contains(e.target)) {
+                setOwnerBellOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const restaurant = restaurants.find(r => r.id === selectedId) ?? restaurants[0] ?? null;
 
     if (!restaurant) return (
@@ -1205,7 +1231,14 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
     }
     async function advanceStatus(order, targetStatus) {
         if (!targetStatus) return;
-        try { const d = await apiFetch(route('owner.orders.status', order.id), 'PATCH', { status: targetStatus }); patchRestaurant(r => ({ ...r, orders: r.orders.map(o => o.id === order.id ? { ...o, status: d.status } : o) })); } catch { }
+        try {
+            const d = await apiFetch(route('owner.orders.status', order.id), 'PATCH', { status: targetStatus });
+            patchRestaurant(r => ({ ...r, orders: r.orders.map(o => o.id === order.id ? { ...o, status: d.status } : o) }));
+            if (targetStatus === 'accepted' || targetStatus === 'cancelled') {
+                setOwnerUnread(prev => Math.max(0, prev - 1));
+                setNewOrderCount(prev => Math.max(0, prev - 1));
+            }
+        } catch { }
     }
     async function deleteVoucher(v) {
         if (!confirm(`Delete voucher "${v.code}"?`)) return;
@@ -1328,13 +1361,61 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                         </div>
                         <div className="flex items-center gap-2.5">
                             <span className="text-xs text-gray-400 hidden lg:inline">{fmtDate()}</span>
-                            {(pendingCount > 0 || newOrderCount > 0) && (
-                                <button onClick={() => handleTabChange('orders')}
-                                    className="relative p-2 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors">
-                                    <BellIcon cls="w-5 h-5 text-orange-500" />
-                                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">{pendingCount + newOrderCount}</span>
+                            <div className="relative" ref={ownerBellRef}>
+                                <button
+                                    onClick={() => {
+                                        setOwnerBellOpen(v => !v);
+                                        setOwnerUnread(0);
+                                    }}
+                                    className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                                    title="Notifications"
+                                >
+                                    <BellIcon cls="w-5 h-5 text-gray-500" />
+                                    {ownerUnread > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">
+                                            {ownerUnread > 9 ? '9+' : ownerUnread}
+                                        </span>
+                                    )}
                                 </button>
-                            )}
+
+                                {ownerBellOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                            <p className="text-sm font-bold text-gray-800">New Orders</p>
+                                            {ownerNotifications.length > 0 && (
+                                                <button
+                                                    onClick={() => { handleTabChange('orders'); setOwnerBellOpen(false); }}
+                                                    className="text-xs text-green-600 font-semibold hover:text-green-700 transition-colors"
+                                                >
+                                                    View all orders →
+                                                </button>
+                                            )}
+                                        </div>
+                                        {ownerNotifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-center text-sm text-gray-400">No new orders yet</div>
+                                        ) : (
+                                            <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                                                {ownerNotifications.map(n => (
+                                                    <li
+                                                        key={n.id}
+                                                        onClick={() => { handleTabChange('orders'); setOwnerBellOpen(false); }}
+                                                        className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-gray-800">Order #{n.order_id}</p>
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${n.order_type === 'delivery' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                                                {n.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-0.5">From {n.customer_name} · ₱{Number(n.total).toFixed(2)}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{n.received_at}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <span className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${restaurant.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${restaurant.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
                                 {cap(restaurant.status)}
