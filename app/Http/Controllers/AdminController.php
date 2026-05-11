@@ -185,4 +185,36 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    public function listBackups(): \Illuminate\Http\JsonResponse
+    {
+        $files = Storage::disk('local')->files('backups');
+
+        $backups = collect($files)
+            ->filter(fn($f) => str_ends_with($f, '.sql'))
+            ->map(fn($file) => [
+                'filename'   => basename($file),
+                'size_kb'    => round(Storage::disk('local')->size($file) / 1024, 1),
+                'created_at' => date('Y-m-d H:i:s', Storage::disk('local')->lastModified($file)),
+            ])
+            ->sortByDesc('created_at')
+            ->values();
+
+        return response()->json($backups);
+    }
+
+    public function downloadBackup(string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        if (! preg_match('/^hapag_backup_[\d_\-]+\.sql$/', $filename)) {
+            abort(404);
+        }
+
+        $path = 'backups/' . $filename;
+
+        if (! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('local')->download($path);
+    }
 }
