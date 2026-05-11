@@ -16,7 +16,12 @@ return new class extends Migration
             $table->decimal('discount_amount', 8, 2)->default(0);
             $table->decimal('final_amount', 8, 2);
             $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
-            $table->enum('status', ['pending', 'preparing', 'ready'])->default('pending');
+            // Use string for SQLite compatibility, enum for MySQL
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->enum('status', ['pending', 'preparing', 'ready'])->default('pending');
+            } else {
+                $table->string('status')->default('pending');
+            }
             $table->text('pickup_note')->nullable();
             $table->timestamps();
         });

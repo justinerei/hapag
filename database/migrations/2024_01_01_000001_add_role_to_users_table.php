@@ -9,7 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['customer', 'owner', 'admin'])->default('customer')->after('email');
+            // Use string for SQLite compatibility, enum for MySQL
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->enum('role', ['customer', 'owner', 'admin'])->default('customer')->after('email');
+            } else {
+                $table->string('role')->default('customer')->after('email');
+            }
         });
     }
 

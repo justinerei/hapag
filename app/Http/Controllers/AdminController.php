@@ -10,9 +10,10 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
+use App\Services\BackupService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -166,15 +167,22 @@ class AdminController extends Controller
         return response()->json(['status' => $restaurant->status]);
     }
 
-    public function backup()
+    public function backup(BackupService $service)
     {
-        Artisan::call('db:backup');
-        $lastBackup     = SystemSetting::where('key', 'last_backup_at')->value('value');
-        $lastBackupFile = SystemSetting::where('key', 'last_backup_file')->value('value');
-        return response()->json([
-            'success'          => true,
-            'last_backup_at'   => $lastBackup,
-            'last_backup_file' => $lastBackupFile,
-        ]);
+        try {
+            $result = $service->run();
+
+            return response()->json([
+                'success'          => true,
+                'filename'         => $result['filename'],
+                'last_backup_at'   => $result['last_backup_at'],
+                'last_backup_file' => $result['filename'],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
