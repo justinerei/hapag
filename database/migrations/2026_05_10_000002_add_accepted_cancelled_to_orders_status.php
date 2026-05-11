@@ -20,7 +20,7 @@ return new class extends Migration
     {
         // Revert back to original statuses (will fail if rows have the new values)
         if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','preparing','ready','completed') NOT NULL DEFAULT 'pending'");
+            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','preparing','ready') NOT NULL DEFAULT 'pending'");
         }
     }
 };
