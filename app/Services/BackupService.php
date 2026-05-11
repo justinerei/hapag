@@ -17,7 +17,7 @@ class BackupService
 
         Storage::disk('local')->makeDirectory('backups');
 
-        $mysqldump = env('MYSQLDUMP_PATH', 'mysqldump');
+        $mysqldump = config('backup.mysqldump_path');
         $password  = $cfg['password'] ?? '';
 
         $cmd = [
@@ -48,15 +48,17 @@ class BackupService
 
         $now = now()->toDateTimeString();
 
-        DB::table('system_settings')->updateOrInsert(
-            ['key' => 'last_backup_at'],
-            ['value' => $now]
-        );
+        DB::transaction(function () use ($now, $filename) {
+            DB::table('system_settings')->updateOrInsert(
+                ['key' => 'last_backup_at'],
+                ['value' => $now]
+            );
 
-        DB::table('system_settings')->updateOrInsert(
-            ['key' => 'last_backup_file'],
-            ['value' => $filename]
-        );
+            DB::table('system_settings')->updateOrInsert(
+                ['key' => 'last_backup_file'],
+                ['value' => $filename]
+            );
+        });
 
         return [
             'filename'       => $filename,
