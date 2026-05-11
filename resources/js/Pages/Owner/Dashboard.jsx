@@ -1019,53 +1019,164 @@ function HistoryTab({ restaurant }) {
 // ─── Tab: Settings ────────────────────────────────────────────────────────────
 
 function SettingsTab({ restaurant }) {
-    const [form, setForm] = useState({ name: restaurant.name ?? '', description: restaurant.description ?? '', municipality: restaurant.municipality ?? '', address: restaurant.address ?? '', image_url: restaurant.image_url ?? '', opening_time: restaurant.opening_time ?? '', closing_time: restaurant.closing_time ?? '' });
+    const [form, setForm] = useState({ 
+        name: restaurant.name ?? '', 
+        description: restaurant.description ?? '', 
+        municipality: restaurant.municipality ?? '', 
+        address: restaurant.address ?? '', 
+        image_url: restaurant.image_url ?? '', 
+        opening_time: restaurant.opening_time ?? '', 
+        closing_time: restaurant.closing_time ?? '' 
+    });
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errors, setErrors] = useState({});
-    const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setSuccess(false); };
+    
+    const set = (k, v) => { 
+        setForm(p => ({ ...p, [k]: v })); 
+        setSuccess(false); 
+    };
 
     async function handleSave(e) {
-        e.preventDefault(); setErrors({}); setSaving(true); setSuccess(false);
-        try { await apiFetch(route('owner.settings.update', restaurant.id), 'PATCH', form); setSuccess(true); }
-        catch (err) { if (err.status === 422) setErrors(err.data?.errors ?? {}); }
-        finally { setSaving(false); }
+        e.preventDefault(); 
+        setErrors({}); 
+        setSaving(true); 
+        setSuccess(false);
+        try { 
+            await apiFetch(route('owner.settings.update', restaurant.id), 'PATCH', form); 
+            setSuccess(true); 
+        } catch (err) { 
+            if (err.status === 422) setErrors(err.data?.errors ?? {}); 
+        } finally { 
+            setSaving(false); 
+        }
     }
 
     return (
-        <div className="max-w-xl space-y-4">
-            <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                <h2 className="text-sm font-extrabold text-gray-800 mb-5">Restaurant Settings</h2>
-                <form onSubmit={handleSave} className="space-y-4">
-                    <Field label="Restaurant Name *" error={errors.name?.[0]}><input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} required /></Field>
-                    <Field label="Description" error={errors.description?.[0]}><textarea value={form.description} onChange={e => set('description', e.target.value)} className={inp + ' resize-none'} rows={3} placeholder="Brief description…" /></Field>
-                    <Field label="Municipality *" error={errors.municipality?.[0]}><select value={form.municipality} onChange={e => set('municipality', e.target.value)} className={inp} required><option value="">Select municipality…</option>{MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}</select></Field>
-                    <Field label="Address / Landmark" error={errors.address?.[0]}><input type="text" value={form.address} onChange={e => set('address', e.target.value)} className={inp} placeholder="e.g. Near SM City, Brgy. Poblacion" /></Field>
-                    <Field label="Cover Image URL" error={errors.image_url?.[0]}><input type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)} className={inp} placeholder="https://…" /></Field>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Opening Time"><input type="time" value={form.opening_time} onChange={e => set('opening_time', e.target.value)} className={inp} /></Field>
-                        <Field label="Closing Time"><input type="time" value={form.closing_time} onChange={e => set('closing_time', e.target.value)} className={inp} /></Field>
-                    </div>
-                    <div className="flex items-center gap-3 pt-2">
-                        <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-50 transition-colors">{saving ? 'Saving…' : 'Save Changes'}</button>
-                        {success && <span className="text-xs font-semibold text-green-600">✓ Saved successfully!</span>}
-                    </div>
-                </form>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-wide mb-3">Quick Info</h3>
-                <div className="space-y-2 text-sm">
-                    {[
-                        ['Status', <span key="s" className={`font-bold ${restaurant.status === 'active' ? 'text-green-600' : 'text-yellow-600'}`}>{cap(restaurant.status)}</span>],
-                        ['Location', restaurant.municipality],
-                        ['Hours', restaurant.opening_time ? `${restaurant.opening_time} – ${restaurant.closing_time}` : '—'],
-                        ['Menu Items', restaurant.menu_items?.length ?? 0],
-                    ].map(([k, v]) => (
-                        <div key={k} className="flex justify-between"><span className="text-gray-400">{k}</span><span className="font-semibold text-gray-700">{v}</span></div>
-                    ))}
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-5xl space-y-6"
+        >
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-6">
+                <div>
+                    <h2 className="text-2xl font-extrabold text-gray-800 tracking-tight">Restaurant Settings</h2>
+                    <p className="text-sm text-gray-500">Configure your store presence and operational hours.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <AnimatePresence>
+                        {success && (
+                            <motion.span 
+                                initial={{ opacity: 0, x: 10 }} 
+                                animate={{ opacity: 1, x: 0 }} 
+                                exit={{ opacity: 0 }}
+                                className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"
+                            >
+                                ✓ Changes saved
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
+                   
                 </div>
             </div>
-        </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left Side: Profile Information */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+                        <form className="space-y-5">
+                            <Field label="Restaurant Name *" error={errors.name?.[0]}>
+                                <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} required />
+                            </Field>
+
+                            <Field label="Description" error={errors.description?.[0]}>
+                                <textarea value={form.description} onChange={e => set('description', e.target.value)} className={inp + ' resize-none'} rows={4} placeholder="Tell customers about your kitchen..." />
+                            </Field>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Field label="Municipality *" error={errors.municipality?.[0]}>
+                                    <select value={form.municipality} onChange={e => set('municipality', e.target.value)} className={inp} required>
+                                        <option value="">Select municipality</option>
+                                        {MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Address / Landmark" error={errors.address?.[0]}>
+                                    <input type="text" value={form.address} onChange={e => set('address', e.target.value)} className={inp} placeholder="Street, Building, Landmark" />
+                                </Field>
+                            </div>
+
+                            <Field label="Cover Image URL" error={errors.image_url?.[0]}>
+                                <div className="relative">
+                                    <input type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)} className={inp + ' pl-10'} placeholder="https://..." />
+                                    <ImageIcon cls="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                </div>
+                            </Field>
+                        </form>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+                        <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
+                            <ClockIcon cls="w-4 h-4 text-green-500" />
+                            Business Hours
+                        </h3>
+                        <div className="grid grid-cols-2 gap-6">
+                            <Field label="Opening Time">
+                                <input type="time" value={form.opening_time} onChange={e => set('opening_time', e.target.value)} className={inp} />
+                            </Field>
+                            <Field label="Closing Time">
+                                <input type="time" value={form.closing_time} onChange={e => set('closing_time', e.target.value)} className={inp} />
+                            </Field>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side: Quick Info & Preview */}
+                <div className="space-y-6">
+                    {/* Visual Preview Card */}
+                    <div className="bg-gray-900 rounded-3xl overflow-hidden shadow-xl relative aspect-video group">
+                        {form.image_url ? (
+                            <img src={form.image_url} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500" alt="Preview" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                <ImageIcon cls="w-8 h-8 text-gray-600" />
+                            </div>
+                        )}
+                        <div className="absolute inset-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="text-white font-bold truncate">{form.name || 'Restaurant Name'}</p>
+                            <p className="text-white/60 text-xs truncate">{form.municipality || 'Location'}</p>
+                        </div>
+                    </div>
+
+                    {/* Operational Stats */}
+                    <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-5">Operational Status</h3>
+                        <div className="space-y-4">
+                            {[
+                                ['Store Status', <span key="s" className={`px-2 py-0.5 rounded-lg text-xs font-bold border ${restaurant.status === 'active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>{cap(restaurant.status)}</span>],
+                                ['Active Menu', `${restaurant.menu_items?.length ?? 0} Items`],
+                                ['Current Schedule', form.opening_time ? `${form.opening_time} - ${form.closing_time}` : 'Not Set'],
+                            ].map(([k, v]) => (
+                                <div key={k} className="flex justify-between items-center border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                                    <span className="text-xs font-medium text-gray-500">{k}</span>
+                                    <span className="text-sm font-bold text-gray-800">{v}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                     <button 
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-6 py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 shadow-lg shadow-green-200 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+
+                </div>
+
+            </div>
+        </motion.div>
     );
 }
 

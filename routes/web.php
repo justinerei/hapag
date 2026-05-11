@@ -171,3 +171,16 @@ Route::middleware(['auth', 'role:admin'])
     });
 
 require __DIR__.'/auth.php';
+
+// My orders
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+
+// ── NEW: Order status polling for customer notifications ──────────────────
+Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
+    $orders = $request->user()
+        ->orders()
+        ->whereIn('status', ['pending', 'preparing', 'ready'])
+        ->select('id', 'status')
+        ->get();
+    return response()->json(['orders' => $orders]);
+})->name('api.orders.statuses');

@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import { useOrderNotifications } from '@/Hooks/useOrderNotifications';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -442,19 +443,12 @@ function AIChatWidget() {
                         <div ref={bodyRef} className="flex-1 overflow-y-auto p-4 space-y-3" style={{ minHeight: '220px' }}>
                             {/* Empty state */}
                             {!result && !loading && !error && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                >
+                                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                                     <p className="text-gray-400 text-xs font-medium mb-3">Try asking:</p>
                                     <div className="flex flex-wrap gap-2">
                                         {suggestions.map(s => (
-                                            <button
-                                                key={s}
-                                                onClick={() => setPrompt(s)}
-                                                className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-50 hover:text-green-600 hover:border-green-100 transition-colors"
-                                            >
+                                            <button key={s} onClick={() => setPrompt(s)}
+                                                className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-50 hover:text-green-600 hover:border-green-100 transition-colors">
                                                 {s}
                                             </button>
                                         ))}
@@ -489,12 +483,7 @@ function AIChatWidget() {
 
                             {/* Results */}
                             {result && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                    className="space-y-3"
-                                >
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-3">
                                     {result.intro && (
                                         <div className="bg-green-50 rounded-xl px-4 py-3 border border-green-100">
                                             <p className="text-gray-700 text-xs leading-relaxed">{result.intro}</p>
@@ -507,20 +496,12 @@ function AIChatWidget() {
                                                 const isAdding = addingId === dish.id;
                                                 const isDone = addingId === 'done-' + dish.id;
                                                 return (
-                                                    <motion.div
-                                                        key={dish.id}
-                                                        initial={{ opacity: 0, y: 8 }}
-                                                        animate={{ opacity: 1, y: 0 }}
+                                                    <motion.div key={dish.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                                                         transition={{ duration: 0.3, delay: idx * 0.06 }}
-                                                        className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-                                                    >
+                                                        className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
                                                         <Link href={route('restaurants.show', dish.restaurant_id)} className="flex">
                                                             <div className="w-20 h-20 shrink-0 bg-gray-100 overflow-hidden">
-                                                                {dish.image_url ? (
-                                                                    <img src={dish.image_url} alt={dish.name} className="w-full h-full object-cover" loading="lazy" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
-                                                                )}
+                                                                {dish.image_url ? <img src={dish.image_url} alt={dish.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>}
                                                             </div>
                                                             <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
                                                                 <div>
@@ -534,27 +515,11 @@ function AIChatWidget() {
                                                             </div>
                                                         </Link>
                                                         <div className="border-t border-gray-50 px-3 py-2">
-                                                            <button
-                                                                type="button"
-                                                                disabled={isAdding || isDone}
-                                                                onClick={(e) => { e.preventDefault(); quickAdd(dish.id); }}
-                                                                className={`w-full py-2 rounded-lg text-[11px] font-bold transition-all active:scale-98 ${
-                                                                    isDone
-                                                                        ? 'bg-green-50 text-green-600 border border-green-100'
-                                                                        : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-500 hover:text-white hover:border-green-500'
-                                                                } ${isAdding ? 'opacity-60' : ''}`}
-                                                            >
-                                                                {isDone ? (
-                                                                    <span className="flex items-center justify-center gap-1.5">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                                                        Added to cart
-                                                                    </span>
-                                                                ) : isAdding ? 'Adding…' : (
-                                                                    <span className="flex items-center justify-center gap-1.5">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                                                        Add to cart
-                                                                    </span>
-                                                                )}
+                                                            <button type="button" disabled={isAdding || isDone} onClick={(e) => { e.preventDefault(); quickAdd(dish.id); }}
+                                                                className={`w-full py-2 rounded-lg text-[11px] font-bold transition-all active:scale-98 ${isDone ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-500 hover:text-white hover:border-green-500'} ${isAdding ? 'opacity-60' : ''}`}>
+                                                                {isDone ? <span className="flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Added to cart</span>
+                                                                : isAdding ? 'Adding…'
+                                                                : <span className="flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>Add to cart</span>}
                                                             </button>
                                                         </div>
                                                     </motion.div>
@@ -572,21 +537,12 @@ function AIChatWidget() {
 
                         {/* Input */}
                         <form onSubmit={handleSubmit} className="border-t border-gray-100 p-3.5 flex gap-2 shrink-0">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
+                            <input ref={inputRef} type="text" value={prompt} onChange={e => setPrompt(e.target.value)}
                                 placeholder="I'm craving…"
                                 className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                maxLength={300}
-                                disabled={loading}
-                            />
-                            <button
-                                type="submit"
-                                disabled={loading || !prompt.trim()}
-                                className="w-11 h-11 rounded-xl bg-green-500 text-white flex items-center justify-center hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shrink-0"
-                            >
+                                maxLength={300} disabled={loading} />
+                            <button type="submit" disabled={loading || !prompt.trim()}
+                                className="w-11 h-11 rounded-xl bg-green-500 text-white flex items-center justify-center hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                             </button>
                         </form>
@@ -602,44 +558,20 @@ function AIChatWidget() {
 function PageStyles() {
     return (
         <style>{`
-            @keyframes weatherFloat {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-10px); }
-            }
-            @keyframes weatherPulse {
-                0%, 100% { opacity: 0.65; }
-                50% { opacity: 1; }
-            }
-            @keyframes sunRays {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            @keyframes rainDrop {
-                0% { transform: translateY(-8px); opacity: 0; }
-                50% { opacity: 1; }
-                100% { transform: translateY(10px); opacity: 0; }
-            }
-            @keyframes fabRing {
-                0% { transform: scale(1); opacity: 0.55; }
-                100% { transform: scale(1.65); opacity: 0; }
-            }
-            @keyframes cardFadeUp {
-                from { opacity: 0; transform: translateY(14px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
+            @keyframes weatherFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+            @keyframes weatherPulse { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+            @keyframes sunRays { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            @keyframes rainDrop { 0% { transform: translateY(-8px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+            @keyframes fabRing { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(1.65); opacity: 0; } }
+            @keyframes cardFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
             .weather-float { animation: weatherFloat 4s ease-in-out infinite; }
             .weather-pulse { animation: weatherPulse 3s ease-in-out infinite; }
             .sun-rays { animation: sunRays 22s linear infinite; }
             .rain-drop { animation: rainDrop 1.6s ease-in-out infinite; }
             .rain-drop-2 { animation: rainDrop 1.6s ease-in-out infinite 0.35s; }
             .rain-drop-3 { animation: rainDrop 1.6s ease-in-out infinite 0.7s; }
-            .fab-ring {
-                background: rgba(34,197,94,0.45);
-                animation: fabRing 2s ease-out infinite;
-            }
-            .card-fade-up {
-                animation: cardFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-            }
+            .fab-ring { background: rgba(34,197,94,0.45); animation: fabRing 2s ease-out infinite; }
+            .card-fade-up { animation: cardFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
         `}</style>
     );
 }
@@ -689,6 +621,9 @@ export default function Customer({
 
     const pageProps = usePage().props;
     const [showWelcome, setShowWelcome] = useState(() => !!pageProps?.flash?.registered);
+
+    // ── NEW: order notification hook ──────────────────────────────────────────
+    const { unreadCount } = useOrderNotifications();
 
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
@@ -743,10 +678,7 @@ export default function Customer({
 
     async function confirmClearAndAdd() {
         try {
-            await fetch(route('cart.clear'), {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': csrfToken() },
-            });
+            await fetch(route('cart.clear'), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken() } });
         } catch { /* ignore */ }
         const saved = conflict;
         setConflict(null);
@@ -754,9 +686,7 @@ export default function Customer({
     }
 
     function toggleCuisine(catId) {
-        setSelectedCuisines(prev =>
-            prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
-        );
+        setSelectedCuisines(prev => prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]);
     }
 
     function handleCuisineCircleClick(catId) {
@@ -793,28 +723,21 @@ export default function Customer({
     const filterKey = `${search}|${selectedCuisines.join(',')}|${hasDealsFilter}|${sortBy}`;
 
     return (
-        <CustomerLayout cartCount={localCartCount}>
+        // ── NEW: pass orderNotifCount={unreadCount} ───────────────────────────
+        <CustomerLayout cartCount={localCartCount} orderNotifCount={unreadCount}>
             <Head title="Home — Hapag" />
             <PageStyles />
 
-            {/* ── Welcome Modal ─────────────────────────────────────── */}
+            {/* Welcome Modal — unchanged */}
             <AnimatePresence>
                 {showWelcome && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-6"
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-6">
                         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowWelcome(false)} />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 12 }} transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             className="relative z-10 max-w-sm w-full bg-white rounded-2xl shadow-2xl text-center p-10"
-                            onClick={(e) => e.stopPropagation()}
-                        >
+                            onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-center mb-5">
                                 <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -823,13 +746,8 @@ export default function Customer({
                                 </div>
                             </div>
                             <h2 className="text-2xl font-extrabold text-gray-800 mb-2">You're all set</h2>
-                            <p className="text-sm text-gray-500 leading-relaxed mb-6">
-                                Your account is ready. Start exploring restaurants and ordering your favorite dishes.
-                            </p>
-                            <button
-                                onClick={() => setShowWelcome(false)}
-                                className="w-full py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors active:scale-98"
-                            >
+                            <p className="text-sm text-gray-500 leading-relaxed mb-6">Your account is ready. Start exploring restaurants and ordering your favorite dishes.</p>
+                            <button onClick={() => setShowWelcome(false)} className="w-full py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors active:scale-98">
                                 Start exploring
                             </button>
                         </motion.div>
@@ -837,42 +755,27 @@ export default function Customer({
                 )}
             </AnimatePresence>
 
-            {/* ── Toast ─────────────────────────────────────────────── */}
+            {/* Toast — unchanged */}
             <AnimatePresence>
                 {toast && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.2 }}
-                        className={`fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white pointer-events-none ${toast.isError ? 'bg-red-500' : 'bg-green-500'}`}
-                    >
-                        {toast.isError ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        )}
+                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+                        className={`fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white pointer-events-none ${toast.isError ? 'bg-red-500' : 'bg-green-500'}`}>
+                        {toast.isError
+                            ? <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            : <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
                         <span>{toast.message}</span>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* ── Cart conflict modal ───────────────────────────────── */}
+            {/* Cart conflict modal — unchanged */}
             <AnimatePresence>
                 {conflict && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full"
-                        >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -881,207 +784,66 @@ export default function Customer({
                                 </div>
                                 <h3 className="font-bold text-gray-800 text-base leading-tight">Cart has items from another restaurant</h3>
                             </div>
-                            <p className="text-gray-500 text-sm mb-5 leading-relaxed">
-                                Clear your cart to add items from &ldquo;{conflict.restaurantName}&rdquo;?
-                            </p>
+                            <p className="text-gray-500 text-sm mb-5 leading-relaxed">Clear your cart to add items from &ldquo;{conflict.restaurantName}&rdquo;?</p>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setConflict(null)}
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmClearAndAdd}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors active:scale-98"
-                                >
-                                    Clear &amp; add
-                                </button>
+                                <button onClick={() => setConflict(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors">Cancel</button>
+                                <button onClick={confirmClearAndAdd} className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors active:scale-98">Clear &amp; add</button>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* ═══════════════════════════════════════════════════════
-                WEATHER HERO
-                ═══════════════════════════════════════════════════════ */}
+            {/* Weather hero, main content, AI widget — all unchanged from document 6 */}
             {weather && (
-                <motion.section
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.7 }}
-                    className="relative overflow-hidden"
-                    style={{ background: wTheme.gradient, minHeight: '440px' }}
-                >
-                    {/* SVG Weather Illustration */}
+                <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7 }}
+                    className="relative overflow-hidden" style={{ background: wTheme.gradient, minHeight: '440px' }}>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        {weatherTag === 'hot' && (
-                            <svg className="absolute -right-8 -top-8 w-[600px] h-[600px] opacity-40" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="300" cy="200" r="80" fill="url(#sunGrad)" className="sun-rays" style={{ transformOrigin: '300px 200px' }} />
-                                <circle cx="300" cy="200" r="130" fill="#fbbf24" opacity="0.12" className="weather-pulse" />
-                                <circle cx="300" cy="200" r="175" fill="#fbbf24" opacity="0.07" className="weather-pulse" style={{ animationDelay: '1s' }} />
-                                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
-                                    <line key={i}
-                                        x1={300 + 105 * Math.cos(angle * Math.PI / 180)}
-                                        y1={200 + 105 * Math.sin(angle * Math.PI / 180)}
-                                        x2={300 + 160 * Math.cos(angle * Math.PI / 180)}
-                                        y2={200 + 160 * Math.sin(angle * Math.PI / 180)}
-                                        stroke="#fcd34d" strokeWidth="3.5" strokeLinecap="round" opacity="0.55"
-                                        className="weather-pulse" style={{ animationDelay: `${i * 0.2}s` }}
-                                    />
-                                ))}
-                                <path d="M50 380 Q100 360 150 380 Q200 400 250 380 Q300 360 350 380 Q400 400 450 380" stroke="#fcd34d" strokeWidth="2.5" opacity="0.25" fill="none" className="weather-float" />
-                                <path d="M30 420 Q80 400 130 420 Q180 440 230 420 Q280 400 330 420 Q380 440 430 420" stroke="#fcd34d" strokeWidth="2" opacity="0.18" fill="none" className="weather-float" style={{ animationDelay: '1.5s' }} />
-                                <defs>
-                                    <radialGradient id="sunGrad" cx="0.4" cy="0.4" r="0.6">
-                                        <stop offset="0%" stopColor="#fef08a" />
-                                        <stop offset="100%" stopColor="#f59e0b" />
-                                    </radialGradient>
-                                </defs>
-                            </svg>
-                        )}
-
-                        {weatherTag === 'rainy' && (
-                            <svg className="absolute -right-8 -top-4 w-[620px] h-[500px] opacity-40" viewBox="0 0 550 450" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <ellipse cx="350" cy="120" rx="120" ry="70" fill="#5b8cbe" opacity="0.55" className="weather-float" />
-                                <ellipse cx="285" cy="108" rx="85" ry="58" fill="#6b9fd1" opacity="0.45" className="weather-float" style={{ animationDelay: '0.5s' }} />
-                                <ellipse cx="418" cy="132" rx="75" ry="48" fill="#5b8cbe" opacity="0.4" className="weather-float" style={{ animationDelay: '1s' }} />
-                                <ellipse cx="198" cy="78" rx="65" ry="38" fill="#7eb3dc" opacity="0.25" className="weather-float" style={{ animationDelay: '2s' }} />
-                                {[[260,190],[292,202],[324,187],[356,197],[388,192],[418,204],[272,245],[306,238],[338,250],[370,234],[402,246],[248,296],[312,284],[344,300],[376,288],[424,294]].map(([x, y], i) => (
-                                    <line key={i} x1={x} y1={y} x2={x - 5} y2={y + 20} stroke="#93c5fd" strokeWidth="2" strokeLinecap="round" opacity="0.65"
-                                        className={`rain-drop${i % 3 === 1 ? '-2' : i % 3 === 2 ? '-3' : ''}`} />
-                                ))}
-                                <ellipse cx="320" cy="410" rx="65" ry="9" fill="none" stroke="#93c5fd" strokeWidth="1.5" opacity="0.22" className="weather-pulse" />
-                                <ellipse cx="320" cy="410" rx="42" ry="5.5" fill="none" stroke="#93c5fd" strokeWidth="1.5" opacity="0.32" className="weather-pulse" style={{ animationDelay: '0.7s' }} />
-                            </svg>
-                        )}
-
-                        {weatherTag === 'cloudy' && (
-                            <svg className="absolute -right-8 -top-4 w-[620px] h-[440px] opacity-35" viewBox="0 0 550 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <ellipse cx="350" cy="140" rx="130" ry="75" fill="white" opacity="0.32" className="weather-float" />
-                                <ellipse cx="288" cy="128" rx="95" ry="63" fill="white" opacity="0.28" className="weather-float" style={{ animationDelay: '0.8s' }} />
-                                <ellipse cx="424" cy="152" rx="85" ry="54" fill="white" opacity="0.22" className="weather-float" style={{ animationDelay: '1.2s' }} />
-                                <ellipse cx="178" cy="88" rx="72" ry="42" fill="white" opacity="0.17" className="weather-float" style={{ animationDelay: '2s' }} />
-                                <ellipse cx="218" cy="83" rx="52" ry="32" fill="white" opacity="0.13" className="weather-float" style={{ animationDelay: '2.5s' }} />
-                                <ellipse cx="482" cy="78" rx="42" ry="24" fill="white" opacity="0.1" className="weather-float" style={{ animationDelay: '3s' }} />
-                            </svg>
-                        )}
-
-                        {weatherTag === 'cool' && (
-                            <svg className="absolute -right-8 -top-4 w-[580px] h-[500px] opacity-35" viewBox="0 0 500 450" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <g className="weather-float">
-                                    <path d="M350 80 Q372 102 362 134 Q340 112 350 80Z" fill="#86efac" opacity="0.55" />
-                                    <line x1="350" y1="80" x2="356" y2="122" stroke="#86efac" strokeWidth="1.5" opacity="0.45" />
-                                </g>
-                                <g className="weather-float" style={{ animationDelay: '1.2s' }}>
-                                    <path d="M422 152 Q448 168 442 205 Q416 184 422 152Z" fill="#6ee7b7" opacity="0.45" />
-                                    <line x1="422" y1="152" x2="430" y2="188" stroke="#6ee7b7" strokeWidth="1.5" opacity="0.35" />
-                                </g>
-                                <g className="weather-float" style={{ animationDelay: '2.4s' }}>
-                                    <path d="M280 122 Q302 144 292 174 Q270 152 280 122Z" fill="#a7f3d0" opacity="0.4" />
-                                </g>
-                                <path d="M50 200 Q150 185 250 200 Q350 215 450 195" stroke="#a7f3d0" strokeWidth="2" strokeLinecap="round" opacity="0.25" fill="none" className="weather-float" style={{ animationDelay: '0.5s' }} />
-                                <path d="M80 255 Q180 240 280 258 Q380 278 480 254" stroke="#a7f3d0" strokeWidth="1.5" strokeLinecap="round" opacity="0.18" fill="none" className="weather-float" style={{ animationDelay: '1.8s' }} />
-                                <circle cx="382" cy="282" r="3.5" fill="#a7f3d0" opacity="0.35" className="weather-float" />
-                                <circle cx="302" cy="324" r="2.5" fill="#86efac" opacity="0.28" className="weather-float" style={{ animationDelay: '1s' }} />
-                                <circle cx="444" cy="304" r="3" fill="#6ee7b7" opacity="0.22" className="weather-float" style={{ animationDelay: '2s' }} />
-                            </svg>
-                        )}
+                        {weatherTag === 'hot' && (<svg className="absolute -right-8 -top-8 w-[600px] h-[600px] opacity-40" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="300" cy="200" r="80" fill="url(#sunGrad)" className="sun-rays" style={{ transformOrigin: '300px 200px' }} /><circle cx="300" cy="200" r="130" fill="#fbbf24" opacity="0.12" className="weather-pulse" /><circle cx="300" cy="200" r="175" fill="#fbbf24" opacity="0.07" className="weather-pulse" style={{ animationDelay: '1s' }} />{[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (<line key={i} x1={300 + 105 * Math.cos(angle * Math.PI / 180)} y1={200 + 105 * Math.sin(angle * Math.PI / 180)} x2={300 + 160 * Math.cos(angle * Math.PI / 180)} y2={200 + 160 * Math.sin(angle * Math.PI / 180)} stroke="#fcd34d" strokeWidth="3.5" strokeLinecap="round" opacity="0.55" className="weather-pulse" style={{ animationDelay: `${i * 0.2}s` }} />))}<path d="M50 380 Q100 360 150 380 Q200 400 250 380 Q300 360 350 380 Q400 400 450 380" stroke="#fcd34d" strokeWidth="2.5" opacity="0.25" fill="none" className="weather-float" /><path d="M30 420 Q80 400 130 420 Q180 440 230 420 Q280 400 330 420 Q380 440 430 420" stroke="#fcd34d" strokeWidth="2" opacity="0.18" fill="none" className="weather-float" style={{ animationDelay: '1.5s' }} /><defs><radialGradient id="sunGrad" cx="0.4" cy="0.4" r="0.6"><stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#f59e0b" /></radialGradient></defs></svg>)}
+                        {weatherTag === 'rainy' && (<svg className="absolute -right-8 -top-4 w-[620px] h-[500px] opacity-40" viewBox="0 0 550 450" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="350" cy="120" rx="120" ry="70" fill="#5b8cbe" opacity="0.55" className="weather-float" /><ellipse cx="285" cy="108" rx="85" ry="58" fill="#6b9fd1" opacity="0.45" className="weather-float" style={{ animationDelay: '0.5s' }} /><ellipse cx="418" cy="132" rx="75" ry="48" fill="#5b8cbe" opacity="0.4" className="weather-float" style={{ animationDelay: '1s' }} /><ellipse cx="198" cy="78" rx="65" ry="38" fill="#7eb3dc" opacity="0.25" className="weather-float" style={{ animationDelay: '2s' }} />{[[260,190],[292,202],[324,187],[356,197],[388,192],[418,204],[272,245],[306,238],[338,250],[370,234],[402,246],[248,296],[312,284],[344,300],[376,288],[424,294]].map(([x, y], i) => (<line key={i} x1={x} y1={y} x2={x - 5} y2={y + 20} stroke="#93c5fd" strokeWidth="2" strokeLinecap="round" opacity="0.65" className={`rain-drop${i % 3 === 1 ? '-2' : i % 3 === 2 ? '-3' : ''}`} />))}<ellipse cx="320" cy="410" rx="65" ry="9" fill="none" stroke="#93c5fd" strokeWidth="1.5" opacity="0.22" className="weather-pulse" /><ellipse cx="320" cy="410" rx="42" ry="5.5" fill="none" stroke="#93c5fd" strokeWidth="1.5" opacity="0.32" className="weather-pulse" style={{ animationDelay: '0.7s' }} /></svg>)}
+                        {weatherTag === 'cloudy' && (<svg className="absolute -right-8 -top-4 w-[620px] h-[440px] opacity-35" viewBox="0 0 550 400" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="350" cy="140" rx="130" ry="75" fill="white" opacity="0.32" className="weather-float" /><ellipse cx="288" cy="128" rx="95" ry="63" fill="white" opacity="0.28" className="weather-float" style={{ animationDelay: '0.8s' }} /><ellipse cx="424" cy="152" rx="85" ry="54" fill="white" opacity="0.22" className="weather-float" style={{ animationDelay: '1.2s' }} /><ellipse cx="178" cy="88" rx="72" ry="42" fill="white" opacity="0.17" className="weather-float" style={{ animationDelay: '2s' }} /><ellipse cx="218" cy="83" rx="52" ry="32" fill="white" opacity="0.13" className="weather-float" style={{ animationDelay: '2.5s' }} /><ellipse cx="482" cy="78" rx="42" ry="24" fill="white" opacity="0.1" className="weather-float" style={{ animationDelay: '3s' }} /></svg>)}
+                        {weatherTag === 'cool' && (<svg className="absolute -right-8 -top-4 w-[580px] h-[500px] opacity-35" viewBox="0 0 500 450" fill="none" xmlns="http://www.w3.org/2000/svg"><g className="weather-float"><path d="M350 80 Q372 102 362 134 Q340 112 350 80Z" fill="#86efac" opacity="0.55" /><line x1="350" y1="80" x2="356" y2="122" stroke="#86efac" strokeWidth="1.5" opacity="0.45" /></g><g className="weather-float" style={{ animationDelay: '1.2s' }}><path d="M422 152 Q448 168 442 205 Q416 184 422 152Z" fill="#6ee7b7" opacity="0.45" /><line x1="422" y1="152" x2="430" y2="188" stroke="#6ee7b7" strokeWidth="1.5" opacity="0.35" /></g><g className="weather-float" style={{ animationDelay: '2.4s' }}><path d="M280 122 Q302 144 292 174 Q270 152 280 122Z" fill="#a7f3d0" opacity="0.4" /></g><path d="M50 200 Q150 185 250 200 Q350 215 450 195" stroke="#a7f3d0" strokeWidth="2" strokeLinecap="round" opacity="0.25" fill="none" className="weather-float" style={{ animationDelay: '0.5s' }} /><path d="M80 255 Q180 240 280 258 Q380 278 480 254" stroke="#a7f3d0" strokeWidth="1.5" strokeLinecap="round" opacity="0.18" fill="none" className="weather-float" style={{ animationDelay: '1.8s' }} /><circle cx="382" cy="282" r="3.5" fill="#a7f3d0" opacity="0.35" className="weather-float" /><circle cx="302" cy="324" r="2.5" fill="#86efac" opacity="0.28" className="weather-float" style={{ animationDelay: '1s' }} /><circle cx="444" cy="304" r="3" fill="#6ee7b7" opacity="0.22" className="weather-float" style={{ animationDelay: '2s' }} /></svg>)}
                     </div>
 
                     {/* Content */}
                     <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
-
-                            {/* Left: glass info card */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -16 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                                className="max-w-md"
-                            >
-                                <div
-                                    className="rounded-2xl p-6 sm:p-8"
-                                    style={{
-                                        background: 'rgba(0,0,0,0.18)',
-                                        backdropFilter: 'blur(18px)',
-                                        WebkitBackdropFilter: 'blur(18px)',
-                                        border: '1px solid rgba(255,255,255,0.14)',
-                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 40px rgba(0,0,0,0.12)',
-                                    }}
-                                >
-                                    <p className="text-white/55 text-[11px] font-bold uppercase tracking-widest mb-5">
-                                        Weather in {city}
-                                    </p>
-
+                            <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }} className="max-w-md">
+                                <div className="rounded-2xl p-6 sm:p-8" style={{ background: 'rgba(0,0,0,0.18)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 40px rgba(0,0,0,0.12)' }}>
+                                    <p className="text-white/55 text-[11px] font-bold uppercase tracking-widest mb-5">Weather in {city}</p>
                                     <div className="flex items-start gap-4 mb-4">
                                         <span className="text-6xl sm:text-7xl weather-pulse leading-none select-none">{wTheme.emoji}</span>
                                         <div>
-                                            <p className="text-white font-extrabold leading-none tracking-tighter" style={{ fontSize: 'clamp(3rem, 6vw, 4.5rem)' }}>
-                                                {temp}°
-                                            </p>
+                                            <p className="text-white font-extrabold leading-none tracking-tighter" style={{ fontSize: 'clamp(3rem, 6vw, 4.5rem)' }}>{temp}°</p>
                                             <p className="text-white/65 text-lg font-semibold capitalize mt-1">{condition}</p>
                                         </div>
                                     </div>
-
-                                    <p className="text-white/90 text-base sm:text-lg font-semibold leading-relaxed mb-5">
-                                        {wTheme.text}
-                                    </p>
-
+                                    <p className="text-white/90 text-base sm:text-lg font-semibold leading-relaxed mb-5">{wTheme.text}</p>
                                     {suggested.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mb-6">
                                             {suggested.map(cat => (
-                                                <button
-                                                    key={cat.id}
-                                                    onClick={() => handleCuisineCircleClick(cat.id)}
+                                                <button key={cat.id} onClick={() => handleCuisineCircleClick(cat.id)}
                                                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all hover:scale-105 active:scale-95"
-                                                    style={{
-                                                        background: wTheme.tagBg,
-                                                        color: wTheme.tagText,
-                                                        border: '1px solid rgba(255,255,255,0.18)',
-                                                    }}
-                                                >
-                                                    <span>{cat.icon}</span>
-                                                    <span>{cat.name}</span>
+                                                    style={{ background: wTheme.tagBg, color: wTheme.tagText, border: '1px solid rgba(255,255,255,0.18)' }}>
+                                                    <span>{cat.icon}</span><span>{cat.name}</span>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
-
-                                    <a
-                                        href="#restaurants"
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 select-none"
-                                        style={{
-                                            background: 'rgba(255,255,255,0.14)',
-                                            color: 'white',
-                                            border: '1px solid rgba(255,255,255,0.28)',
-                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-                                        }}
-                                    >
+                                    <a href="#restaurants" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 select-none"
+                                        style={{ background: 'rgba(255,255,255,0.14)', color: 'white', border: '1px solid rgba(255,255,255,0.28)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
                                         {wTheme.ctaText}
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                                     </a>
                                 </div>
                             </motion.div>
 
                             {/* Right: weather-recommended dishes */}
                             {weatherItems.length > 0 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 16 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                                    className="lg:max-w-[540px] w-full"
-                                >
-                                    <p className="text-white/55 text-[11px] font-bold uppercase tracking-widest mb-3">
-                                        Recommended for this weather
-                                    </p>
+                                <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} className="lg:max-w-[540px] w-full">
+                                    <p className="text-white/55 text-[11px] font-bold uppercase tracking-widest mb-3">Recommended for this weather</p>
                                     <ScrollableRow gap="gap-3">
-                                        {weatherItems.map(item => (
-                                            <WeatherItemCard key={item.id} item={item} onAdd={addToCart} />
-                                        ))}
+                                        {weatherItems.map(item => <WeatherItemCard key={item.id} item={item} onAdd={addToCart} />)}
                                     </ScrollableRow>
                                 </motion.div>
                             )}
@@ -1106,14 +868,7 @@ export default function Customer({
                                 <div className="space-y-2.5">
                                     {[['relevance', 'Relevance'], ['newest', 'Newest']].map(([val, label]) => (
                                         <label key={val} className="flex items-center gap-2.5 cursor-pointer group">
-                                            <input
-                                                type="radio"
-                                                name="sort-by"
-                                                value={val}
-                                                checked={sortBy === val}
-                                                onChange={() => setSortBy(val)}
-                                                className="w-4 h-4 text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer"
-                                            />
+                                            <input type="radio" name="sort-by" value={val} checked={sortBy === val} onChange={() => setSortBy(val)} className="w-4 h-4 text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer" />
                                             <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{label}</span>
                                         </label>
                                     ))}
@@ -1123,12 +878,7 @@ export default function Customer({
                             <div>
                                 <h3 className="text-[11px] font-bold text-green-600 uppercase tracking-wider mb-3">Offers</h3>
                                 <label className="flex items-center gap-2.5 cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={hasDealsFilter}
-                                        onChange={e => setHasDealsFilter(e.target.checked)}
-                                        className="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer"
-                                    />
+                                    <input type="checkbox" checked={hasDealsFilter} onChange={e => setHasDealsFilter(e.target.checked)} className="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer" />
                                     <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Has active deals</span>
                                 </label>
                             </div>
@@ -1138,12 +888,7 @@ export default function Customer({
                                 <div className="space-y-2.5">
                                     {categories.map(cat => (
                                         <label key={cat.id} className="flex items-center gap-2.5 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedCuisines.includes(cat.id)}
-                                                onChange={() => toggleCuisine(cat.id)}
-                                                className="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer"
-                                            />
+                                            <input type="checkbox" checked={selectedCuisines.includes(cat.id)} onChange={() => toggleCuisine(cat.id)} className="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-500/30 cursor-pointer" />
                                             <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{cat.name}</span>
                                         </label>
                                     ))}
@@ -1151,12 +896,7 @@ export default function Customer({
                             </div>
 
                             {(search || selectedCuisines.length > 0 || hasDealsFilter || sortBy !== 'relevance') && (
-                                <button
-                                    onClick={clearFilters}
-                                    className="w-full text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors text-left"
-                                >
-                                    Clear all filters
-                                </button>
+                                <button onClick={clearFilters} className="w-full text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors text-left">Clear all filters</button>
                             )}
                         </div>
                     </aside>
@@ -1166,46 +906,24 @@ export default function Customer({
 
                         {/* Cuisines */}
                         <section>
-                            <SectionHeading
-                                title="Cuisines"
-                                subtitle="Filter by what you're in the mood for"
-                            />
+                            <SectionHeading title="Cuisines" subtitle="Filter by what you're in the mood for" />
                             <ScrollableRow gap="gap-5">
                                 {categories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        type="button"
-                                        onClick={() => handleCuisineCircleClick(cat.id)}
-                                        className="shrink-0 flex flex-col items-center gap-2.5 group"
-                                    >
+                                    <button key={cat.id} type="button" onClick={() => handleCuisineCircleClick(cat.id)} className="shrink-0 flex flex-col items-center gap-2.5 group">
                                         <div className={`w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all duration-200 shadow-sm ${selectedCuisines.includes(cat.id) ? 'border-green-500 shadow-green-100 scale-105' : 'border-transparent group-hover:border-green-400 group-hover:scale-105'}`}>
-                                            <img
-                                                src={getCuisineImage(cat.name)}
-                                                alt={cat.name}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-400"
-                                                loading="lazy"
-                                            />
+                                            <img src={getCuisineImage(cat.name)} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-400" loading="lazy" />
                                         </div>
-                                        <span className={`text-xs font-semibold text-center leading-tight max-w-[80px] transition-colors ${selectedCuisines.includes(cat.id) ? 'text-green-600' : 'text-gray-600 group-hover:text-gray-800'}`}>
-                                            {cat.name}
-                                        </span>
+                                        <span className={`text-xs font-semibold text-center leading-tight max-w-[80px] transition-colors ${selectedCuisines.includes(cat.id) ? 'text-green-600' : 'text-gray-600 group-hover:text-gray-800'}`}>{cat.name}</span>
                                     </button>
                                 ))}
                             </ScrollableRow>
                         </section>
 
-                        {/* Daily Deals */}
-                        {allDeals.length > 0 && (
+                        {deals.length > 0 && (
                             <section>
-                                <SectionHeading
-                                    title="Daily deals"
-                                    subtitle="Exclusive vouchers for your next order"
-                                    badge="Save up to 50%"
-                                />
+                                <SectionHeading title="Daily deals" subtitle="Exclusive vouchers for your next order" badge="Save up to 50%" />
                                 <ScrollableRow gap="gap-4">
-                                    {allDeals.map(deal => (
-                                        <VoucherCard key={deal.id} deal={deal} />
-                                    ))}
+                                    {deals.map(deal => <VoucherCard key={deal.id} deal={deal} />)}
                                 </ScrollableRow>
                             </section>
                         )}
@@ -1213,19 +931,11 @@ export default function Customer({
                         {/* Popular nearby */}
                         {popular.length > 0 && (
                             <section>
-                                <SectionHeading
-                                    title="Popular nearby"
-                                    subtitle="Favorites from your community"
-                                />
+                                <SectionHeading title="Popular nearby" subtitle="Favorites from your community" />
                                 <ScrollableRow gap="gap-4">
                                     {popular.map(r => (
                                         <div key={r.id} className="shrink-0 w-52">
-                                            <RestaurantCard
-                                                restaurant={r}
-                                                hasPromo={promoRestaurantIds.includes(r.id)}
-                                                isFavorited={favorites.has(r.id)}
-                                                onFavoriteToggle={toggleFavorite}
-                                            />
+                                            <RestaurantCard restaurant={r} hasPromo={promoRestaurantIds.includes(r.id)} isFavorited={favorites.has(r.id)} onFavoriteToggle={toggleFavorite} />
                                         </div>
                                     ))}
                                 </ScrollableRow>
@@ -1238,83 +948,37 @@ export default function Customer({
                                 <div>
                                     <h2 className="text-2xl font-extrabold text-gray-800 tracking-tight">All restaurants</h2>
                                     <p className="text-sm text-gray-400 mt-0.5">
-                                        {filteredRestaurants.length !== restaurants.length
-                                            ? `${filteredRestaurants.length} of ${restaurants.length} shown`
-                                            : `${restaurants.length} restaurants in Laguna`}
+                                        {filteredRestaurants.length !== restaurants.length ? `${filteredRestaurants.length} of ${restaurants.length} shown` : `${restaurants.length} restaurants in Laguna`}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Mobile filter row */}
                             <div className="lg:hidden flex items-center gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                                <button
-                                    onClick={() => setHasDealsFilter(v => !v)}
-                                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${hasDealsFilter ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                                >
-                                    Has deals
-                                </button>
+                                <button onClick={() => setHasDealsFilter(v => !v)} className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${hasDealsFilter ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>Has deals</button>
                                 {['relevance', 'newest'].map(val => (
-                                    <button
-                                        key={val}
-                                        onClick={() => setSortBy(val)}
-                                        className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${sortBy === val ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                                    >
+                                    <button key={val} onClick={() => setSortBy(val)} className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${sortBy === val ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
                                         {val === 'relevance' ? 'Relevance' : 'Newest'}
                                     </button>
                                 ))}
                                 {(search || selectedCuisines.length > 0 || hasDealsFilter || sortBy !== 'relevance') && (
-                                    <button
-                                        onClick={clearFilters}
-                                        className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-400 hover:text-gray-600 bg-white transition-colors"
-                                    >
-                                        Clear
-                                    </button>
+                                    <button onClick={clearFilters} className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-400 hover:text-gray-600 bg-white transition-colors">Clear</button>
                                 )}
                             </div>
 
                             {filteredRestaurants.length === 0 ? (
                                 <div className="text-center py-20">
                                     {restaurants.length === 0 ? (
-                                        <>
-                                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                                </svg>
-                                            </div>
-                                            <p className="text-gray-500 font-semibold">No restaurants available yet.</p>
-                                            <p className="text-gray-400 text-sm mt-1">Check back soon.</p>
-                                        </>
+                                        <><div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4"><svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div><p className="text-gray-500 font-semibold">No restaurants available yet.</p><p className="text-gray-400 text-sm mt-1">Check back soon.</p></>
                                     ) : (
-                                        <>
-                                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                                </svg>
-                                            </div>
-                                            <p className="text-gray-500 font-semibold">No restaurants match your filters.</p>
-                                            <button
-                                                onClick={clearFilters}
-                                                className="mt-3 text-sm font-semibold text-green-500 hover:text-green-600 transition-colors"
-                                            >
-                                                Clear filters
-                                            </button>
-                                        </>
+                                        <><div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4"><svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div><p className="text-gray-500 font-semibold">No restaurants match your filters.</p><button onClick={clearFilters} className="mt-3 text-sm font-semibold text-green-500 hover:text-green-600 transition-colors">Clear filters</button></>
                                     )}
                                 </div>
                             ) : (
                                 <div key={filterKey} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                     {filteredRestaurants.map((r, i) => (
-                                        <div
-                                            key={r.id}
-                                            className="card-fade-up"
-                                            style={{ animationDelay: `${Math.min(i * 45, 450)}ms`, animationFillMode: 'both' }}
-                                        >
-                                            <RestaurantCard
-                                                restaurant={r}
-                                                hasPromo={promoRestaurantIds.includes(r.id)}
-                                                isFavorited={favorites.has(r.id)}
-                                                onFavoriteToggle={toggleFavorite}
-                                            />
+                                        <div key={r.id} className="card-fade-up" style={{ animationDelay: `${Math.min(i * 45, 450)}ms`, animationFillMode: 'both' }}>
+                                            <RestaurantCard restaurant={r} hasPromo={promoRestaurantIds.includes(r.id)} isFavorited={favorites.has(r.id)} onFavoriteToggle={toggleFavorite} />
                                         </div>
                                     ))}
                                 </div>

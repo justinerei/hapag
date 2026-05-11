@@ -775,7 +775,7 @@ export default function Show({
                         )}
                     </AnimatePresence>
 
-                    <div className="fixed bottom-5 right-4 sm:right-6 z-[39] w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px]">
+                  <div className="fixed bottom-6 right-20 sm:right-24 z-[39] w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px]">
                         <AnimatePresence mode="wait">
                             {cartExpanded ? (
                                 /* ── EXPANDED CART PANEL ── */
@@ -861,12 +861,18 @@ export default function Show({
                                                 <p className="text-xs font-semibold text-gray-800">Cutlery</p>
                                                 <p className="text-[10px] text-gray-400">Help reduce waste</p>
                                             </div>
-                                            <button
+                                             <button
                                                 type="button"
                                                 onClick={() => setCutlery(v => !v)}
-                                                className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${cutlery ? 'bg-green-500' : 'bg-gray-200'}`}
+                                                className={`relative w-9 h-5 rounded-full shrink-0 transition-colors duration-200 ease-in-out ${
+                                                    cutlery ? 'bg-green-500' : 'bg-gray-200'
+                                                }`}
                                             >
-                                                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${cutlery ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                                <span
+                                                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+                                                        cutlery ? 'translate-x-4' : 'translate-x-0'
+                                                    }`}
+                                                />
                                             </button>
                                         </div>
 
