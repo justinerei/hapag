@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import '@/bootstrap';
 import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
@@ -251,6 +252,26 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
         onScroll();
         return () => window.removeEventListener('scroll', onScroll);
     }, [user]);
+
+    useEffect(() => {
+        if (!user || user.role !== 'customer') return;
+        const channel = window.Echo.private('customer.' + user.id);
+        channel.listen('.order-status-updated', (event) => {
+            setNotifications(prev => [
+                {
+                    id: Date.now(),
+                    message: event.message,
+                    order_id: event.order_id,
+                    status: event.status,
+                    created_at: 'just now',
+                },
+                ...prev,
+            ]);
+        });
+        return () => {
+            window.Echo.leave('customer.' + user.id);
+        };
+    }, [user?.id]);
 
     const logout = () => router.post(route('logout'));
     const firstName = user ? user.name.split(' ')[0] : null;

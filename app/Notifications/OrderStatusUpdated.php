@@ -3,24 +3,35 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OrderStatusUpdated extends Notification implements ShouldQueue
+class OrderStatusUpdated extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 
     public function __construct(public Order $order) {}
 
-    /**
-     * Deliver via database so customers can see it in-app.
-     * Add 'mail' here later when mail is configured.
-     */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'broadcast'];
+    }
+
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('customer.' . $this->order->user_id),
+        ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'order-status-updated';
     }
 
     public function toArray(object $notifiable): array
@@ -39,6 +50,11 @@ class OrderStatusUpdated extends Notification implements ShouldQueue
             'message'    => 'Your order #' . $this->order->id . ' ' . ($labels[$this->order->status] ?? 'has been updated.'),
             'restaurant' => $this->order->restaurant->name ?? 'the restaurant',
         ];
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->toArray($notifiable));
     }
 
     public function toMail(object $notifiable): MailMessage

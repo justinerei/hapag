@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
-// ── NEW ───────────────────────────────────────────────────────────────────────
-import { useOrderNotifications } from '@/Hooks/useOrderNotifications';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -33,15 +31,6 @@ const STATUS_LABELS = {
 };
 
 // ── NEW: friendly messages for each status transition ─────────────────────────
-const STATUS_CHANGE_MESSAGES = {
-    pending_preparing: '👨‍🍳 Your order is now being prepared!',
-    preparing_ready:   '✅ Your order is ready for pickup!',
-    pending_ready:     '✅ Your order is ready!',
-};
-function getChangeMessage(from, to) {
-    return STATUS_CHANGE_MESSAGES[`${from}_${to}`]
-        ?? `📦 Order status updated to ${STATUS_LABELS[to] ?? to}.`;
-}
 
 const TIMELINE_STEPS = [
     {
@@ -371,9 +360,6 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     const [toast, setToast]         = useState(null);
     const toastTimer                = useRef(null);
 
-    // ── NEW: pass isOnOrdersPage=true → badge auto-clears on mount ───────────
-    const { latestChange } = useOrderNotifications(true);
-
     function showToast(message, isError = false, isStatus = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
         setToast({ message, isError, isStatus });
@@ -386,16 +372,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
         if (flash?.error)   showToast(flash.error, true);
     }, [flash?.success, flash?.error]);
 
-    // ── NEW: when a status change is detected, show toast + reload orders ─────
-    useEffect(() => {
-        if (!latestChange) return;
-        showToast(getChangeMessage(latestChange.from, latestChange.to), false, true);
-        router.reload({ only: ['orders'], onSuccess: (page) => {
-            setOrders(page.props.orders);
-        }});
-    }, [latestChange]);
-
-    // ── NEW: background Inertia reload every 15s to keep order list fresh ─────
+    // Background Inertia reload every 15s to keep order list fresh
     useEffect(() => {
         const id = setInterval(() => {
             router.reload({ only: ['orders'], onSuccess: (page) => {

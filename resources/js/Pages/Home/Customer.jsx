@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
-import { useOrderNotifications } from '@/Hooks/useOrderNotifications';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -622,9 +621,6 @@ export default function Customer({
     const pageProps = usePage().props;
     const [showWelcome, setShowWelcome] = useState(() => !!pageProps?.flash?.registered);
 
-    // ── NEW: order notification hook ──────────────────────────────────────────
-    const { unreadCount } = useOrderNotifications();
-
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
 
@@ -723,8 +719,7 @@ export default function Customer({
     const filterKey = `${search}|${selectedCuisines.join(',')}|${hasDealsFilter}|${sortBy}`;
 
     return (
-        // ── NEW: pass orderNotifCount={unreadCount} ───────────────────────────
-        <CustomerLayout cartCount={localCartCount} orderNotifCount={unreadCount}>
+        <CustomerLayout cartCount={localCartCount} orderNotifCount={0}>
             <Head title="Home — Hapag" />
             <PageStyles />
 

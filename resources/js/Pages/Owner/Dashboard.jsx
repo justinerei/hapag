@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
+import '@/bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -1137,13 +1138,31 @@ function SettingsTab({ restaurant }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, auth }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
     const [sidebarOpen, setSidebarOpen]   = useState(false);
     const [itemModal, setItemModal]       = useState(null);
     const [voucherModal, setVoucherModal] = useState(null);
+    const [newOrderCount, setNewOrderCount] = useState(0);
+    const [orderToast, setOrderToast]       = useState(null);
+    const orderToastTimer                   = useRef(null);
+
+    useEffect(() => {
+        if (!auth?.user?.id) return;
+        const channel = window.Echo.private('owner.' + auth.user.id);
+        channel.listen('.new-order', (event) => {
+            setNewOrderCount(prev => prev + 1);
+            if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
+            setOrderToast(event);
+            orderToastTimer.current = setTimeout(() => setOrderToast(null), 5000);
+        });
+        return () => {
+            window.Echo.leave('owner.' + auth.user.id);
+            if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
+        };
+    }, [auth?.user?.id]);
 
     const restaurant = restaurants.find(r => r.id === selectedId) ?? restaurants[0] ?? null;
 
@@ -1181,9 +1200,15 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
 
     const pendingCount = (restaurant.orders ?? []).filter(o => o.status === 'pending').length;
 
+    function handleTabChange(key) {
+        if (key === 'orders') setNewOrderCount(0);
+        setActiveTab(key);
+        setSidebarOpen(false);
+    }
+
     function renderTab() {
         switch (activeTab) {
-            case 'overview': return <OverviewTab restaurant={restaurant} onSwitchTab={setActiveTab} />;
+            case 'overview': return <OverviewTab restaurant={restaurant} onSwitchTab={handleTabChange} />;
             case 'orders':   return <OrdersTab restaurant={restaurant} onAdvance={advanceStatus} />;
             case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal('add')} onOpenEdit={item => setItemModal(item)} />;
             case 'vouchers': return <VouchersTab restaurant={restaurant} onOpenAdd={() => setVoucherModal('add')} onOpenEdit={v => setVoucherModal(v)} onDelete={deleteVoucher} />;
@@ -1245,7 +1270,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-green-500 rounded-r-full" />
                                     )}
                                     <button
-                                        onClick={() => { setActiveTab(key); setSidebarOpen(false); }}
+                                        onClick={() => handleTabChange(key)}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                             ${active ? 'bg-green-50 text-green-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}
                                     >
@@ -1285,11 +1310,11 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         </div>
                         <div className="flex items-center gap-2.5">
                             <span className="text-xs text-gray-400 hidden lg:inline">{fmtDate()}</span>
-                            {pendingCount > 0 && (
-                                <button onClick={() => setActiveTab('orders')}
+                            {(pendingCount > 0 || newOrderCount > 0) && (
+                                <button onClick={() => handleTabChange('orders')}
                                     className="relative p-2 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors">
                                     <BellIcon cls="w-5 h-5 text-orange-500" />
-                                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">{pendingCount}</span>
+                                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">{pendingCount + newOrderCount}</span>
                                 </button>
                             )}
                             <span className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${restaurant.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
@@ -1339,6 +1364,36 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         onClose={() => setVoucherModal(null)}
                         onSaved={onVoucherSaved}
                     />
+                )}
+            </AnimatePresence>
+
+            {/* New-order toast */}
+            <AnimatePresence>
+                {orderToast && (
+                    <motion.div
+                        key="order-toast"
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed bottom-6 right-6 z-[200] flex items-start gap-3 bg-green-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-sm"
+                    >
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-extrabold leading-snug">New order #{orderToast.order_id} received!</p>
+                            <p className="text-xs font-medium mt-0.5 opacity-90">
+                                From {orderToast.customer_name} · {orderToast.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setOrderToast(null)}
+                            className="shrink-0 p-0.5 rounded-full hover:bg-green-600 transition-colors"
+                            aria-label="Dismiss"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>
