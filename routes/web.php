@@ -128,6 +128,44 @@ Route::middleware('auth')->group(function () {
             ->get();
         return response()->json(['orders' => $orders]);
     })->name('api.orders.statuses');
+
+    // Owner: fetch a single order by ID (used by real-time Echo listener)
+    Route::get('/api/owner/orders/{order}', function (\App\Models\Order $order) {
+        abort_if($order->restaurant->owner_id !== auth()->id(), 403);
+
+        $order->load(['user', 'items.menuItem', 'restaurant']);
+
+        return response()->json([
+            'order' => [
+                'id'               => $order->id,
+                'status'           => $order->status,
+                'order_type'       => $order->order_type,
+                'total_amount'     => $order->total_amount,
+                'final_amount'     => $order->final_amount,
+                'delivery_fee'     => $order->delivery_fee,
+                'discount_amount'  => $order->discount_amount,
+                'delivery_address' => $order->delivery_address,
+                'pickup_note'      => $order->pickup_note,
+                'scheduled_at'     => $order->scheduled_at,
+                'created_at'       => $order->created_at,
+                'restaurant_id'    => $order->restaurant_id,
+                'user'             => [
+                    'id'           => $order->user->id,
+                    'name'         => $order->user->name,
+                    'municipality' => $order->user->municipality,
+                ],
+                'items'            => $order->items->map(fn($i) => [
+                    'id'         => $i->id,
+                    'quantity'   => $i->quantity,
+                    'unit_price' => $i->unit_price,
+                    'menu_item'  => [
+                        'id'   => $i->menuItem->id,
+                        'name' => $i->menuItem->name,
+                    ],
+                ])->values()->toArray(),
+            ],
+        ]);
+    })->name('api.owner.order');
 });
 
 // ── Owner portal ──────────────────────────────────────────────────────────────

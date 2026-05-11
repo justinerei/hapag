@@ -489,7 +489,18 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                             <div className="relative" ref={bellRef}>
                                 <button
                                     onClick={() => {
-                                        setBellOpen(v => !v);
+                                        const opening = !bellOpen;
+                                        setBellOpen(opening);
+                                        if (opening && notifications.length > 0) {
+                                            setNotifications([]);
+                                            fetch(route('notifications.read'), {
+                                                method: 'POST',
+                                                headers: {
+                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                                                    'X-Requested-With': 'XMLHttpRequest',
+                                                },
+                                            });
+                                        }
                                     }}
                                     className="relative p-2 rounded-full transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                                     title="Notifications"

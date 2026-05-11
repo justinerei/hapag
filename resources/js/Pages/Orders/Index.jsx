@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import '@/bootstrap';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -350,7 +351,7 @@ const TABS = [
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
-    const { flash } = usePage().props;
+    const { flash, auth } = usePage().props;
 
     // ── NEW: local orders state so polling can update the list live ───────────
     const [orders, setOrders] = useState(initialOrders);
@@ -386,6 +387,25 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
         const hasActive = orders.some(o => o.status === 'pending' || o.status === 'preparing');
         if (!hasActive) setActiveTab('all');
     }, [orders]);
+
+    useEffect(() => {
+        if (!auth?.user?.id) return;
+
+        const channel = window.Echo.private('customer.' + auth.user.id);
+
+        channel.listen('.order-status-updated', (event) => {
+            setOrders(prev => prev.map(order =>
+                order.id === event.order_id
+                    ? { ...order, status: event.status }
+                    : order
+            ));
+            showToast(`Order #${event.order_id}: ${event.message}`, false, true);
+        });
+
+        return () => {
+            window.Echo.leave('customer.' + auth.user.id);
+        };
+    }, [auth?.user?.id]);
 
     function toggle(orderId) {
         setExpanded(prev => {

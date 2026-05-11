@@ -1157,6 +1157,24 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
             if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
             setOrderToast(event);
             orderToastTimer.current = setTimeout(() => setOrderToast(null), 5000);
+
+            fetch(`/api/owner/orders/${event.order_id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data?.order) return;
+                setRestaurants(prev => prev.map(r =>
+                    r.id === data.order.restaurant_id
+                        ? { ...r, orders: [data.order, ...r.orders] }
+                        : r
+                ));
+            })
+            .catch(() => {});
         });
         return () => {
             window.Echo.leave('owner.' + auth.user.id);
@@ -1376,7 +1394,8 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed bottom-6 right-6 z-[200] flex items-start gap-3 bg-green-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-sm"
+                        onClick={() => { handleTabChange('orders'); setOrderToast(null); }}
+                        className="fixed bottom-6 right-6 z-[200] flex items-start gap-3 bg-green-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-sm cursor-pointer"
                     >
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-extrabold leading-snug">New order #{orderToast.order_id} received!</p>
@@ -1385,7 +1404,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                             </p>
                         </div>
                         <button
-                            onClick={() => setOrderToast(null)}
+                            onClick={(e) => { e.stopPropagation(); setOrderToast(null); }}
                             className="shrink-0 p-0.5 rounded-full hover:bg-green-600 transition-colors"
                             aria-label="Dismiss"
                         >
