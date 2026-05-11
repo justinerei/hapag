@@ -218,12 +218,17 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 // ── CHANGE 1 of 4: Added `orderNotifCount = 0` prop ──────────────────────────
 export default function CustomerLayout({ children, cartCount = 0, orderNotifCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
     const { auth } = usePage().props;
+export default function CustomerLayout({ children, cartCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
+    const { auth, notifications: initialNotifications = [] } = usePage().props;
     const user = auth?.user ?? null;
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [bellOpen, setBellOpen] = useState(false);
+    const [notifications, setNotifications] = useState(initialNotifications);
+    const bellRef = useRef(null);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
 
@@ -236,6 +241,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     useEffect(() => {
         function onClickOutside(e) {
             if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
+            if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false);
         }
         document.addEventListener('mousedown', onClickOutside);
         return () => document.removeEventListener('mousedown', onClickOutside);
@@ -460,6 +466,49 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                         </Link>
 
                         {/* Cart — unchanged */}
+                        {/* Notifications Bell */}
+                        {user && user.role === 'customer' && (
+                            <div className="relative" ref={bellRef}>
+                                <button
+                                    onClick={() => {
+                                        setBellOpen(v => !v);
+                                    }}
+                                    className="relative p-2 rounded-full transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                    title="Notifications"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    {notifications.length > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 leading-none">
+                                            {notifications.length > 9 ? '9+' : notifications.length}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {bellOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-gray-100">
+                                            <p className="text-sm font-bold text-gray-800">Notifications</p>
+                                        </div>
+                                        {notifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-center text-sm text-gray-400">You're all caught up!</div>
+                                        ) : (
+                                            <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                                                {notifications.map(n => (
+                                                    <li key={n.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                                                        <p className="text-sm text-gray-700">{n.message}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{n.created_at}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Cart */}
                         <Link
                             href={route('cart.index')}
                             className={`relative p-2 rounded-full transition-colors ${isActive('/cart') ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}

@@ -18,14 +18,18 @@ function fmtDate(dateStr) {
 
 const STATUS_STYLES = {
     pending:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    accepted:  'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
     preparing: 'bg-blue-50  text-blue-700  ring-1 ring-blue-200',
     ready:     'bg-green-50 text-green-700 ring-1 ring-green-200',
+    cancelled: 'bg-red-50   text-red-600   ring-1 ring-red-200',
 };
 
 const STATUS_LABELS = {
     pending:   'Pending',
+    accepted:  'Accepted',
     preparing: 'Preparing',
     ready:     'Ready',
+    cancelled: 'Cancelled',
 };
 
 // ── NEW: friendly messages for each status transition ─────────────────────────
@@ -514,7 +518,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                     </div>
                 ) : (
                     /* This is the section updated for responsive multi-column layout */
-                    <div className="columns-1 md:columns-2 gap-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 items-start">
                         {filteredOrders.map(order => (
                             <div key={order.id} className="break-inside-avoid mb-4">
                                 <OrderCard
@@ -523,6 +527,12 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                                     onToggle={() => toggle(order.id)}
                                 />
                             </div>
+                            <OrderCard
+                                key={order.id}
+                                order={order}
+                                isExpanded={expanded.has(order.id)}
+                                onToggle={() => toggle(order.id)}
+                            />
                         ))}
                     </div>
                 )}

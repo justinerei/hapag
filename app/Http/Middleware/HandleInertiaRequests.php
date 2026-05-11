@@ -47,8 +47,6 @@ class HandleInertiaRequests extends Middleware
                     'role'         => $user->role,
                     'municipality' => $user->municipality,
                     'address'      => $user->address,
-                    // ← THIS is what was missing — explicitly passes the
-                    //   computed avatar_url to every Inertia page/component
                     'avatar_url'   => $user->avatar_url,
                 ] : null,
             ],
@@ -56,7 +54,25 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
             ],
+            // Share unread notifications for customer role only.
+            // Wrapped in a closure so it only runs when a customer is logged in —
+            // avoids a wasted query for guests, owners, and admins.
+            'notifications' => function () use ($user) {
+                if (! $user || $user->role !== 'customer') {
+                    return [];
+                }
+
+                return $user->unreadNotifications
+                    ->map(fn ($n) => [
+                        'id'         => $n->id,
+                        'message'    => $n->data['message'] ?? 'Your order status has been updated.',
+                        'order_id'   => $n->data['order_id'] ?? null,
+                        'status'     => $n->data['status'] ?? null,
+                        'created_at' => $n->created_at->diffForHumans(),
+                    ])
+                    ->values()
+                    ->all();
+            },
         ];
     }
-    
 }
