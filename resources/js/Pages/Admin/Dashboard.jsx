@@ -1337,12 +1337,13 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
 
 // ── Backup Section (dark) ──────────────────────────────────────────────────────
 
-function BackupSection({ lastBackup, backupFile, onBackup, loading }) {
+function BackupSection({ lastBackup, backupFile, onBackup, loading, backups }) {
     return (
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
             <motion.h2 variants={FADE_UP} className="text-base font-bold text-white mb-5">Database backup</motion.h2>
 
-            <motion.div variants={FADE_UP} className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-6 max-w-lg">
+            {/* Manual backup card */}
+            <motion.div variants={FADE_UP} className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-6 max-w-lg mb-6">
                 <div className="flex items-center gap-3 mb-5">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white">
                         <IcoDB c="w-5 h-5" />
@@ -1374,6 +1375,33 @@ function BackupSection({ lastBackup, backupFile, onBackup, loading }) {
                     <IcoDB c="w-4 h-4" />
                     {loading ? 'Running backup…' : 'Run backup now'}
                 </button>
+            </motion.div>
+
+            {/* Backup file list */}
+            <motion.div variants={FADE_UP} className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-6 max-w-lg">
+                <p className="text-sm font-semibold text-white mb-4">Backup files</p>
+                {backups.length === 0 ? (
+                    <p className="text-xs text-gray-500">No backups yet.</p>
+                ) : (
+                    <ul className="space-y-1">
+                        {backups.map(b => (
+                            <li key={b.filename} className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-700/40 last:border-0">
+                                <div className="min-w-0">
+                                    <p className="text-gray-300 font-mono text-xs truncate">{b.filename}</p>
+                                    <p className="text-gray-500 text-xs mt-0.5">{b.size_kb} KB · {b.created_at}</p>
+                                </div>
+                                <a
+                                    href={route('admin.backups.download', { filename: b.filename })}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="shrink-0 px-2.5 py-1 rounded-lg bg-gray-700 text-gray-300 hover:text-white hover:bg-gray-600 text-xs font-medium transition-colors"
+                                >
+                                    Download
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </motion.div>
         </motion.div>
     );
@@ -1429,6 +1457,7 @@ export default function AdminDashboard({
     const [categoryModal,  setCategoryModal]  = useState(null);
     const [voucherModal,   setVoucherModal]   = useState(null);
     const [backupLoading,  setBackupLoading]  = useState(false);
+    const [backups,        setBackups]        = useState([]);
     const [toasts,         setToasts]         = useState([]);
 
     function addToast(msg, type = 'success') {
@@ -1497,6 +1526,19 @@ export default function AdminDashboard({
 
     // ── Backup ──────────────────────────────────────────────────────────────────
 
+    async function fetchBackups() {
+        try {
+            const data = await apiFetch(route('admin.backups.list'), 'GET');
+            setBackups(data);
+        } catch {
+            // silently ignore
+        }
+    }
+
+    useEffect(() => {
+        if (activeSection === 'backup') fetchBackups();
+    }, [activeSection]);
+
     async function handleBackup() {
         if (!confirm('Run a full database backup now?')) return;
         setBackupLoading(true);
@@ -1505,6 +1547,8 @@ export default function AdminDashboard({
             setLastBackup(data.last_backup_at);
             setBackupFile(data.last_backup_file);
             addToast('Database backup complete.');
+            window.open(route('admin.backups.download', { filename: data.filename }), '_blank');
+            fetchBackups();
         } catch {
             addToast('Backup failed. Check server logs.', 'error');
         } finally {
@@ -1664,6 +1708,7 @@ export default function AdminDashboard({
                                         backupFile={backupFile}
                                         onBackup={handleBackup}
                                         loading={backupLoading}
+                                        backups={backups}
                                     />
                                 </motion.div>
                             )}
