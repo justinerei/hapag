@@ -9,6 +9,7 @@ import {
 } from 'framer-motion';
 import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
+import Footer from '@/Components/Footer';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -716,50 +717,7 @@ export default function GuestHome() {
 
                 </main>
 
-                {/* ── Footer ───────────────────────────────────────────────── */}
-                <footer className="bg-gray-800 text-white relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32">
-                        <span className="text-[10rem] font-extrabold tracking-tighter text-white/[0.04] leading-none -mb-6">hapag</span>
-                    </div>
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-10">
-                            <div>
-                                <h3 className="text-2xl font-bold text-green-400 mb-3">Hapag</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                    Good food, right to your table.<br />Serving Laguna province, Philippines.
-                                </p>
-                                <span className="inline-block text-xs text-gray-600 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                                    Pickup &amp; Delivery · Cash Payment
-                                </span>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Explore</h4>
-                                <ul className="space-y-2.5 text-sm">
-                                    <li><Link href={route('home')} className="text-gray-400 hover:text-white transition-colors">Home</Link></li>
-                                    <li><Link href={route('restaurants.index')} className="text-gray-400 hover:text-white transition-colors">Browse restaurants</Link></li>
-                                    <li><button onClick={() => setSignInOpen(true)} className="text-gray-400 hover:text-white transition-colors">Sign in</button></li>
-                                    <li><button onClick={() => setSignUpOpen(true)} className="text-gray-400 hover:text-white transition-colors">Create account</button></li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Restaurants</h4>
-                                <ul className="space-y-2.5 text-sm">
-                                    {BRANDS.map((brand) => (
-                                        <li key={brand.slug}>
-                                            <Link href={route('restaurants.index')} className="text-gray-400 hover:text-white transition-colors">
-                                                {brand.name}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} Hapag. For educational use only.</p>
-                            <p className="text-xs text-gray-600">LSPU · ITEL 203 · Web Systems and Technologies</p>
-                        </div>
-                    </div>
-                </footer>
+                <Footer />
             </div>
 
             <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => setSignInOpen(true)} />

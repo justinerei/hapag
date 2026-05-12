@@ -3,6 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import '@/bootstrap';
 import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
+import Footer from '@/Components/Footer';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
 const MUNICIPALITIES = [
@@ -342,6 +343,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                     )}
                 </div>
                 <main className="flex-1">{children}</main>
+                <Footer />
                 <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => setSignInOpen(true)} />
                 <SignInModal show={signInOpen} onClose={() => setSignInOpen(false)} onSwitchToSignUp={() => setSignUpOpen(true)} />
             </div>
@@ -638,6 +640,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
             </nav>
 
             <main className="flex-1">{children}</main>
+            <Footer />
         </div>
      );
 }
