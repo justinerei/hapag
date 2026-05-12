@@ -45,6 +45,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2794,
                 'lng'          => 121.4117,
                 'status'       => 'active',  // ✅ Top performer
+                'opening_time' => '10:00 AM',
+                'closing_time' => '9:00 PM',
             ],
             [
                 'owner_id'     => $own['owner1@hapag.com'],
@@ -56,6 +58,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2713,
                 'lng'          => 121.4559,
                 'status'       => 'active',  // ✅ Solid performer
+                'opening_time' => '10:00 AM',
+                'closing_time' => '9:00 PM',
             ],
             [
                 'owner_id'     => $own['owner2@hapag.com'],
@@ -67,6 +71,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.1692,
                 'lng'          => 121.2436,
                 'status'       => 'active',  // ✅ Growing steadily
+                'opening_time' => '10:00 AM',
+                'closing_time' => '9:00 PM',
             ],
             [
                 'owner_id'     => $own['owner2@hapag.com'],
@@ -78,6 +84,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2116,
                 'lng'          => 121.1653,
                 'status'       => 'active',  // ✅ Moderate performer
+                'opening_time' => '10:00 AM',
+                'closing_time' => '9:00 PM',
             ],
             [
                 'owner_id'     => $own['owner3@hapag.com'],
@@ -89,6 +97,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.0653,
                 'lng'          => 121.3244,
                 'status'       => 'inactive', // ❌ CLOSED — too far from base, low traffic
+                'opening_time' => '10:00 AM',
+                'closing_time' => '9:00 PM',
             ],
 
             // ── GRILL MASTERS PH (BBQ / Ihaw-Ihaw) ───────────────────────
@@ -102,6 +112,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2821,
                 'lng'          => 121.4089,
                 'status'       => 'active',  // ✅ Strong performer
+                'opening_time' => '11:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner4@hapag.com'],
@@ -113,6 +125,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2089,
                 'lng'          => 121.1701,
                 'status'       => 'active',  // ✅ Top performer overall
+                'opening_time' => '11:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner5@hapag.com'],
@@ -124,6 +138,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3122,
                 'lng'          => 121.1114,
                 'status'       => 'active',  // ✅ Decent mall-area traffic
+                'opening_time' => '11:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner5@hapag.com'],
@@ -135,6 +151,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.0678,
                 'lng'          => 121.3289,
                 'status'       => 'inactive', // ❌ CLOSED — palugi, eventually shut down
+                'opening_time' => '11:00 AM',
+                'closing_time' => '10:00 PM',
             ],
 
             // ── KAPE'T TINAPAY (Cafe) ─────────────────────────────────────
@@ -148,6 +166,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2698,
                 'lng'          => 121.4612,
                 'status'       => 'active',  // ✅ Best cafe branch
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
             [
                 'owner_id'     => $own['owner6@hapag.com'],
@@ -159,6 +179,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2774,
                 'lng'          => 121.4143,
                 'status'       => 'active',  // ✅ Consistent orders
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
             [
                 'owner_id'     => $own['owner7@hapag.com'],
@@ -170,6 +192,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.1705,
                 'lng'          => 121.2451,
                 'status'       => 'active',  // ✅ Student crowd keeps it alive
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
             [
                 'owner_id'     => $own['owner7@hapag.com'],
@@ -181,6 +205,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3394,
                 'lng'          => 121.0789,
                 'status'       => 'active',  // ✅ Commuter traffic
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
             [
                 'owner_id'     => $own['owner8@hapag.com'],
@@ -192,6 +218,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3098,
                 'lng'          => 121.1089,
                 'status'       => 'active',  // ✅ Good mall-adjacent footfall
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
             [
                 'owner_id'     => $own['owner8@hapag.com'],
@@ -203,6 +231,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2742,
                 'lng'          => 121.1253,
                 'status'       => 'active',  // ⚠️  PALUGI — low foot traffic, barely surviving
+                'opening_time' => '7:00 AM',
+                'closing_time' => '8:00 PM',
             ],
 
             // ── LA PRECIOSA BAKERY (Bakery) ───────────────────────────────
@@ -216,6 +246,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2721,
                 'lng'          => 121.4531,
                 'status'       => 'active',  // ✅ Star branch — thriving
+                'opening_time' => '5:30 AM',
+                'closing_time' => '7:00 PM',
             ],
             [
                 'owner_id'     => $own['owner9@hapag.com'],
@@ -227,6 +259,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2143,
                 'lng'          => 121.1632,
                 'status'       => 'active',  // ✅ Decent revenue
+                'opening_time' => '5:30 AM',
+                'closing_time' => '7:00 PM',
             ],
             [
                 'owner_id'     => $own['owner10@hapag.com'],
@@ -238,6 +272,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.0629,
                 'lng'          => 121.3271,
                 'status'       => 'active',  // ⚠️  PALUGI — struggling, barely breaking even
+                'opening_time' => '5:30 AM',
+                'closing_time' => '7:00 PM',
             ],
             [
                 'owner_id'     => $own['owner10@hapag.com'],
@@ -248,7 +284,9 @@ class RestaurantSeeder extends Seeder
                 'municipality' => 'Biñan',
                 'lat'          => 14.3412,
                 'lng'          => 121.0814,
-                'status'       => 'inactive', // ❌ CLOSED — mall bakeries dominated, couldn\'t compete
+                'status'       => 'inactive', // ❌ CLOSED — mall bakeries dominated, couldn't compete
+                'opening_time' => '5:30 AM',
+                'closing_time' => '7:00 PM',
             ],
 
             // ── MAMA NENA'S CARINDERIA (Filipino) ─────────────────────────
@@ -262,6 +300,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.1678,
                 'lng'          => 121.2462,
                 'status'       => 'active',  // ✅ Top carinderia branch
+                'opening_time' => '7:00 AM',
+                'closing_time' => '3:00 PM',
             ],
             [
                 'owner_id'     => $own['owner11@hapag.com'],
@@ -273,6 +313,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2812,
                 'lng'          => 121.4132,
                 'status'       => 'active',  // ✅ Market area = steady crowd
+                'opening_time' => '7:00 AM',
+                'closing_time' => '3:00 PM',
             ],
             [
                 'owner_id'     => $own['owner12@hapag.com'],
@@ -284,6 +326,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2763,
                 'lng'          => 121.1231,
                 'status'       => 'active',  // ⚠️  PALUGI — poor management, inconsistent quality
+                'opening_time' => '7:00 AM',
+                'closing_time' => '3:00 PM',
             ],
             [
                 'owner_id'     => $own['owner12@hapag.com'],
@@ -295,6 +339,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3145,
                 'lng'          => 121.1098,
                 'status'       => 'active',  // ✅ Solid worker crowd at lunch
+                'opening_time' => '7:00 AM',
+                'closing_time' => '3:00 PM',
             ],
             [
                 'owner_id'     => $own['owner13@hapag.com'],
@@ -306,6 +352,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.0641,
                 'lng'          => 121.3258,
                 'status'       => 'inactive', // ❌ CLOSED — poorest performer, shut down after losses
+                'opening_time' => '7:00 AM',
+                'closing_time' => '3:00 PM',
             ],
 
             // ── BIDA BURGER (Fast Food) ────────────────────────────────────
@@ -319,6 +367,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2134,
                 'lng'          => 121.1678,
                 'status'       => 'active',  // ✅ Great location, high traffic
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner14@hapag.com'],
@@ -330,6 +380,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3378,
                 'lng'          => 121.0801,
                 'status'       => 'active',  // ✅ Commuter and student traffic
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner14@hapag.com'],
@@ -341,6 +393,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.3109,
                 'lng'          => 121.1136,
                 'status'       => 'active',  // ✅ Best Bida branch — mall-adjacent boom
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner15@hapag.com'],
@@ -352,6 +406,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2751,
                 'lng'          => 121.1269,
                 'status'       => 'active',  // ✅ Moderate but reliable
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner15@hapag.com'],
@@ -363,6 +419,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.2802,
                 'lng'          => 121.4098,
                 'status'       => 'active',  // ✅ Good highway exposure
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
             [
                 'owner_id'     => $own['owner15@hapag.com'],
@@ -374,6 +432,8 @@ class RestaurantSeeder extends Seeder
                 'lat'          => 14.1712,
                 'lng'          => 121.2418,
                 'status'       => 'active',  // ⚠️  PALUGI — students prefer carinderias, slow sales
+                'opening_time' => '9:00 AM',
+                'closing_time' => '10:00 PM',
             ],
         ];
 
