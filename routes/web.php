@@ -18,6 +18,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+Route::get('/for-owners/faq', function () {
+    $cartCount = auth()->check()
+        ? \App\Models\CartItem::where('user_id', auth()->id())->sum('quantity')
+        : 0;
+    return inertia('OwnerFAQ', compact('cartCount'));
+})->name('owners.faq');
+
+Route::get('/partnership', function () {
+    $cartCount = auth()->check()
+        ? \App\Models\CartItem::where('user_id', auth()->id())->sum('quantity')
+        : 0;
+    return inertia('Partnership', compact('cartCount'));
+})->name('partnership');
+
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
 Route::get('/menu/{restaurant}', [RestaurantController::class, 'show'])->name('restaurants.show');
 

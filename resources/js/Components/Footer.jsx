@@ -95,7 +95,7 @@ export default function Footer() {
                         <ul className="space-y-3">
                             <li><FLink href={route('home')}>Home</FLink></li>
                             <li><FLink href={route('restaurants.index')}>Browse restaurants</FLink></li>
-                            <li><FLink href="#">How it works</FLink></li>
+                            <li><FLink href={route('search')}>Search</FLink></li>
                             <li><FLink href={route('login')}>Sign in</FLink></li>
                             <li><FLink href={route('register')}>Create account</FLink></li>
                         </ul>
@@ -107,8 +107,8 @@ export default function Footer() {
                         <ul className="space-y-3">
                             <li><FLink href={route('register')}>Register your restaurant</FLink></li>
                             <li><FLink href={route('login')}>Owner login</FLink></li>
-                            <li><FLink href="#">Owner FAQ</FLink></li>
-                            <li><FLink href="#">Partnership enquiries</FLink></li>
+                            <li><FLink href={route('owners.faq')}>Owner FAQ</FLink></li>
+                            <li><FLink href={route('partnership')}>Partnership enquiries</FLink></li>
                         </ul>
                     </motion.div>
                 </motion.div>
