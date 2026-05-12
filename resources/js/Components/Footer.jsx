@@ -2,17 +2,28 @@ import { useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 
-/* ── Footer link with underline slide-in ──────────────────────────────────── */
+/* ── Footer nav link (Inertia) ────────────────────────────────────────────── */
 
 function FLink({ href, children }) {
     const cls = 'relative group inline-block text-gray-400 hover:text-green-400 transition-colors duration-150 text-sm leading-relaxed';
     const underline = (
         <span className="absolute -bottom-px left-0 h-px w-0 bg-green-400 group-hover:w-full transition-all duration-200" aria-hidden="true" />
     );
-    if (href === '#') {
-        return <a href="#" className={cls}>{children}{underline}</a>;
-    }
     return <Link href={href} className={cls}>{children}{underline}</Link>;
+}
+
+/* ── Footer action button (opens modal) ───────────────────────────────────── */
+
+function FButton({ onClick, children }) {
+    const cls = 'relative group inline-block text-gray-400 hover:text-green-400 transition-colors duration-150 text-sm leading-relaxed cursor-pointer';
+    const underline = (
+        <span className="absolute -bottom-px left-0 h-px w-0 bg-green-400 group-hover:w-full transition-all duration-200" aria-hidden="true" />
+    );
+    return (
+        <button type="button" onClick={onClick} className={cls}>
+            {children}{underline}
+        </button>
+    );
 }
 
 /* ── Column heading ───────────────────────────────────────────────────────── */
@@ -27,7 +38,7 @@ function ColHead({ children }) {
 
 /* ── Main footer ──────────────────────────────────────────────────────────── */
 
-export default function Footer() {
+export default function Footer({ onSignIn, onSignUp }) {
     const footerRef = useRef(null);
     const reduce = useReducedMotion() ?? false;
     const inView = useInView(footerRef, { once: true, margin: '-60px' });
@@ -95,9 +106,8 @@ export default function Footer() {
                         <ul className="space-y-3">
                             <li><FLink href={route('home')}>Home</FLink></li>
                             <li><FLink href={route('restaurants.index')}>Browse restaurants</FLink></li>
-                            <li><FLink href={route('search')}>Search</FLink></li>
-                            <li><FLink href={route('login')}>Sign in</FLink></li>
-                            <li><FLink href={route('register')}>Create account</FLink></li>
+                            {onSignIn && <li><FButton onClick={onSignIn}>Sign in</FButton></li>}
+                            {onSignUp && <li><FButton onClick={onSignUp}>Create account</FButton></li>}
                         </ul>
                     </motion.div>
 
@@ -105,8 +115,8 @@ export default function Footer() {
                     <motion.div variants={col}>
                         <ColHead>For restaurants</ColHead>
                         <ul className="space-y-3">
-                            <li><FLink href={route('register')}>Register your restaurant</FLink></li>
-                            <li><FLink href={route('login')}>Owner login</FLink></li>
+                            {onSignUp && <li><FButton onClick={onSignUp}>Register your restaurant</FButton></li>}
+                            {onSignIn && <li><FButton onClick={onSignIn}>Owner login</FButton></li>}
                             <li><FLink href={route('owners.faq')}>Owner FAQ</FLink></li>
                             <li><FLink href={route('partnership')}>Partnership enquiries</FLink></li>
                         </ul>

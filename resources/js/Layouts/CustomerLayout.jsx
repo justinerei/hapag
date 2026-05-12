@@ -343,7 +343,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                     )}
                 </div>
                 <main className="flex-1">{children}</main>
-                <Footer />
+                <Footer onSignIn={() => setSignInOpen(true)} onSignUp={() => setSignUpOpen(true)} />
                 <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => setSignInOpen(true)} />
                 <SignInModal show={signInOpen} onClose={() => setSignInOpen(false)} onSwitchToSignUp={() => setSignUpOpen(true)} />
             </div>
