@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('lat', 10, 7);
             $table->decimal('lng', 10, 7);
             $table->string('image_url')->nullable();
-            $table->enum('status', ['pending', 'active', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'active', 'rejected', 'inactive'])->default('pending');
             $table->timestamps();
         });
     }

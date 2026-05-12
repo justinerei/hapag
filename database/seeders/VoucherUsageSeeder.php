@@ -26,40 +26,35 @@ class VoucherUsageSeeder extends Seeder
         // ── Clean slate ───────────────────────────────────────────────────
         DB::table('voucher_usages')->truncate();
         DB::table('claimed_vouchers')->truncate();
-
-        // Reset used_count on all vouchers
         Voucher::query()->update(['used_count' => 0]);
 
         // ── Step 1: Seed claimed_vouchers ─────────────────────────────────
-        // This is what $totalClaimed = ClaimedVoucher::count() reads.
-        // Each customer can claim each voucher only once (unique constraint).
-        // We distribute claims across all vouchers with varying popularity.
+        // Scaled down to match 30 customers (was 60).
+        // Admin vouchers are claimed widely; owner vouchers are niche.
+        // MASARAP10 has a max_uses of 50 so capping at 20 is safe.
 
         $claimCounts = [
-            'HAPAG20'   => 32,  // matches screenshot: 32/100
-            'KAINDITO'  => 35,  // matches screenshot: 35/200
-            'MASARAP10' => 30,  // matches screenshot: 30/50
-            'GRILL30'   => 18,
-            'KAFETIME'  => 22,
-            'BIDANOW'   => 15,
+            'HAPAG20'   => 22,  // popular site-wide promo — most customers claim it
+            'KAINDITO'  => 18,  // good promo but higher min order, fewer claims
+            'MASARAP10' => 20,  // no min order, easy to grab
+            'GRILL30'   => 10,  // restaurant-specific, only Grill Masters fans
+            'KAFETIME'  => 12,  // cafe crowd, decent uptake
+            'BIDANOW'   => 8,   // smallest reach, burger-specific
         ];
 
         foreach ($vouchers as $voucher) {
-            $targetCount = $claimCounts[$voucher->code] ?? 10;
+            $targetCount = $claimCounts[$voucher->code] ?? 8;
 
-            // Cap at max_uses if set, and cap at available customers
             if ($voucher->max_uses !== null) {
                 $targetCount = min($targetCount, $voucher->max_uses);
             }
             $targetCount = min($targetCount, $customers->count());
 
-            // shuffle() + take() guarantees NO duplicate user per voucher
-            // (safe against the unique(['user_id','voucher_id']) constraint)
+            // shuffle + take guarantees no duplicate user per voucher
             $pickedCustomers = $customers->shuffle()->take($targetCount);
 
             $inserted = 0;
             foreach ($pickedCustomers as $customer) {
-                // Spread created_at dates naturally over 60 days
                 $daysAgo = rand(1, 60);
 
                 DB::table('claimed_vouchers')->insertOrIgnore([
@@ -76,25 +71,25 @@ class VoucherUsageSeeder extends Seeder
         }
 
         // ── Step 2: Seed voucher_usages ───────────────────────────────────
-        // This is what $totalVouchersUsed = VoucherUsage::count() reads.
-        // Also feeds voucherUsageGrowth chart (daily count over time).
-        // A usage = voucher was actually applied to a completed order.
+        // Usage = voucher was actually applied to a completed order.
+        // Usages are a subset of claims (not everyone who claims, redeems).
+        // Spread over last 30 days so the growth chart looks smooth.
 
         $usageCounts = [
-            'HAPAG20'   => 32,  // same as claimed — all who claimed also used
-            'KAINDITO'  => 35,
-            'MASARAP10' => 30,
-            'GRILL30'   => 18,
-            'KAFETIME'  => 22,
-            'BIDANOW'   => 15,
+            'HAPAG20'   => 18,  // most claimers also redeemed
+            'KAINDITO'  => 14,
+            'MASARAP10' => 16,
+            'GRILL30'   => 8,
+            'KAFETIME'  => 10,
+            'BIDANOW'   => 6,
         ];
 
-        // We need unique order_id per usage (order can only have 1 voucher)
+        // Shuffle orders to avoid patterns; each order can only have 1 voucher
         $availableOrders = $orders->shuffle();
         $orderIndex      = 0;
 
         foreach ($vouchers as $voucher) {
-            $targetCount = $usageCounts[$voucher->code] ?? 10;
+            $targetCount = $usageCounts[$voucher->code] ?? 6;
             $usedSoFar   = 0;
 
             for ($i = 0; $i < $targetCount; $i++) {
@@ -102,7 +97,8 @@ class VoucherUsageSeeder extends Seeder
 
                 $order    = $availableOrders[$orderIndex++];
                 $customer = $customers->random();
-                $daysAgo  = rand(1, 30); // usages are more recent than claims
+                // Usages are more recent than claims — last 30 days
+                $daysAgo  = rand(1, 30);
 
                 VoucherUsage::create([
                     'voucher_id' => $voucher->id,
@@ -115,7 +111,7 @@ class VoucherUsageSeeder extends Seeder
                 $usedSoFar++;
             }
 
-            // Update used_count on the voucher itself (for top codes bar chart)
+            // Keep used_count in sync for the top vouchers bar chart
             $voucher->update(['used_count' => $usedSoFar]);
 
             $this->command->info("✅ {$usedSoFar} usages → voucher [{$voucher->code}]");

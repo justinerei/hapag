@@ -13,70 +13,76 @@ use Illuminate\Support\Carbon;
 class OrderSeeder extends Seeder
 {
     /**
-     * Per-branch order volumes — intentionally varied so the admin leaderboard
-     * shows a natural mix of brands in the top 5.
+     * Per-branch order volumes — designed to clearly show successful vs palugi branches.
      *
-     * Projected top 5 (by total orders):
-     *  #1  Lutong Bahay - Santa Cruz      ~230
-     *  #2  Grill Masters - Calamba        ~190
-     *  #3  Mama Nena's - Los Baños        ~175
-     *  #4  Bida Burger - Sta. Rosa        ~160
-     *  #5  Kape't Tinapay - Pagsanjan     ~145
+     * ✅ SUCCESSFUL branches (high, growing order counts):
+     *   #1  La Preciosa - Pagsanjan         ~220  (star bakery branch)
+     *   #2  Lutong Bahay - Santa Cruz        ~200  (top Filipino resto)
+     *   #3  Grill Masters - Calamba          ~185  (best BBQ branch)
+     *   #4  Bida Burger - Sta. Rosa          ~160  (mall-adjacent boom)
+     *   #5  Mama Nena's - Los Baños          ~155  (student crowd)
+     *
+     * ⚠️  PALUGI branches (still active but very low, stagnant/declining orders):
+     *   Kape't Tinapay - Cabuyao             ~18   (almost no traffic)
+     *   Bida Burger - Los Baños              ~22   (students prefer carinderias)
+     *   La Preciosa - San Pablo              ~25   (struggling, barely breaking even)
+     *   Mama Nena's - Cabuyao               ~28   (poor management)
+     *
+     * ❌ INACTIVE branches — 0 orders (they're closed):
+     *   Lutong Bahay - San Pablo
+     *   Grill Masters - San Pablo
+     *   La Preciosa - Biñan
+     *   Mama Nena's - San Pablo
      *
      * Format: 'Exact Restaurant Name' => [ [minDays, maxDays, count], ... ]
-     * Four time windows give the chart a visible growth curve:
+     * Four time windows give the chart a visible growth/decline curve:
      *   old(60-90d) → mid(30-60d) → recent(7-30d) → this week(0-7d)
      */
     private array $branchOrders = [
 
         // ── Lutong Bahay ni Aling Rosa ────────────────────────────────────
-        'Lutong Bahay ni Aling Rosa - Santa Cruz'  => [[60,90,40],[30,60,60],[7,30,80],[0,7,50]],  // ~230
-        'Lutong Bahay ni Aling Rosa - Calamba'     => [[60,90,20],[30,60,30],[7,30,35],[0,7,15]],  // ~100
-        'Lutong Bahay ni Aling Rosa - Los Baños'   => [[60,90,15],[30,60,25],[7,30,30],[0,7,15]],  // ~85
-        'Lutong Bahay ni Aling Rosa - Pagsanjan'   => [[60,90,10],[30,60,20],[7,30,25],[0,7,10]],  // ~65
-        'Lutong Bahay ni Aling Rosa - San Pablo'   => [[60,90,8], [30,60,15],[7,30,20],[0,7,8]],   // ~51
+        'Lutong Bahay ni Aling Rosa - Santa Cruz'  => [[60,90,35],[30,60,55],[7,30,70],[0,7,40]],  // ✅ ~200
+        'Lutong Bahay ni Aling Rosa - Pagsanjan'   => [[60,90,18],[30,60,28],[7,30,35],[0,7,14]],  // ✅ ~95
+        'Lutong Bahay ni Aling Rosa - Los Baños'   => [[60,90,14],[30,60,22],[7,30,28],[0,7,11]],  // ✅ ~75
+        'Lutong Bahay ni Aling Rosa - Calamba'     => [[60,90,10],[30,60,18],[7,30,22],[0,7,8]],   // ✅ ~58
+        // San Pablo = inactive, no orders
 
         // ── Grill Masters PH ─────────────────────────────────────────────
-        'Grill Masters PH - Calamba'               => [[60,90,35],[30,60,55],[7,30,65],[0,7,35]],  // ~190
-        'Grill Masters PH - Santa Cruz'            => [[60,90,18],[30,60,28],[7,30,35],[0,7,14]],  // ~95
-        'Grill Masters PH - Sta. Rosa'             => [[60,90,12],[30,60,22],[7,30,28],[0,7,10]],  // ~72
-        'Grill Masters PH - San Pablo'             => [[60,90,8], [30,60,15],[7,30,20],[0,7,8]],   // ~51
+        'Grill Masters PH - Calamba'               => [[60,90,32],[30,60,50],[7,30,62],[0,7,33]],  // ✅ ~177 growing
+        'Grill Masters PH - Santa Cruz'            => [[60,90,15],[30,60,25],[7,30,32],[0,7,12]],  // ✅ ~84
+        'Grill Masters PH - Sta. Rosa'             => [[60,90,10],[30,60,18],[7,30,24],[0,7,9]],   // ✅ ~61
+        // San Pablo = inactive, no orders
 
         // ── Mama Nena's Carinderia ────────────────────────────────────────
-        "Mama Nena's Carinderia - Los Baños"       => [[60,90,30],[30,60,50],[7,30,60],[0,7,35]],  // ~175
-        "Mama Nena's Carinderia - Sta. Rosa"       => [[60,90,15],[30,60,25],[7,30,32],[0,7,13]],  // ~85
-        "Mama Nena's Carinderia - Santa Cruz"      => [[60,90,12],[30,60,20],[7,30,28],[0,7,10]],  // ~70
-        "Mama Nena's Carinderia - Cabuyao"         => [[60,90,10],[30,60,18],[7,30,22],[0,7,8]],   // ~58
-        "Mama Nena's Carinderia - San Pablo"       => [[60,90,8], [30,60,14],[7,30,18],[0,7,6]],   // ~46
+        "Mama Nena's Carinderia - Los Baños"       => [[60,90,28],[30,60,45],[7,30,55],[0,7,27]],  // ✅ ~155
+        "Mama Nena's Carinderia - Sta. Rosa"       => [[60,90,12],[30,60,22],[7,30,28],[0,7,11]],  // ✅ ~73
+        "Mama Nena's Carinderia - Santa Cruz"      => [[60,90,10],[30,60,18],[7,30,24],[0,7,9]],   // ✅ ~61
+        "Mama Nena's Carinderia - Cabuyao"         => [[60,90,8], [30,60,9], [7,30,7], [0,7,4]],   // ⚠️  ~28 PALUGI declining
+        // San Pablo = inactive, no orders
 
         // ── Bida Burger ──────────────────────────────────────────────────
-        'Bida Burger - Sta. Rosa'                  => [[60,90,28],[30,60,45],[7,30,55],[0,7,32]],  // ~160
-        'Bida Burger - Calamba'                    => [[60,90,12],[30,60,22],[7,30,28],[0,7,10]],  // ~72
-        'Bida Burger - Biñan'                      => [[60,90,10],[30,60,18],[7,30,24],[0,7,8]],   // ~60
-        'Bida Burger - Cabuyao'                    => [[60,90,8], [30,60,14],[7,30,18],[0,7,6]],   // ~46
-        'Bida Burger - Santa Cruz'                 => [[60,90,6], [30,60,12],[7,30,16],[0,7,5]],   // ~39
-        'Bida Burger - Los Baños'                  => [[60,90,5], [30,60,10],[7,30,14],[0,7,4]],   // ~33
+        'Bida Burger - Sta. Rosa'                  => [[60,90,25],[30,60,42],[7,30,55],[0,7,28]],  // ✅ ~150 growing fast
+        'Bida Burger - Calamba'                    => [[60,90,11],[30,60,20],[7,30,26],[0,7,9]],   // ✅ ~66
+        'Bida Burger - Biñan'                      => [[60,90,9], [30,60,16],[7,30,21],[0,7,8]],   // ✅ ~54
+        'Bida Burger - Cabuyao'                    => [[60,90,7], [30,60,12],[7,30,16],[0,7,6]],   // ✅ ~41
+        'Bida Burger - Santa Cruz'                 => [[60,90,5], [30,60,10],[7,30,14],[0,7,5]],   // ✅ ~34
+        'Bida Burger - Los Baños'                  => [[60,90,7], [30,60,7], [7,30,6], [0,7,2]],   // ⚠️  ~22 PALUGI flat/declining
 
-        // ── Kape't Tinapay ────────────────────────────────────────────────
-        "Kape't Tinapay - Pagsanjan"               => [[60,90,25],[30,60,40],[7,30,55],[0,7,25]],  // ~145
-        "Kape't Tinapay - Sta. Rosa"               => [[60,90,12],[30,60,20],[7,30,26],[0,7,10]],  // ~68
-        "Kape't Tinapay - Santa Cruz"              => [[60,90,10],[30,60,18],[7,30,22],[0,7,8]],   // ~58
-        "Kape't Tinapay - Los Baños"               => [[60,90,8], [30,60,15],[7,30,20],[0,7,7]],   // ~50
-        "Kape't Tinapay - Biñan"                   => [[60,90,6], [30,60,12],[7,30,16],[0,7,5]],   // ~39
-        "Kape't Tinapay - Cabuyao"                 => [[60,90,5], [30,60,10],[7,30,13],[0,7,4]],   // ~32
+        // ── Kape't Tinapay ───────────────────────────────────────────────
+        "Kape't Tinapay - Pagsanjan"               => [[60,90,22],[30,60,36],[7,30,48],[0,7,22]],  // ✅ ~128
+        "Kape't Tinapay - Sta. Rosa"               => [[60,90,10],[30,60,18],[7,30,24],[0,7,9]],   // ✅ ~61
+        "Kape't Tinapay - Santa Cruz"              => [[60,90,8], [30,60,16],[7,30,20],[0,7,8]],   // ✅ ~52
+        "Kape't Tinapay - Los Baños"               => [[60,90,7], [30,60,13],[7,30,18],[0,7,6]],   // ✅ ~44
+        "Kape't Tinapay - Biñan"                   => [[60,90,5], [30,60,11],[7,30,14],[0,7,5]],   // ✅ ~35
+        "Kape't Tinapay - Cabuyao"                 => [[60,90,5], [30,60,6], [7,30,5], [0,7,2]],   // ⚠️  ~18 PALUGI near-zero
 
         // ── La Preciosa Bakery ────────────────────────────────────────────
-        'La Preciosa Bakery - Pagsanjan'           => [[60,90,40],[30,60,60],[7,30,80],[0,7,40]],  // ~220
-        'La Preciosa Bakery - Calamba'             => [[60,90,10],[30,60,18],[7,30,22],[0,7,8]],   // ~58
-        'La Preciosa Bakery - San Pablo'           => [[60,90,8], [30,60,14],[7,30,18],[0,7,6]],   // ~46
-        'La Preciosa Bakery - Biñan'               => [[60,90,6], [30,60,11],[7,30,14],[0,7,5]],   // ~36
+        'La Preciosa Bakery - Pagsanjan'           => [[60,90,38],[30,60,58],[7,30,78],[0,7,38]],  // ✅ ~212 star branch
+        'La Preciosa Bakery - Calamba'             => [[60,90,9], [30,60,16],[7,30,20],[0,7,7]],   // ✅ ~52
+        'La Preciosa Bakery - San Pablo'           => [[60,90,7], [30,60,8], [7,30,7], [0,7,3]],   // ⚠️  ~25 PALUGI stagnant
+        // Biñan = inactive, no orders
     ];
 
-    // NOTE: 'completed' and 'cancelled' are added here so the admin dashboard
-    // completionRate and cancellationRate stats have real data.
-    // The migration only has pending/preparing/ready — ADD these two values
-    // to your orders migration enum if you want them, or remove them below
-    // and keep only: pending, preparing, ready.
     private array $statusWeights = [
         'pending'   => 5,
         'preparing' => 10,
@@ -85,15 +91,54 @@ class OrderSeeder extends Seeder
 
     private array $orderTypes = ['pickup', 'delivery'];
 
+    // Barangay-level delivery addresses per municipality
     private array $deliveryAddresses = [
-        'Santa Cruz'  => ['12 Rizal Ave, Poblacion, Santa Cruz', '8 Bonifacio Road, Santa Cruz', '22 Quezon St, Santa Cruz'],
-        'Pagsanjan'   => ['5 Burgos St, Pagsanjan', '3 Gen. Luna St, Pagsanjan'],
-        'Los Baños'   => ['88 National Highway, Los Baños', '101 JP Rizal St, Los Baños'],
-        'Calamba'     => ['34 Parian Road, Calamba', '56 Real Street, Calamba'],
-        'San Pablo'   => ['21 Mabini St, San Pablo', '45 Rizal St, San Pablo'],
-        'Sta. Rosa'   => ['Paseo de Sta. Rosa, Tagaytay Road', 'Nueno Ave, Sta. Rosa'],
-        'Biñan'       => ['Halang Road, Biñan', 'Gen. Luna Road, Biñan'],
-        'Cabuyao'     => ["Governor's Drive, Cabuyao", 'Barangay Banay-Banay, Cabuyao'],
+        'Santa Cruz'  => [
+            'Brgy. Poblacion, Santa Cruz, Laguna',
+            'Brgy. Bubukal, Santa Cruz, Laguna',
+            'Brgy. Market Area, Santa Cruz, Laguna',
+            'Brgy. Ganado, Santa Cruz, Laguna',
+        ],
+        'Pagsanjan'   => [
+            'Brgy. Pinagsanjan, Pagsanjan, Laguna',
+            'Brgy. Lambac, Pagsanjan, Laguna',
+            'Brgy. Poblacion, Pagsanjan, Laguna',
+        ],
+        'Los Baños'   => [
+            'Brgy. Batong Malake, Los Baños, Laguna',
+            'Brgy. Anos, Los Baños, Laguna',
+            'Brgy. Bayog, Los Baños, Laguna',
+            'Brgy. Putho Tuntungin, Los Baños, Laguna',
+        ],
+        'Calamba'     => [
+            'Brgy. Parian, Calamba City, Laguna',
+            'Brgy. Real, Calamba City, Laguna',
+            'Brgy. Halang, Calamba City, Laguna',
+            'Brgy. Uno, Calamba City, Laguna',
+        ],
+        'San Pablo'   => [
+            'Brgy. San Buenaventura, San Pablo City, Laguna',
+            'Brgy. Concepcion, San Pablo City, Laguna',
+            'Brgy. San Rafael, San Pablo City, Laguna',
+            'Brgy. San Gregorio, San Pablo City, Laguna',
+        ],
+        'Sta. Rosa'   => [
+            'Brgy. Tagapo, Sta. Rosa City, Laguna',
+            'Brgy. Balibago, Sta. Rosa City, Laguna',
+            'Brgy. Malusak, Sta. Rosa City, Laguna',
+            'Brgy. Baclaran, Sta. Rosa City, Laguna',
+        ],
+        'Biñan'       => [
+            'Brgy. Poblacion, Biñan City, Laguna',
+            'Brgy. Halang, Biñan City, Laguna',
+            'Brgy. Ganado, Biñan City, Laguna',
+            'Brgy. Soro-Soro, Biñan City, Laguna',
+        ],
+        'Cabuyao'     => [
+            'Brgy. Banay-Banay, Cabuyao City, Laguna',
+            'Brgy. Sala, Cabuyao City, Laguna',
+            'Brgy. Bigaa, Cabuyao City, Laguna',
+        ],
     ];
 
     public function run(): void
@@ -116,6 +161,12 @@ class OrderSeeder extends Seeder
         $overallTotal = 0;
 
         foreach ($restaurants as $restaurant) {
+            // Skip inactive branches — they have no orders
+            if ($restaurant->status === 'inactive') {
+                $this->command->info("⏭️  Skipping inactive: \"{$restaurant->name}\"");
+                continue;
+            }
+
             $orderConfigs = $this->branchOrders[$restaurant->name] ?? null;
 
             if (! $orderConfigs) {
