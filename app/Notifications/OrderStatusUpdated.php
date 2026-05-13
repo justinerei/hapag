@@ -50,7 +50,7 @@ class OrderStatusUpdated extends Notification implements ShouldBroadcast, Should
         return [
             'order_id'   => $this->order->id,
             'status'     => $this->order->status,
-            'message'    => 'Your order #' . $this->order->id . ' ' . ($labels[$this->order->status] ?? 'has been updated.'),
+            'message'    => 'Your order #' . str_pad($this->order->id, 5, '0', STR_PAD_LEFT) . ' ' . ($labels[$this->order->status] ?? 'has been updated.'),
             'restaurant' => $this->order->restaurant->name ?? 'the restaurant',
         ];
     }
@@ -63,7 +63,7 @@ class OrderStatusUpdated extends Notification implements ShouldBroadcast, Should
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Order #' . $this->order->id . ' Update — Hapag')
+            ->subject('Order #' . str_pad($this->order->id, 5, '0', STR_PAD_LEFT) . ' Update — Hapag')
             ->line($this->toArray($notifiable)['message'])
             ->action('View My Orders', url('/orders'));
     }

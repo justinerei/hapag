@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import '@/bootstrap';
+import { formatOrderId } from '@/utils/formatOrderId';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -248,7 +249,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
                         <StatusBadge status={order.status} />
                         <OrderTypeBadge type={order.order_type} />
                         <span className="text-[11px] text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded">
-                            #{order.id}
+                            #{formatOrderId(order.id)}
                         </span>
                     </div>
 
@@ -498,7 +499,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                     ? { ...order, status: event.status }
                     : order
             ));
-            showToast(`Order #${event.order_id}: ${event.message}`, false, true);
+            showToast(`Order #${formatOrderId(event.order_id)}: ${event.message}`, false, true);
         });
 
         return () => {

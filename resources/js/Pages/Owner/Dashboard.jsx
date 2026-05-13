@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import '@/bootstrap';
+import { formatOrderId } from '@/utils/formatOrderId';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -389,7 +390,7 @@ function OrderCard({ order, onAdvance }) {
         <div className={`bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all duration-200 ${isPending ? 'border-l-4 border-l-amber-400' : ''}`}>
             <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-extrabold text-gray-800">Order #{order.id}</span>
+                    <span className="text-sm font-extrabold text-gray-800">Order #{formatOrderId(order.id)}</span>
                     <TypePill type={order.order_type} />
                     <StatusPill status={order.status} />
                 </div>
@@ -512,7 +513,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
         const ordersHTML = ords.map(o => `
             <div class="order-block">
                 <div class="order-header">
-                    <span class="order-id">Order #${o.id}</span>
+                    <span class="order-id">Order #${String(o.id).padStart(5, '0')}</span>
                     <span class="order-meta">${fmtDate(o.created_at)}</span>
                     <span class="order-meta">${o.customer_name}</span>
                     <span class="order-meta">${o.order_type.toUpperCase()}</span>
@@ -953,7 +954,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                         {orders.slice(0, 6).map(o => (
                             <div key={o.id} className={`flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 hover:bg-gray-50/60 transition-colors ${o.status === 'pending' ? 'border-l-2 border-l-amber-300' : ''}`}>
                                 <div className="flex items-center gap-2.5">
-                                    <span className="text-xs font-extrabold text-gray-400 w-8">#{o.id}</span>
+                                    <span className="text-xs font-extrabold text-gray-400 w-8">#{formatOrderId(o.id)}</span>
                                     <TypePill type={o.order_type} />
                                     <StatusPill status={o.status} />
                                     <span className="text-xs text-gray-600 font-medium hidden sm:inline">{o.user?.name ?? 'Customer'}</span>
@@ -1533,7 +1534,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
             }
             if (statusToastTimer.current) clearTimeout(statusToastTimer.current);
             const label = { accepted: 'Accepted', preparing: 'Preparing', ready: 'Ready for pickup', cancelled: 'Cancelled' };
-            setStatusToast(`Order #${order.id} marked as ${label[targetStatus] ?? targetStatus}`);
+            setStatusToast(`Order #${formatOrderId(order.id)} marked as ${label[targetStatus] ?? targetStatus}`);
             statusToastTimer.current = setTimeout(() => setStatusToast(null), 3000);
         } catch { }
     }
@@ -1698,7 +1699,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                                                         className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
                                                     >
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <p className="text-sm font-semibold text-gray-800">Order #{n.order_id}</p>
+                                                            <p className="text-sm font-semibold text-gray-800">Order #{formatOrderId(n.order_id)}</p>
                                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${n.order_type === 'delivery' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                                                                 {n.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
                                                             </span>
@@ -1806,7 +1807,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                         className="fixed bottom-6 right-6 z-[200] flex items-start gap-3 bg-green-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-sm cursor-pointer"
                     >
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-extrabold leading-snug">New order #{orderToast.order_id} received!</p>
+                            <p className="text-sm font-extrabold leading-snug">New order #{formatOrderId(orderToast.order_id)} received!</p>
                             <p className="text-xs font-medium mt-0.5 opacity-90">
                                 From {orderToast.customer_name} · {orderToast.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
                             </p>
