@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::patch('/orders/{order}/confirm', [OrderController::class, 'confirmReceived'])->name('orders.confirm');
 
     // Favorites
     Route::get('/favorites', [\App\Http\Controllers\FavoriteController::class, 'index'])->name('favorites');

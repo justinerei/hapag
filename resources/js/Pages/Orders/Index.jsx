@@ -189,7 +189,32 @@ function OrderTypeBadge({ type }) {
 
 // ── Order card ─────────────────────────────────────────────────────────────────
 
-function OrderCard({ order, isExpanded, onToggle }) {
+function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
+    const [confirming, setConfirming] = useState(false);
+    const [loading, setLoading]       = useState(false);
+
+    async function handleConfirm() {
+        setLoading(true);
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            const res = await fetch(route('orders.confirm', order.id), {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+            });
+            if (!res.ok) throw new Error('Failed');
+            onConfirm(order.id);
+        } catch {
+            // silently reset — the page polling will sync eventually
+        } finally {
+            setLoading(false);
+            setConfirming(false);
+        }
+    }
+
     const itemsSummary = order.items.length === 0
         ? 'No items'
         : order.items.slice(0, 2).map(i => `${i.quantity}× ${i.menu_item.name}`).join(', ')
@@ -310,6 +335,43 @@ function OrderCard({ order, isExpanded, onToggle }) {
                         </div>
                     )}
 
+                    {/* Confirm received — only when order is ready */}
+                    {order.status === 'ready' && (
+                        <div>
+                            {!confirming ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirming(true)}
+                                    className="w-full py-2.5 rounded-xl border-2 border-green-500 text-green-600 text-sm font-bold hover:bg-green-50 transition-colors duration-150"
+                                >
+                                    Confirm received
+                                </button>
+                            ) : (
+                                <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                                    <p className="text-sm text-green-800 font-semibold">Mark this order as received?</p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={handleConfirm}
+                                            disabled={loading}
+                                            className="px-3.5 py-1.5 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-60 transition-colors duration-150"
+                                        >
+                                            {loading ? 'Saving…' : 'Yes, received'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirming(false)}
+                                            disabled={loading}
+                                            className="px-3 py-1.5 rounded-lg text-gray-500 text-sm font-semibold hover:text-gray-700 transition-colors duration-150"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-1.5 text-sm">
                         <div className="flex justify-between text-gray-500">
                             <span>Subtotal</span>
@@ -341,34 +403,49 @@ function OrderCard({ order, isExpanded, onToggle }) {
     );
 }
 
-// ── Filter Tabs ────────────────────────────────────────────────────────────────
+// ── Date filter helpers ────────────────────────────────────────────────────────
 
-const TABS = [
-    {
-        key: 'active',
-        label: 'Active',
-        filter: o => o.status === 'pending' || o.status === 'preparing',
-        emptyIcon: '⏳',
-        emptyText: 'No active orders',
-        emptySubtext: 'Your ongoing orders will appear here.',
-    },
-    {
-        key: 'ready',
-        label: 'Ready',
-        filter: o => o.status === 'ready',
-        emptyIcon: '✅',
-        emptyText: 'No ready orders',
-        emptySubtext: 'Orders ready for pickup or delivery will appear here.',
-    },
-    {
-        key: 'all',
-        label: 'All',
-        filter: () => true,
-        emptyIcon: '🧾',
-        emptyText: 'No orders yet',
-        emptySubtext: 'Your order history will appear here once you place an order.',
-    },
+const DATE_FILTERS = [
+    { key: 'today',     label: 'Today' },
+    { key: 'this_week', label: 'This week' },
+    { key: 'this_month',label: 'This month' },
+    { key: 'all',       label: 'All' },
 ];
+
+function toDateString(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function filterByDate(orders, filter) {
+    const now = new Date();
+    if (filter === 'all') return orders;
+    if (filter === 'today') {
+        const todayStr = toDateString(now);
+        return orders.filter(o => toDateString(o.created_at) === todayStr);
+    }
+    if (filter === 'this_week') {
+        const day = now.getDay(); // 0 Sun … 6 Sat
+        const diffToMon = (day === 0 ? -6 : 1 - day);
+        const monday = new Date(now);
+        monday.setHours(0, 0, 0, 0);
+        monday.setDate(now.getDate() + diffToMon);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        return orders.filter(o => {
+            const d = new Date(o.created_at);
+            return d >= monday && d <= sunday;
+        });
+    }
+    if (filter === 'this_month') {
+        return orders.filter(o => {
+            const d = new Date(o.created_at);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+    }
+    return orders;
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -378,8 +455,8 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     // ── NEW: local orders state so polling can update the list live ───────────
     const [orders, setOrders] = useState(initialOrders);
 
-    const [activeTab, setActiveTab] = useState('active');
-    const [expanded, setExpanded]   = useState(() => new Set());
+    const [dateFilter, setDateFilter] = useState('today');
+    const [expanded, setExpanded]     = useState(() => new Set());
     const [toast, setToast]         = useState(null);
     const toastTimer                = useRef(null);
 
@@ -437,11 +514,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
         });
     }
 
-    const currentTab     = TABS.find(t => t.key === activeTab);
-    const filteredOrders = orders.filter(currentTab.filter);
-
-    const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
-    const readyCount  = orders.filter(o => o.status === 'ready').length;
+    const filteredOrders = filterByDate(orders, dateFilter);
 
     return (
         // ── NEW: orderNotifCount=0 because we're already on this page ─────────
@@ -488,45 +561,33 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                 </div>
 
                 <div className="flex items-center gap-2 mb-5 flex-wrap">
-                    {TABS.map(tab => {
-                        const count = tab.key === 'active' ? activeCount
-                                    : tab.key === 'ready'  ? readyCount
-                                    : orders.length;
-                        const isSelected = activeTab === tab.key;
-
-                        return (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all duration-150 ${
-                                    isSelected
-                                        ? 'bg-green-500 text-white shadow-md shadow-green-200'
-                                        : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                                }`}
-                            >
-                                {tab.label}
-                                {count > 0 && (
-                                    <span className={`text-[11px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ${
-                                        isSelected
-                                            ? 'bg-white/25 text-white'
-                                            : tab.key === 'active' && activeCount > 0
-                                                ? 'bg-orange-100 text-orange-600'
-                                                : 'bg-gray-100 text-gray-500'
-                                    }`}>
-                                        {count}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
+                    {DATE_FILTERS.map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => setDateFilter(f.key)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-150 ${
+                                dateFilter === f.key
+                                    ? 'bg-green-500 text-white shadow-md shadow-green-200'
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
                 </div>
 
                 {filteredOrders.length === 0 ? (
                     <div className="text-center py-20">
-                        <span className="text-5xl block mb-4">{currentTab.emptyIcon}</span>
-                        <p className="text-gray-600 font-bold text-base mb-1">{currentTab.emptyText}</p>
-                        <p className="text-gray-400 text-sm mb-6">{currentTab.emptySubtext}</p>
-                        {activeTab === 'all' && (
+                        <span className="text-5xl block mb-4">📭</span>
+                        <p className="text-gray-600 font-bold text-base mb-1">
+                            {dateFilter === 'all' ? 'No orders yet' : 'No orders for this period'}
+                        </p>
+                        <p className="text-gray-400 text-sm mb-6">
+                            {dateFilter === 'all'
+                                ? 'Your order history will appear here once you place an order.'
+                                : 'Try selecting a different time range.'}
+                        </p>
+                        {dateFilter === 'all' && (
                             <Link
                                 href={route('restaurants.index')}
                                 className="inline-block px-6 py-2.5 rounded-full bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors shadow-md shadow-green-200"
@@ -539,11 +600,15 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                     /* This is the section updated for responsive multi-column layout */
                     <div className="columns-1 md:columns-2 gap-4 space-y-4">
                         {filteredOrders.map(order => (
-                            <div key={order.id} className="break-inside-avoid mb-4"> 
+                            <div key={order.id} className="break-inside-avoid mb-4">
                                 <OrderCard
                                     order={order}
                                     isExpanded={expanded.has(order.id)}
                                     onToggle={() => toggle(order.id)}
+                                    onConfirm={(id) => {
+                                        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'completed' } : o));
+                                        showToast('Order marked as received. Enjoy your meal! 🎉');
+                                    }}
                                 />
                             </div>
                         ))}

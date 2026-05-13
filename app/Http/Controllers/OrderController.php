@@ -22,6 +22,21 @@ class OrderController extends Controller
         return Inertia::render('Orders/Index', compact('orders', 'cartCount'));
     }
 
+    public function confirmReceived(Order $order)
+    {
+        abort_if($order->user_id !== auth()->id(), 403);
+
+        if ($order->status !== 'ready') {
+            return response()->json(['message' => 'Order is not ready yet.'], 422);
+        }
+
+        $order->update(['status' => 'completed']);
+
+        $order->restaurant->owner->notify(new OrderStatusUpdated($order));
+
+        return response()->json(['status' => 'completed']);
+    }
+
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate([
