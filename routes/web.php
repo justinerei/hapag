@@ -224,6 +224,9 @@ Route::middleware(['auth', 'role:owner'])
 
         // Restaurant settings
         Route::patch('/restaurants/{restaurant}/settings', [OwnerController::class, 'updateSettings'])->name('settings.update');
+
+        // Sales export (full data, unbounded by the dashboard's 100-order limit)
+        Route::get('/export/sales', [OwnerController::class, 'exportSales'])->name('export.sales');
     });
 
 // ── Admin panel ───────────────────────────────────────────────────────────────

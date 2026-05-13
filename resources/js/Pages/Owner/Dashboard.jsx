@@ -460,6 +460,187 @@ function OverviewTab({ restaurant, onSwitchTab }) {
     const orders = restaurant.orders ?? [];
     const items  = restaurant.menu_items ?? [];
     const [chartRange, setChartRange] = useState('week');
+    const [exporting, setExporting]   = useState(false);
+    const [exportRange, setExportRange] = useState('month');
+    const [exportError, setExportError] = useState('');
+
+    async function handleExport() {
+        setExporting(true);
+        setExportError('');
+        try {
+            const params = new URLSearchParams({
+                restaurant_id: restaurant.id,
+                range: exportRange,
+            });
+            const res = await fetch(`/owner/export/sales?${params}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF(),
+                },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) throw new Error('Export failed');
+            const data = await res.json();
+            generatePDF(data);
+        } catch {
+            setExportError('Could not generate report. Try again.');
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    function generatePDF(data) {
+        const { restaurant: r, range, generated_at, summary, top_items, orders: ords } = data;
+
+        const rangeLabels = { today: 'Today', week: 'This Week', month: 'This Month', all: 'All Time' };
+
+        const fmt = n => '₱' + Number(n || 0).toLocaleString('en-PH', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+
+        const fmtDate = d => new Date(d).toLocaleDateString('en-PH', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+        });
+
+        const statusLabel = {
+            pending: 'Pending', accepted: 'Accepted', preparing: 'Preparing',
+            ready: 'Ready', completed: 'Completed', cancelled: 'Cancelled',
+        };
+
+        const ordersHTML = ords.map(o => `
+            <div class="order-block">
+                <div class="order-header">
+                    <span class="order-id">Order #${o.id}</span>
+                    <span class="order-meta">${fmtDate(o.created_at)}</span>
+                    <span class="order-meta">${o.customer_name}</span>
+                    <span class="order-meta">${o.order_type.toUpperCase()}</span>
+                    <span class="status-badge status-${o.status}">${statusLabel[o.status] ?? o.status}</span>
+                </div>
+                ${o.delivery_address ? `<div class="delivery-addr">&#128205; ${o.delivery_address}</div>` : ''}
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="right">Qty</th>
+                            <th class="right">Unit Price</th>
+                            <th class="right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${o.items.map(i => `
+                            <tr>
+                                <td>${i.name}</td>
+                                <td class="right">${i.quantity}</td>
+                                <td class="right">${fmt(i.unit_price)}</td>
+                                <td class="right">${fmt(i.subtotal)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="order-totals">
+                    ${Number(o.discount_amount) > 0
+                        ? `<div class="total-row"><span>Subtotal</span><span>${fmt(o.total_amount)}</span></div>
+                           <div class="total-row discount"><span>Discount${o.voucher_code ? ` (${o.voucher_code})` : ''}</span><span>- ${fmt(o.discount_amount)}</span></div>`
+                        : ''}
+                    ${Number(o.delivery_fee) > 0
+                        ? `<div class="total-row"><span>Delivery Fee</span><span>${fmt(o.delivery_fee)}</span></div>`
+                        : ''}
+                    <div class="total-row final"><span>Total</span><span>${fmt(o.final_amount)}</span></div>
+                </div>
+            </div>
+        `).join('');
+
+        const topItemsHTML = Object.entries(top_items).map(([name, d]) => `
+            <tr>
+                <td>${name}</td>
+                <td class="right">${d.qty}</td>
+                <td class="right">${fmt(d.revenue)}</td>
+            </tr>
+        `).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sales Report &#8212; ${r.name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; color: #1f2937; padding: 32px 40px; }
+        .header { border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h1 { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 2px; }
+        .header p { color: #6b7280; font-size: 11px; }
+        .header .range-badge { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 99px; margin-top: 6px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #374151; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+        .summary-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }
+        .summary-card .label { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+        .summary-card .value { font-size: 17px; font-weight: 800; color: #111827; }
+        .summary-card .sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9fafb; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; }
+        .right { text-align: right; }
+        .order-block { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; page-break-inside: avoid; }
+        .order-header { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        .order-id { font-weight: 700; font-size: 13px; }
+        .order-meta { color: #6b7280; font-size: 11px; }
+        .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: auto; }
+        .status-completed { background:#dcfce7; color:#166534; }
+        .status-cancelled { background:#fee2e2; color:#991b1b; }
+        .status-ready     { background:#d1fae5; color:#065f46; }
+        .status-preparing { background:#dbeafe; color:#1e40af; }
+        .status-accepted  { background:#cffafe; color:#155e75; }
+        .status-pending   { background:#fef3c7; color:#92400e; }
+        .delivery-addr { font-size: 11px; color: #ea580c; background: #fff7ed; border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; }
+        .items-table { margin-bottom: 8px; }
+        .items-table th, .items-table td { font-size: 11px; padding: 5px 8px; }
+        .order-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; border-top: 1px solid #f3f4f6; padding-top: 6px; }
+        .total-row { display: flex; gap: 16px; font-size: 11px; }
+        .total-row.discount { color: #16a34a; }
+        .total-row.final { font-weight: 800; font-size: 13px; color: #111827; margin-top: 2px; }
+        .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: center; }
+        @media print { body { padding: 20px 28px; } .order-block { page-break-inside: avoid; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${r.name}</h1>
+        <p>${r.municipality}, Laguna, Philippines</p>
+        <span class="range-badge">${rangeLabels[range] ?? range}</span>
+        <p style="margin-top:6px;color:#9ca3af">Generated: ${fmtDate(generated_at)}</p>
+    </div>
+    <div class="section-title">Summary</div>
+    <div class="summary-grid">
+        <div class="summary-card"><div class="label">Total Revenue</div><div class="value">${fmt(summary.total_revenue)}</div></div>
+        <div class="summary-card"><div class="label">Total Orders</div><div class="value">${summary.total_orders}</div><div class="sub">${summary.completed_orders} completed &middot; ${summary.cancelled_orders} cancelled</div></div>
+        <div class="summary-card"><div class="label">Avg. Order Value</div><div class="value">${fmt(summary.avg_order_value)}</div></div>
+        <div class="summary-card"><div class="label">Pickup</div><div class="value">${fmt(summary.pickup_revenue)}</div><div class="sub">${summary.pickup_orders} orders</div></div>
+        <div class="summary-card"><div class="label">Delivery</div><div class="value">${fmt(summary.delivery_revenue)}</div><div class="sub">${summary.delivery_orders} orders</div></div>
+    </div>
+    ${Object.keys(top_items).length > 0 ? `
+    <div class="section-title">Top Menu Items</div>
+    <table><thead><tr><th>Item</th><th class="right">Qty Sold</th><th class="right">Revenue</th></tr></thead><tbody>${topItemsHTML}</tbody></table>
+    ` : ''}
+    <div class="section-title">Orders (${ords.length})</div>
+    ${ords.length === 0 ? '<p style="color:#9ca3af;font-size:12px">No orders for this period.</p>' : ordersHTML}
+    <div class="footer">Hapag &middot; Sales Report &middot; ${r.name} &middot; Generated ${fmtDate(generated_at)}</div>
+</body>
+</html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;';
+        document.body.appendChild(iframe);
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+        iframe.onload = () => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => document.body.removeChild(iframe), 1000);
+        };
+    }
 
     const now = new Date();
     const today = now.toDateString();
@@ -590,6 +771,36 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Export Sales Report */}
+            <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p className="text-sm font-bold text-gray-800">Sales Report</p>
+                    <p className="text-xs text-gray-400">Download a PDF of your sales data</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <select
+                        value={exportRange}
+                        onChange={e => setExportRange(e.target.value)}
+                        className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 focus:outline-none focus:border-green-400 bg-gray-50"
+                    >
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="all">All Time</option>
+                    </select>
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 disabled:opacity-50 transition-colors shadow-sm shadow-green-200"
+                    >
+                        {exporting ? 'Generating…' : '↓ Download PDF'}
+                    </button>
+                </div>
+                {exportError && (
+                    <p className="w-full text-xs text-red-500">{exportError}</p>
+                )}
             </div>
 
             {/* 6 Stat cards */}
