@@ -72,7 +72,7 @@ class OwnerController extends Controller
             ->restaurants()
             ->with([
                 'menuItems' => fn ($q) => $q->orderBy('category')->orderBy('name'),
-                'orders'    => fn ($q) => $q->with('user', 'items.menuItem')->latest(),
+                'orders'    => fn ($q) => $q->with('user', 'items.menuItem')->latest()->limit(100),
                 'vouchers'  => fn ($q) => $q->orderByDesc('created_at'),
             ])
             ->get();
@@ -198,5 +198,98 @@ class OwnerController extends Controller
         $restaurant->update($data);
 
         return response()->json(['updated' => true, 'restaurant' => $restaurant->fresh()]);
+    }
+
+    public function exportSales(Request $request)
+    {
+        $request->validate([
+            'restaurant_id' => 'required|exists:restaurants,id',
+            'range'         => 'required|in:today,week,month,all',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($request->restaurant_id);
+
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+
+        $query = $restaurant->orders()
+            ->with(['user', 'items.menuItem', 'voucher'])
+            ->latest();
+
+        $now = now();
+
+        match ($request->range) {
+            'today' => $query->whereDate('created_at', $now->toDateString()),
+            'week'  => $query->where('created_at', '>=',
+                           $now->copy()->startOfWeek(\Carbon\Carbon::MONDAY)),
+            'month' => $query->where('created_at', '>=',
+                           $now->copy()->startOfMonth()),
+            'all'   => null,
+        };
+
+        $orders = $query->get();
+
+        $totalRevenue    = $orders->sum('final_amount');
+        $totalOrders     = $orders->count();
+        $completedOrders = $orders->where('status', 'completed')->count();
+        $cancelledOrders = $orders->where('status', 'cancelled')->count();
+        $pickupOrders    = $orders->where('order_type', 'pickup')->count();
+        $deliveryOrders  = $orders->where('order_type', 'delivery')->count();
+        $avgOrderValue   = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+        $deliveryRevenue = $orders->where('order_type', 'delivery')->sum('final_amount');
+        $pickupRevenue   = $orders->where('order_type', 'pickup')->sum('final_amount');
+
+        $itemCounts = [];
+        foreach ($orders as $order) {
+            foreach ($order->items as $oi) {
+                $name = $oi->menuItem->name ?? 'Unknown Item';
+                if (!isset($itemCounts[$name])) {
+                    $itemCounts[$name] = ['qty' => 0, 'revenue' => 0];
+                }
+                $itemCounts[$name]['qty']     += $oi->quantity;
+                $itemCounts[$name]['revenue'] += $oi->unit_price * $oi->quantity;
+            }
+        }
+        arsort($itemCounts);
+        $topItems = array_slice($itemCounts, 0, 10, true);
+
+        return response()->json([
+            'restaurant' => [
+                'name'         => $restaurant->name,
+                'municipality' => $restaurant->municipality,
+            ],
+            'range'        => $request->range,
+            'generated_at' => $now->toDateTimeString(),
+            'summary'      => [
+                'total_revenue'    => round($totalRevenue, 2),
+                'total_orders'     => $totalOrders,
+                'completed_orders' => $completedOrders,
+                'cancelled_orders' => $cancelledOrders,
+                'pickup_orders'    => $pickupOrders,
+                'delivery_orders'  => $deliveryOrders,
+                'avg_order_value'  => round($avgOrderValue, 2),
+                'pickup_revenue'   => round($pickupRevenue, 2),
+                'delivery_revenue' => round($deliveryRevenue, 2),
+            ],
+            'top_items' => $topItems,
+            'orders'    => $orders->map(fn ($o) => [
+                'id'               => $o->id,
+                'created_at'       => $o->created_at->toDateTimeString(),
+                'status'           => $o->status,
+                'order_type'       => $o->order_type,
+                'customer_name'    => $o->user->name ?? 'Guest',
+                'delivery_address' => $o->delivery_address,
+                'items'            => $o->items->map(fn ($oi) => [
+                    'name'       => $oi->menuItem->name ?? 'Item',
+                    'quantity'   => $oi->quantity,
+                    'unit_price' => $oi->unit_price,
+                    'subtotal'   => $oi->unit_price * $oi->quantity,
+                ]),
+                'total_amount'    => $o->total_amount,
+                'discount_amount' => $o->discount_amount,
+                'delivery_fee'    => $o->delivery_fee,
+                'final_amount'    => $o->final_amount,
+                'voucher_code'    => $o->voucher?->code,
+            ]),
+        ]);
     }
 }

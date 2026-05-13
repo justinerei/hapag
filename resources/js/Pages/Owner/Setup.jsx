@@ -72,14 +72,11 @@ function RestaurantFormModal({ categories }) {
         municipality: '',
         image_url: '',
     });
+    const [confirmExit, setConfirmExit] = useState(false);
 
     function submit(e) {
         e.preventDefault();
         post(route('owner.setup.store'));
-    }
-
-    function handleClose() {
-        router.post(route('logout'));
     }
 
     return (
@@ -91,9 +88,24 @@ function RestaurantFormModal({ categories }) {
                 </div>
 
                 <div className="flex justify-end p-4 pb-0 relative z-10">
-                    <button type="button" onClick={handleClose} className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 transition-colors" title="Log out and exit">
+                    <button type="button" onClick={() => setConfirmExit(true)} className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 transition-colors" title="Log out and exit">
                         <CloseIcon />
                     </button>
+                    {confirmExit && (
+                        <div className="absolute top-14 right-4 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-xs text-gray-700 w-52">
+                            <p className="font-semibold mb-2">Exit and log out?</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => router.post(route('logout'))}
+                                    className="flex-1 py-1.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors">
+                                    Log out
+                                </button>
+                                <button onClick={() => setConfirmExit(false)}
+                                    className="flex-1 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors">
+                                    Stay
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-center px-8 pb-2">

@@ -24,8 +24,11 @@ class OrderStatusUpdated extends Notification implements ShouldBroadcast, Should
 
     public function broadcastOn(): array
     {
+        $this->order->loadMissing('restaurant');
+
         return [
             new PrivateChannel('customer.' . $this->order->user_id),
+            new PrivateChannel('owner.' . $this->order->restaurant->owner_id),
         ];
     }
 

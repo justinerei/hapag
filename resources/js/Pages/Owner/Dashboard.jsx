@@ -164,7 +164,7 @@ function TypePill({ type }) {
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
 
-function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved }) {
+function ItemModal({ mode, item, existingCategories, restaurantId, restaurantName, onClose, onSaved }) {
     const [form, setForm] = useState(
         mode === 'add' ? { ...EMPTY_ITEM }
             : { name: item.name, description: item.description ?? '', price: item.price, category: item.category, image_url: item.image_url ?? '', is_available: item.is_available }
@@ -220,7 +220,10 @@ function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved 
                     </Field>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label="Category *" error={errors.category?.[0]}>
-                            <input type="text" value={form.category} onChange={e => set('category', e.target.value)} className={inp} placeholder="e.g. Soups" required />
+                            <input type="text" list="cat-suggestions" value={form.category} onChange={e => set('category', e.target.value)} className={inp} placeholder="e.g. Soups" required />
+                            <datalist id="cat-suggestions">
+                                {existingCategories.map(c => <option key={c} value={c} />)}
+                            </datalist>
                         </Field>
                         <Field label="Price (₱) *" error={errors.price?.[0]}>
                             <input type="number" step="0.01" min="0" value={form.price} onChange={e => set('price', e.target.value)} className={inp} required />
@@ -331,6 +334,53 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
     );
 }
 
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+
+function DeleteConfirmModal({ confirm, onCancel, onConfirm }) {
+    const [processing, setProcessing] = useState(false);
+    async function handleConfirm() {
+        setProcessing(true);
+        await onConfirm();
+        setProcessing(false);
+    }
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 className="text-base font-extrabold text-gray-800 mb-2">
+                    Delete {confirm.type === 'item' ? `"${confirm.target.name}"` : 'voucher'}?
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                    {confirm.type === 'item'
+                        ? "This can't be undone."
+                        : `Voucher ${confirm.target.code} will be permanently deleted.`}
+                </p>
+                <div className="flex justify-end gap-3">
+                    <button type="button" onClick={onCancel}
+                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" onClick={handleConfirm} disabled={processing}
+                        className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-50 transition-colors">
+                        {processing ? 'Deleting…' : 'Yes, delete'}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
 function OrderCard({ order, onAdvance }) {
@@ -371,7 +421,7 @@ function OrderCard({ order, onAdvance }) {
                             className="px-4 py-1.5 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-95 transition-all">
                             Mark as {cap(NEXT_STATUS[order.status])}
                         </button>
-                        {order.status === 'pending' && (
+                        {(order.status === 'pending' || order.status === 'accepted') && (
                             <button onClick={() => onAdvance(order, 'cancelled')}
                                 className="px-4 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 active:scale-95 transition-all">
                                 Cancel
@@ -414,9 +464,13 @@ function OverviewTab({ restaurant, onSwitchTab }) {
     const now = new Date();
     const today = now.toDateString();
 
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+
     const todayTotal  = useMemo(() => orders.filter(o => new Date(o.created_at).toDateString() === today).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
     const totalIncome = useMemo(() => orders.reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
-    const weekTotal   = useMemo(() => orders.filter(o => (now - new Date(o.created_at)) < 7 * 86400000).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
+    const weekTotal   = useMemo(() => orders.filter(o => new Date(o.created_at) >= startOfWeek).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
     const pending     = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
     const available   = useMemo(() => items.filter(i => i.is_available).length, [items]);
     const avgOrderValue = orders.length > 0 ? totalIncome / orders.length : 0;
@@ -738,8 +792,9 @@ function OrdersTab({ restaurant, onAdvance }) {
     const orders = restaurant.orders ?? [];
     const [filter, setFilter] = useState('pending');
     const counts = { pending: orders.filter(o => o.status === 'pending').length, accepted: orders.filter(o => o.status === 'accepted').length, preparing: orders.filter(o => o.status === 'preparing').length, ready: orders.filter(o => o.status === 'ready').length };
-    const FILTERS = [{ k: 'pending', label: `Pending (${counts.pending})` }, { k: 'accepted', label: `Accepted (${counts.accepted})` }, { k: 'preparing', label: `Preparing (${counts.preparing})` }, { k: 'ready', label: `Ready (${counts.ready})` }, { k: 'all', label: `All (${orders.length})` }];
-    const visible = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+    const activeCount = orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)).length;
+    const FILTERS = [{ k: 'pending', label: `Pending (${counts.pending})` }, { k: 'accepted', label: `Accepted (${counts.accepted})` }, { k: 'preparing', label: `Preparing (${counts.preparing})` }, { k: 'ready', label: `Ready (${counts.ready})` }, { k: 'all', label: `All Active (${activeCount})` }];
+    const visible = filter === 'all' ? orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)) : orders.filter(o => o.status === filter);
     return (
         <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -750,6 +805,9 @@ function OrdersTab({ restaurant, onAdvance }) {
                     </button>
                 ))}
             </div>
+            {orders.some(o => o.status === 'completed' || o.status === 'cancelled') && (
+                <p className="text-xs text-gray-400">Completed and cancelled orders are in Order History.</p>
+            )}
             {visible.length === 0
                 ? <div className="bg-white border border-gray-200 rounded-2xl flex flex-col items-center justify-center py-16 gap-2">
                     <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-1"><ListIcon cls="w-6 h-6 text-gray-300" /></div>
@@ -932,10 +990,14 @@ function VouchersTab({ restaurant, onOpenAdd, onOpenEdit, onDelete }) {
 
 function HistoryTab({ restaurant }) {
     const orders = restaurant.orders ?? [];
+    const [dateFilter, setDateFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [search, setSearch] = useState('');
     const visible = orders.filter(o => {
+        if (dateFilter === 'today' && new Date(o.created_at).toDateString() !== new Date().toDateString()) return false;
+        if (dateFilter === 'week' && (Date.now() - new Date(o.created_at)) >= 7 * 86400000) return false;
+        if (dateFilter === 'month' && (Date.now() - new Date(o.created_at)) >= 30 * 86400000) return false;
         if (statusFilter !== 'all' && o.status !== statusFilter) return false;
         if (typeFilter !== 'all' && o.order_type !== typeFilter) return false;
         if (search && !`${o.id} ${o.user?.name ?? ''}`.toLowerCase().includes(search.toLowerCase())) return false;
@@ -943,6 +1005,14 @@ function HistoryTab({ restaurant }) {
     });
     return (
         <div className="space-y-4">
+            <div className="flex gap-1.5 flex-wrap">
+                {[{ k: 'all', label: 'All' }, { k: 'today', label: 'Today' }, { k: 'week', label: 'This Week' }, { k: 'month', label: 'This Month' }].map(({ k, label }) => (
+                    <button key={k} onClick={() => setDateFilter(k)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${dateFilter === k ? 'bg-green-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                        {label}
+                    </button>
+                ))}
+            </div>
             <div className="flex flex-wrap gap-3 items-center">
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
                     className="px-3 py-1.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 w-48" />
@@ -1037,12 +1107,12 @@ function SettingsTab({ restaurant }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+            <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
                 {/* Left Side: Profile Information */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
-                        <form className="space-y-5">
+                        <div className="space-y-5">
                             <Field label="Restaurant Name *" error={errors.name?.[0]}>
                                 <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} required />
                             </Field>
@@ -1069,7 +1139,7 @@ function SettingsTab({ restaurant }) {
                                     <ImageIcon cls="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                                 </div>
                             </Field>
-                        </form>
+                        </div>
                     </div>
 
                     <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
@@ -1121,8 +1191,8 @@ function SettingsTab({ restaurant }) {
                             ))}
                         </div>
                     </div>
-                     <button 
-                        onClick={handleSave}
+                     <button
+                        type="submit"
                         disabled={saving}
                         className="px-6 py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 shadow-lg shadow-green-200 transition-all active:scale-95 disabled:opacity-50"
                     >
@@ -1131,7 +1201,7 @@ function SettingsTab({ restaurant }) {
 
                 </div>
 
-            </div>
+            </form>
         </motion.div>
     );
 }
@@ -1145,9 +1215,12 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
     const [sidebarOpen, setSidebarOpen]   = useState(false);
     const [itemModal, setItemModal]       = useState(null);
     const [voucherModal, setVoucherModal] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [newOrderCount, setNewOrderCount] = useState(0);
     const [orderToast, setOrderToast]       = useState(null);
     const orderToastTimer                   = useRef(null);
+    const [statusToast, setStatusToast]     = useState(null);
+    const statusToastTimer                  = useRef(null);
     const [ownerBellOpen, setOwnerBellOpen]           = useState(false);
     const [ownerNotifications, setOwnerNotifications] = useState([]);
     const [ownerUnread, setOwnerUnread]               = useState(0);
@@ -1192,6 +1265,16 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
             })
             .catch(() => {});
         });
+        channel.listen('.order-status-updated', (event) => {
+            setRestaurants(prev => prev.map(r => ({
+                ...r,
+                orders: r.orders.map(o =>
+                    o.id === event.order_id
+                        ? { ...o, status: event.status }
+                        : o
+                ),
+            })));
+        });
         return () => {
             window.Echo.leave('owner.' + auth.user.id);
             if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
@@ -1221,9 +1304,8 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
     async function toggleItem(item) {
         try { const d = await apiFetch(route('owner.items.toggle', item.id), 'PATCH'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.map(i => i.id === item.id ? { ...i, is_available: d.is_available } : i) })); } catch { }
     }
-    async function deleteItem(item) {
-        if (!confirm(`Delete "${item.name}"?`)) return;
-        try { await apiFetch(route('owner.items.destroy', item.id), 'DELETE'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== item.id) })); } catch (e) { if (e?.data?.error) alert(e.data.error); }
+    function deleteItem(item) {
+        setDeleteConfirm({ type: 'item', target: item });
     }
     function onItemSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, menu_items: mode === 'add' ? [...r.menu_items, saved] : r.menu_items.map(i => i.id === saved.id ? saved : i) }));
@@ -1238,11 +1320,14 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                 setOwnerUnread(prev => Math.max(0, prev - 1));
                 setNewOrderCount(prev => Math.max(0, prev - 1));
             }
+            if (statusToastTimer.current) clearTimeout(statusToastTimer.current);
+            const label = { accepted: 'Accepted', preparing: 'Preparing', ready: 'Ready for pickup', cancelled: 'Cancelled' };
+            setStatusToast(`Order #${order.id} marked as ${label[targetStatus] ?? targetStatus}`);
+            statusToastTimer.current = setTimeout(() => setStatusToast(null), 3000);
         } catch { }
     }
-    async function deleteVoucher(v) {
-        if (!confirm(`Delete voucher "${v.code}"?`)) return;
-        try { await apiFetch(route('owner.vouchers.destroy', v.id), 'DELETE'); patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== v.id) })); } catch { }
+    function deleteVoucher(v) {
+        setDeleteConfirm({ type: 'voucher', target: v });
     }
     function onVoucherSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, vouchers: mode === 'add' ? [saved, ...r.vouchers] : r.vouchers.map(v => v.id === saved.id ? saved : v) }));
@@ -1261,7 +1346,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
         switch (activeTab) {
             case 'overview': return <OverviewTab restaurant={restaurant} onSwitchTab={handleTabChange} />;
             case 'orders':   return <OrdersTab restaurant={restaurant} onAdvance={advanceStatus} />;
-            case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal('add')} onOpenEdit={item => setItemModal(item)} />;
+            case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal({ mode: 'add', categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} onOpenEdit={item => setItemModal({ mode: 'edit', item, categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} />;
             case 'vouchers': return <VouchersTab restaurant={restaurant} onOpenAdd={() => setVoucherModal('add')} onOpenEdit={v => setVoucherModal(v)} onDelete={deleteVoucher} />;
             case 'history':  return <HistoryTab restaurant={restaurant} />;
             case 'settings': return <SettingsTab restaurant={restaurant} />;
@@ -1444,8 +1529,9 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                 {itemModal !== null && (
                     <ItemModal
                         key="item-modal"
-                        mode={itemModal === 'add' ? 'add' : 'edit'}
-                        item={itemModal === 'add' ? null : itemModal}
+                        mode={itemModal.mode}
+                        item={itemModal.mode === 'edit' ? itemModal.item : null}
+                        existingCategories={itemModal.categories}
                         restaurantId={restaurant.id}
                         restaurantName={restaurant.name}
                         onClose={() => setItemModal(null)}
@@ -1465,6 +1551,36 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
                     />
                 )}
             </AnimatePresence>
+            <AnimatePresence>
+                {deleteConfirm !== null && (
+                    <DeleteConfirmModal
+                        key="delete-confirm-modal"
+                        confirm={deleteConfirm}
+                        onCancel={() => setDeleteConfirm(null)}
+                        onConfirm={async () => {
+                            if (deleteConfirm.type === 'item') {
+                                try {
+                                    await apiFetch(route('owner.items.destroy', deleteConfirm.target.id), 'DELETE');
+                                    patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== deleteConfirm.target.id) }));
+                                } catch (e) { if (e?.data?.error) alert(e.data.error); }
+                            } else {
+                                try {
+                                    await apiFetch(route('owner.vouchers.destroy', deleteConfirm.target.id), 'DELETE');
+                                    patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== deleteConfirm.target.id) }));
+                                } catch {}
+                            }
+                            setDeleteConfirm(null);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Status advance toast */}
+            {statusToast && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-bold text-white bg-gray-800 pointer-events-none">
+                    ✓ {statusToast}
+                </div>
+            )}
 
             {/* New-order toast */}
             <AnimatePresence>
