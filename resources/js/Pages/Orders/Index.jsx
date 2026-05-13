@@ -20,6 +20,7 @@ const STATUS_STYLES = {
     accepted:  'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
     preparing: 'bg-blue-50  text-blue-700  ring-1 ring-blue-200',
     ready:     'bg-green-50 text-green-700 ring-1 ring-green-200',
+    completed: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
     cancelled: 'bg-red-50   text-red-600   ring-1 ring-red-200',
 };
 
@@ -28,6 +29,7 @@ const STATUS_LABELS = {
     accepted:  'Accepted',
     preparing: 'Preparing',
     ready:     'Ready',
+    completed: 'Completed',
     cancelled: 'Cancelled',
 };
 
@@ -41,6 +43,16 @@ const TIMELINE_STEPS = [
         icon: (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+        ),
+    },
+    {
+        key: 'accepted',
+        label: 'Accepted',
+        sublabel: 'Restaurant confirmed your order',
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
         ),
     },
@@ -65,9 +77,19 @@ const TIMELINE_STEPS = [
             </svg>
         ),
     },
+    {
+        key: 'completed',
+        label: 'Completed',
+        sublabel: 'Order completed. Enjoy your meal!',
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+            </svg>
+        ),
+    },
 ];
 
-const STATUS_STEP_INDEX = { pending: 0, preparing: 1, ready: 2 };
+const STATUS_STEP_INDEX = { pending: 0, accepted: 1, preparing: 2, ready: 3, completed: 4 };
 
 // ── Status Timeline ────────────────────────────────────────────────────────────
 
@@ -373,20 +395,20 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
         if (flash?.error)   showToast(flash.error, true);
     }, [flash?.success, flash?.error]);
 
-    // Background Inertia reload every 15s to keep order list fresh
+    // Background Inertia reload every 15s — only while active orders exist
+    const hasActiveOrders = orders.some(
+        o => o.status === 'pending' || o.status === 'preparing' || o.status === 'accepted'
+    );
+
     useEffect(() => {
+        if (!hasActiveOrders) return;
         const id = setInterval(() => {
             router.reload({ only: ['orders'], onSuccess: (page) => {
                 setOrders(page.props.orders);
             }});
         }, 15_000);
         return () => clearInterval(id);
-    }, []);
-
-    useEffect(() => {
-        const hasActive = orders.some(o => o.status === 'pending' || o.status === 'preparing');
-        if (!hasActive) setActiveTab('all');
-    }, [orders]);
+    }, [hasActiveOrders]);
 
     useEffect(() => {
         if (!auth?.user?.id) return;
