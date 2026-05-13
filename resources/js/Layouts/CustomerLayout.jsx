@@ -5,6 +5,7 @@ import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
 import Footer from '@/Components/Footer';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
+import { useNotification } from '@/hooks/useNotification';
 
 const MUNICIPALITIES = [
     'Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba',
@@ -218,7 +219,7 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 // ── Main Layout ───────────────────────────────────────────────────────────────
 
 export default function CustomerLayout({ children, cartCount = 0, orderNotifCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
-    const { auth, notifications: initialNotifications = [] } = usePage().props;
+    const { auth, notifications: initialNotifications = [], orderNotifCount: sharedOrderNotifCount = 0 } = usePage().props;
     const user = auth?.user ?? null;
 
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -228,6 +229,8 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     const [bellOpen, setBellOpen] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
     const [unreadCount, setUnreadCount] = useState(initialNotifications.length);
+    // Always read from middleware shared props — works on every page without passing manually
+    const [liveOrderNotifCount, setLiveOrderNotifCount] = useState(sharedOrderNotifCount || orderNotifCount);
     const bellRef = useRef(null);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
@@ -270,6 +273,8 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                 ...prev,
             ]);
             setUnreadCount(prev => prev + 1);
+            // Increment the My Orders badge live when resto updates status
+            setLiveOrderNotifCount(prev => prev + 1);
         });
         return () => {
             window.Echo.leave('customer.' + user.id);
@@ -583,7 +588,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                    {orderNotifCount > 0 && !profileOpen && (
+                                    {liveOrderNotifCount > 0 && !profileOpen && (
                                         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 ring-1 ring-white" />
                                     )}
                                 </div>
@@ -612,9 +617,9 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                                         <span className="flex-1">My Orders</span>
-                                        {orderNotifCount > 0 && (
+                                        {liveOrderNotifCount > 0 && (
                                             <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-extrabold leading-none">
-                                                {orderNotifCount > 9 ? '9+' : orderNotifCount}
+                                                {liveOrderNotifCount > 9 ? '9+' : liveOrderNotifCount}
                                             </span>
                                         )}
                                     </Link>

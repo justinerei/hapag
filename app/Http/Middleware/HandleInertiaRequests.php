@@ -39,6 +39,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+
             'auth' => [
                 'user' => $user ? [
                     'id'           => $user->id,
@@ -50,29 +51,25 @@ class HandleInertiaRequests extends Middleware
                     'avatar_url'   => $user->avatar_url,
                 ] : null,
             ],
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-            ],
-            // Share unread notifications for customer role only.
-            // Wrapped in a closure so it only runs when a customer is logged in —
-            // avoids a wasted query for guests, owners, and admins.
-            'notifications' => function () use ($user) {
-                if (! $user || $user->role !== 'customer') {
-                    return [];
-                }
 
-                return $user->unreadNotifications
-                    ->map(fn ($n) => [
-                        'id'         => $n->id,
-                        'message'    => $n->data['message'] ?? 'Your order status has been updated.',
-                        'order_id'   => $n->data['order_id'] ?? null,
-                        'status'     => $n->data['status'] ?? null,
-                        'created_at' => $n->created_at->diffForHumans(),
-                    ])
-                    ->values()
-                    ->all();
+            // Ito yung kailangan ng useNotification.js
+            'notifications' => function () use ($user) {
+                if (!$user) return [];
+
+                return $user->unreadNotifications->map(fn ($n) => [
+                    'id'         => $n->id,
+                    'message'    => $n->data['message'] ?? 'Status updated',
+                    'order_id'   => $n->data['order_id'] ?? null,
+                    'created_at' => $n->created_at->diffForHumans(),
+                ]);
             },
+
+            // Bilang ng active orders para sa badge
+            'orderNotifCount' => $user 
+                ? $user->orders()->whereIn('status', ['pending', 'preparing', 'ready'])->count() 
+                : 0,
+
+            'cartCount' => $user ? $user->cartItems()->count() : 0,
         ];
     }
 }
