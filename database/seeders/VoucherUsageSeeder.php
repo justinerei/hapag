@@ -2,124 +2,117 @@
 
 namespace Database\Seeders;
 
-use App\Models\ClaimedVoucher;
-use App\Models\Order;
-use App\Models\User;
-use App\Models\Voucher;
-use App\Models\VoucherUsage;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class VoucherUsageSeeder extends Seeder
 {
     public function run(): void
     {
-        $vouchers  = Voucher::all();
-        $orders    = Order::all();
-        $customers = User::where('role', 'customer')->get();
+        DB::table('voucher_usages')->delete();
+        DB::table('vouchers')->update(['used_count' => 0]);
 
-        if ($vouchers->isEmpty() || $orders->isEmpty() || $customers->isEmpty()) {
-            $this->command->warn('Missing vouchers, orders, or customers. Run other seeders first.');
+        $completedOrders = DB::table('orders')->where('status', 'completed')->get();
+
+        if ($completedOrders->isEmpty()) {
+            $this->command->warn('No completed orders found. Run OrderSeeder first.');
             return;
         }
 
-        // ── Clean slate ───────────────────────────────────────────────────
-        DB::table('voucher_usages')->truncate();
-        DB::table('claimed_vouchers')->truncate();
-        Voucher::query()->update(['used_count' => 0]);
+        $vouchers = DB::table('vouchers')->where('is_active', true)->get();
 
-        // ── Step 1: Seed claimed_vouchers ─────────────────────────────────
-        // Scaled down to match 30 customers (was 60).
-        // Admin vouchers are claimed widely; owner vouchers are niche.
-        // MASARAP10 has a max_uses of 50 so capping at 20 is safe.
-
-        $claimCounts = [
-            'HAPAG20'   => 22,  // popular site-wide promo — most customers claim it
-            'KAINDITO'  => 18,  // good promo but higher min order, fewer claims
-            'MASARAP10' => 20,  // no min order, easy to grab
-            'GRILL30'   => 10,  // restaurant-specific, only Grill Masters fans
-            'KAFETIME'  => 12,  // cafe crowd, decent uptake
-            'BIDANOW'   => 8,   // smallest reach, burger-specific
-        ];
-
-        foreach ($vouchers as $voucher) {
-            $targetCount = $claimCounts[$voucher->code] ?? 8;
-
-            if ($voucher->max_uses !== null) {
-                $targetCount = min($targetCount, $voucher->max_uses);
-            }
-            $targetCount = min($targetCount, $customers->count());
-
-            // shuffle + take guarantees no duplicate user per voucher
-            $pickedCustomers = $customers->shuffle()->take($targetCount);
-
-            $inserted = 0;
-            foreach ($pickedCustomers as $customer) {
-                $daysAgo = rand(1, 60);
-
-                DB::table('claimed_vouchers')->insertOrIgnore([
-                    'user_id'    => $customer->id,
-                    'voucher_id' => $voucher->id,
-                    'created_at' => now()->subDays($daysAgo),
-                    'updated_at' => now()->subDays($daysAgo),
-                ]);
-
-                $inserted++;
-            }
-
-            $this->command->info("✅ {$inserted} claims → voucher [{$voucher->code}]");
+        if ($vouchers->isEmpty()) {
+            $this->command->warn('No active vouchers found. Run VoucherSeeder first.');
+            return;
         }
 
-        // ── Step 2: Seed voucher_usages ───────────────────────────────────
-        // Usage = voucher was actually applied to a completed order.
-        // Usages are a subset of claims (not everyone who claims, redeems).
-        // Spread over last 30 days so the growth chart looks smooth.
+        // Apply vouchers to ~20% of completed orders
+        $targetCount    = (int) ceil($completedOrders->count() * 0.20);
+        $selectedOrders = $completedOrders->shuffle()->take($targetCount);
 
-        $usageCounts = [
-            'HAPAG20'   => 18,  // most claimers also redeemed
-            'KAINDITO'  => 14,
-            'MASARAP10' => 16,
-            'GRILL30'   => 8,
-            'KAFETIME'  => 10,
-            'BIDANOW'   => 6,
-        ];
+        // Track used combos (user_id:voucher_id) to enforce one-use-per-user rule
+        $usedCombos        = [];
+        $voucherUsedCounts = [];
 
-        // Shuffle orders to avoid patterns; each order can only have 1 voucher
-        $availableOrders = $orders->shuffle();
-        $orderIndex      = 0;
+        $applied = 0;
+        $skipped = 0;
 
-        foreach ($vouchers as $voucher) {
-            $targetCount = $usageCounts[$voucher->code] ?? 6;
-            $usedSoFar   = 0;
+        foreach ($selectedOrders as $order) {
+            $validVoucher = null;
 
-            for ($i = 0; $i < $targetCount; $i++) {
-                if ($orderIndex >= $availableOrders->count()) break;
+            foreach ($vouchers->shuffle() as $voucher) {
+                // Must match the order's restaurant or be a global voucher
+                if ($voucher->restaurant_id !== null && $voucher->restaurant_id != $order->restaurant_id) {
+                    continue;
+                }
 
-                $order    = $availableOrders[$orderIndex++];
-                $customer = $customers->random();
-                // Usages are more recent than claims — last 30 days
-                $daysAgo  = rand(1, 30);
+                // Must meet minimum order amount
+                if ($voucher->min_order_amount !== null && $order->total_amount < $voucher->min_order_amount) {
+                    continue;
+                }
 
-                VoucherUsage::create([
-                    'voucher_id' => $voucher->id,
-                    'user_id'    => $customer->id,
-                    'order_id'   => $order->id,
-                    'created_at' => now()->subDays($daysAgo),
-                    'updated_at' => now()->subDays($daysAgo),
-                ]);
+                // Must not exceed max_uses (accounting for usages applied in this seeder run)
+                $usedSoFar = $voucherUsedCounts[$voucher->id] ?? 0;
+                if ($voucher->max_uses !== null && $usedSoFar >= $voucher->max_uses) {
+                    continue;
+                }
 
-                $usedSoFar++;
+                // Must not be expired
+                if ($voucher->expires_at !== null && Carbon::parse($voucher->expires_at)->isPast()) {
+                    continue;
+                }
+
+                // Same user must not have already used this voucher
+                $comboKey = "{$order->user_id}:{$voucher->id}";
+                if (isset($usedCombos[$comboKey])) {
+                    continue;
+                }
+
+                $validVoucher = $voucher;
+                break;
             }
 
-            // Keep used_count in sync for the top vouchers bar chart
-            $voucher->update(['used_count' => $usedSoFar]);
+            if ($validVoucher === null) {
+                $skipped++;
+                continue;
+            }
 
-            $this->command->info("✅ {$usedSoFar} usages → voucher [{$voucher->code}]");
+            $discountAmount = $validVoucher->type === 'percentage'
+                ? round((float) $order->total_amount * ((float) $validVoucher->value / 100), 2)
+                : min((float) $validVoucher->value, (float) $order->total_amount);
+
+            $finalAmount = round(
+                (float) $order->total_amount - $discountAmount + (float) $order->delivery_fee,
+                2
+            );
+
+            DB::table('orders')->where('id', $order->id)->update([
+                'voucher_id'      => $validVoucher->id,
+                'discount_amount' => $discountAmount,
+                'final_amount'    => $finalAmount,
+                'updated_at'      => $order->updated_at,
+            ]);
+
+            DB::table('voucher_usages')->insert([
+                'voucher_id' => $validVoucher->id,
+                'user_id'    => $order->user_id,
+                'order_id'   => $order->id,
+                'created_at' => $order->created_at,
+                'updated_at' => $order->created_at,
+            ]);
+
+            $comboKey = "{$order->user_id}:{$validVoucher->id}";
+            $usedCombos[$comboKey]               = true;
+            $voucherUsedCounts[$validVoucher->id] = ($voucherUsedCounts[$validVoucher->id] ?? 0) + 1;
+
+            $applied++;
         }
 
-        $totalClaimed = ClaimedVoucher::count();
-        $totalUsed    = VoucherUsage::count();
+        foreach ($voucherUsedCounts as $voucherId => $count) {
+            DB::table('vouchers')->where('id', $voucherId)->increment('used_count', $count);
+        }
 
-        $this->command->info("🎉 Done! Total claimed: {$totalClaimed} | Total redeemed: {$totalUsed}");
+        $this->command->info("✅ Done! Vouchers applied: {$applied} | Skipped (no valid match): {$skipped}");
     }
 }
