@@ -213,6 +213,7 @@ class CartController extends Controller
             'cartCount'        => $cartCount,
             'allVouchers'      => $allVouchers,
             'orderType'        => $request->query('type', 'pickup'),
+            'deliveryFee'      => 49,
         ]);
     }
 
