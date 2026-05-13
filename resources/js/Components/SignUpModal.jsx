@@ -125,7 +125,7 @@ function RoleSelection({ onSelect, onClose, reduce }) {
 
 // ── Registration form step ────────────────────────────────────────────────────
 
-function RegistrationForm({ role, onClose, onSwitchToSignIn, reduce }) {
+function RegistrationForm({ role, onBack, onClose, onSwitchToSignIn, reduce }) {
     const isCustomer = role === 'customer';
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -198,20 +198,34 @@ function RegistrationForm({ role, onClose, onSwitchToSignIn, reduce }) {
 
                 {/* Right — form */}
                 <div className="relative p-8 sm:p-10 flex flex-col justify-center overflow-y-auto max-h-[92vh]">
+                    {/* Back button */}
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="absolute top-4 left-4 z-20 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-colors"
+                        aria-label="Back"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
                     <CloseBtn onClick={onClose} />
 
-                    {/* Step hint */}
-                    <div className="mb-5">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200/60 rounded-full px-3 py-1">
-                            <span
-                                className="flex items-center justify-center w-[15px] h-[15px] rounded-full bg-green-500 text-white text-[9px] font-bold leading-none"
-                                aria-hidden="true"
-                            >
-                                1
+                    {/* Step hint — only shown for owner (2-step flow) */}
+                    {!isCustomer && (
+                        <div className="mb-5">
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200/60 rounded-full px-3 py-1">
+                                <span
+                                    className="flex items-center justify-center w-[15px] h-[15px] rounded-full bg-green-500 text-white text-[9px] font-bold leading-none"
+                                    aria-hidden="true"
+                                >
+                                    1
+                                </span>
+                                Step 1 of 2 — Account details
                             </span>
-                            Step 1 of 2 — Account details
-                        </span>
-                    </div>
+                        </div>
+                    )}
 
                     <div className="mb-6">
                         <h2 className="text-[20px] font-extrabold text-gray-800">Create your account</h2>
@@ -349,6 +363,11 @@ export default function SignUpModal({ show, onClose, onSwitchToSignIn }) {
         setStep('form');
     }
 
+    function handleBack() {
+        setStep('role');
+        setSelectedRole(null);
+    }
+
     function handleSwitchToSignIn() {
         handleClose();
         onSwitchToSignIn?.();
@@ -397,6 +416,7 @@ export default function SignUpModal({ show, onClose, onSwitchToSignIn }) {
                             <motion.div key="form-step" className="relative z-10 w-full" {...stepAnim}>
                                 <RegistrationForm
                                     role={selectedRole}
+                                    onBack={handleBack}
                                     onClose={handleClose}
                                     onSwitchToSignIn={handleSwitchToSignIn}
                                     reduce={reduce}
