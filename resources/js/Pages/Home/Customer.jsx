@@ -232,7 +232,7 @@ function WeatherItemCard({ item, onAdd }) {
 
 // ── Voucher Ticket Card ───────────────────────────────────────────────────────
 
-function VoucherCard({ deal }) {
+function VoucherCard({ deal, isClaimed = false }) {
     const dr = deal.restaurant;
     const isGlobal = !dr;
     const discLabel = deal.type === 'percentage'
@@ -246,7 +246,7 @@ function VoucherCard({ deal }) {
                 <div className={`h-2 w-full ${isGlobal ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-orange-400 to-orange-600'}`} />
 
                 <div className="flex">
-                    <div className="flex-1 p-5 pr-3">
+                    <div className={`flex-1 p-5 pr-3 ${isClaimed ? 'opacity-40' : ''}`}>
                         <div className="flex items-center gap-1.5 mb-2.5">
                             {isGlobal ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-600 border border-green-100">
@@ -288,12 +288,17 @@ function VoucherCard({ deal }) {
                         <div className="absolute left-[-6px] bottom-[-1px] w-3 h-3 rounded-full bg-gray-50 border border-gray-100" />
 
                         <div className="text-center">
-                            <span className={`block text-3xl font-extrabold leading-none ${isGlobal ? 'text-green-500' : 'text-orange-500'}`}>
+                            <span className={`block text-3xl font-extrabold leading-none ${isGlobal ? 'text-green-500' : 'text-orange-500'} ${isClaimed ? 'opacity-40' : ''}`}>
                                 {discLabel}
                             </span>
-                            <span className={`block text-[10px] font-bold uppercase tracking-widest mt-1 ${isGlobal ? 'text-green-400' : 'text-orange-400'}`}>
+                            <span className={`block text-[10px] font-bold uppercase tracking-widest mt-1 ${isGlobal ? 'text-green-400' : 'text-orange-400'} ${isClaimed ? 'opacity-40' : ''}`}>
                                 OFF
                             </span>
+                            {isClaimed && (
+                                <span className="block mt-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-400">
+                                    Used
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -610,6 +615,7 @@ export default function Customer({
     popular,
     featuredItemMap,
     favoriteIds,
+    claimedCodes = [],
 }) {
     const [search, setSearch] = useState('');
     const [selectedCuisines, setSelectedCuisines] = useState([]);
@@ -920,7 +926,9 @@ export default function Customer({
                             <section>
                                 <SectionHeading title="Daily deals" subtitle="Exclusive vouchers for your next order" badge="Save up to 50%" />
                                 <ScrollableRow gap="gap-4">
-                                    {deals.map(deal => <VoucherCard key={deal.id} deal={deal} />)}
+                                    {deals.map(deal => (
+                                        <VoucherCard key={deal.id} deal={deal} isClaimed={claimedCodes.includes(deal.code)} />
+                                    ))}
                                 </ScrollableRow>
                             </section>
                         )}
