@@ -1637,13 +1637,9 @@ export default function AdminDashboard({
 
     return (
         <>
-            <Head title="Admin — Hapag">
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-            </Head>
+            <Head title="Admin — Hapag" />
 
-            <div style={{ fontFamily: "'Outfit', system-ui, sans-serif" }} className="flex min-h-[100dvh] bg-gray-950">
+            <div className="flex min-h-[100dvh] bg-gray-950">
 
                 {/* Mobile sidebar overlay */}
                 <AnimatePresence>
