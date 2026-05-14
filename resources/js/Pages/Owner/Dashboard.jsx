@@ -1396,7 +1396,7 @@ function HistoryTab({ restaurant }) {
 
 // ─── Tab: Settings ────────────────────────────────────────────────────────────
 
-function SettingsTab({ restaurant, categories }) {
+function SettingsTab({ restaurant, categories, onDirtyChange }) {
     const [form, setForm] = useState({
         name: restaurant.name ?? '',
         description: restaurant.description ?? '',
@@ -1410,10 +1410,14 @@ function SettingsTab({ restaurant, categories }) {
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errors, setErrors] = useState({});
+    const [isDirty, setIsDirty] = useState(false);
+
+    useEffect(() => { onDirtyChange?.(isDirty); }, [isDirty]);
 
     const set = (k, v) => {
         setForm(p => ({ ...p, [k]: v }));
         setSuccess(false);
+        setIsDirty(true);
     };
 
     async function handleSave(e) {
@@ -1424,6 +1428,7 @@ function SettingsTab({ restaurant, categories }) {
         try {
             await apiFetch(route('owner.settings.update', restaurant.id), 'PATCH', form);
             setSuccess(true);
+            setIsDirty(false);
         } catch (err) {
             if (err.status === 422) setErrors(err.data?.errors ?? {});
         } finally {
@@ -1633,6 +1638,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
     const ownerBellRef                                = useRef(null);
     const [restaurantDropOpen, setRestaurantDropOpen] = useState(false);
     const restaurantDropRef                           = useRef(null);
+    const [isSettingsDirty, setIsSettingsDirty]       = useState(false);
 
     useEffect(() => {
         if (!auth?.user?.id) return;
@@ -1748,6 +1754,9 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
     const pendingCount = (restaurant.orders ?? []).filter(o => o.status === 'pending').length;
 
     function handleTabChange(key) {
+        if (activeTab === 'settings' && isSettingsDirty) {
+            if (!window.confirm('You have unsaved changes. Leave anyway?')) return;
+        }
         if (key === 'orders') setNewOrderCount(0);
         setActiveTab(key);
         setSidebarOpen(false);
@@ -1760,7 +1769,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
             case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal({ mode: 'add', categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} onOpenEdit={item => setItemModal({ mode: 'edit', item, categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} />;
             case 'vouchers': return <VouchersTab restaurant={restaurant} onOpenAdd={() => setVoucherModal('add')} onOpenEdit={v => setVoucherModal(v)} onDelete={deleteVoucher} />;
             case 'history':  return <HistoryTab restaurant={restaurant} />;
-            case 'settings': return <SettingsTab restaurant={restaurant} categories={categories} />;
+            case 'settings': return <SettingsTab restaurant={restaurant} categories={categories} onDirtyChange={setIsSettingsDirty} />;
             default: return null;
         }
     }
