@@ -125,12 +125,19 @@ class OwnerController extends Controller
             'price'         => 'required|numeric|min:0|max:99999.99',
             'category'      => 'required|string|max:80',
             'is_available'  => 'boolean',
+            'image'         => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
         // Confirm this restaurant belongs to the authenticated owner
         $restaurant = Restaurant::findOrFail($data['restaurant_id']);
         abort_if($restaurant->owner_id !== auth()->id(), 403);
         abort_if($restaurant->status !== 'active', 403, 'Restaurant is not active.');
+
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('menu-items', 'public');
+            $imageUrl = Storage::disk('public')->url($path);
+        }
 
         $item = MenuItem::create([
             'restaurant_id' => $restaurant->id,
@@ -139,6 +146,7 @@ class OwnerController extends Controller
             'price'         => $data['price'],
             'category'      => $data['category'],
             'is_available'  => $data['is_available'] ?? true,
+            'image_url'     => $imageUrl,
         ]);
 
         return response()->json(['created' => true, 'item' => $item]);
@@ -155,7 +163,20 @@ class OwnerController extends Controller
             'price'        => 'required|numeric|min:0|max:99999.99',
             'category'     => 'required|string|max:80',
             'is_available' => 'boolean',
+            'image'        => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
+
+        if ($request->hasFile('image')) {
+            if ($menuItem->image_url && str_contains($menuItem->image_url, '/storage/')) {
+                $oldPath = 'menu-items/' . basename($menuItem->image_url);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $data['image_url'] = Storage::disk('public')->url(
+                $request->file('image')->store('menu-items', 'public')
+            );
+        } else {
+            unset($data['image_url']);
+        }
 
         $menuItem->update($data);
 

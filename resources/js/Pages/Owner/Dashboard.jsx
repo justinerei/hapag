@@ -174,16 +174,35 @@ function ItemModal({ mode, item, existingCategories, restaurantId, restaurantNam
     const [processing, setProcessing] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState('');
+    const [imageFile, setImageFile] = useState(null);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     async function handleSubmit(e) {
         e.preventDefault(); setErrors({}); setProcessing(true);
         try {
-            const url = mode === 'add' ? route('owner.items.store') : route('owner.items.update', item.id);
-            const data = await apiFetch(url, mode === 'add' ? 'POST' : 'PATCH', mode === 'add' ? { ...form, restaurant_id: restaurantId } : form);
+            const fd = new FormData();
+            fd.append('name', form.name);
+            fd.append('description', form.description ?? '');
+            fd.append('price', form.price);
+            fd.append('category', form.category);
+            fd.append('is_available', form.is_available ? '1' : '0');
+            if (mode === 'add') fd.append('restaurant_id', restaurantId);
+            if (imageFile) fd.append('image', imageFile);
+            if (mode === 'edit') fd.append('_method', 'PATCH');
+
+            const url = mode === 'add'
+                ? route('owner.items.store')
+                : route('owner.items.update', item.id);
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok) { if (res.status === 422) setErrors(data.errors ?? {}); return; }
             onSaved(data.item, mode);
-        } catch (err) { if (err.status === 422) setErrors(err.data?.errors ?? {}); }
-        finally { setProcessing(false); }
+        } finally { setProcessing(false); }
     }
 
     async function generateDescription() {
@@ -222,17 +241,24 @@ function ItemModal({ mode, item, existingCategories, restaurantId, restaurantNam
                         <div className="flex-shrink-0 w-20 space-y-1.5">
                             <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Photo</label>
                             <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
-                                {form.image_url
-                                    ? <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+                                {(imageFile ? URL.createObjectURL(imageFile) : form.image_url)
+                                    ? <img src={imageFile ? URL.createObjectURL(imageFile) : form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
                                     : <ImageIcon cls="w-7 h-7 text-gray-300" />
                                 }
                             </div>
-                            <input
-                                type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)}
-                                className="w-full px-1.5 py-1 text-[10px] border border-gray-200 rounded-lg text-gray-500 placeholder:text-gray-300 focus:outline-none focus:border-green-400 bg-white transition-colors"
-                                placeholder="Paste URL…"
-                            />
-                            {errors.image_url?.[0] && <p className="text-[10px] text-red-500">{errors.image_url[0]}</p>}
+                            <label className="block w-full text-center cursor-pointer">
+                                <span className="text-[10px] text-green-600 font-semibold hover:text-green-700 transition-colors">
+                                    {imageFile ? 'Change' : 'Upload'}
+                                </span>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                    className="hidden"
+                                    onChange={e => { const file = e.target.files[0]; if (file) setImageFile(file); }}
+                                />
+                            </label>
+                            <p className="text-[9px] text-gray-400 text-center leading-tight">Max 2MB</p>
+                            {errors.image?.[0] && <p className="text-[10px] text-red-500">{errors.image[0]}</p>}
                         </div>
                         <div className="flex-1 space-y-3">
                             <Field label="Item Name *" error={errors.name?.[0]}>
