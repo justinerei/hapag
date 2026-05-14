@@ -95,6 +95,25 @@ const STATUS_STEP_INDEX = { pending: 0, accepted: 1, preparing: 2, ready: 3, com
 // ── Status Timeline ────────────────────────────────────────────────────────────
 
 function StatusTimeline({ status }) {
+    if (status === 'cancelled') {
+        return (
+            <div className="bg-red-50 border border-red-100 rounded-2xl px-5 py-5">
+                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2">Order Status</p>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-red-700">Order Cancelled</p>
+                        <p className="text-xs text-red-400 mt-0.5">This order was cancelled and will not be processed.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const currentIndex = STATUS_STEP_INDEX[status] ?? 0;
 
     return (
