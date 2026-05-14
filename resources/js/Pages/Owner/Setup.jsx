@@ -14,14 +14,6 @@ const inputCls = [
     'transition-colors',
 ].join(' ');
 
-function CloseIcon() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-    );
-}
-
 function CheckCircleIcon({ className = 'h-16 w-16' }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -72,8 +64,6 @@ function RestaurantFormModal({ categories }) {
         municipality: '',
         image_url: '',
     });
-    const [confirmExit, setConfirmExit] = useState(false);
-
     function submit(e) {
         e.preventDefault();
         post(route('owner.setup.store'));
@@ -87,28 +77,7 @@ function RestaurantFormModal({ categories }) {
                     <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-green-500/5" />
                 </div>
 
-                <div className="flex justify-end p-4 pb-0 relative z-10">
-                    <button type="button" onClick={() => setConfirmExit(true)} className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 transition-colors" title="Log out and exit">
-                        <CloseIcon />
-                    </button>
-                    {confirmExit && (
-                        <div className="absolute top-14 right-4 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-xs text-gray-700 w-52">
-                            <p className="font-semibold mb-2">Exit and log out?</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => router.post(route('logout'))}
-                                    className="flex-1 py-1.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors">
-                                    Log out
-                                </button>
-                                <button onClick={() => setConfirmExit(false)}
-                                    className="flex-1 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors">
-                                    Stay
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="text-center px-8 pb-2">
+                <div className="text-center px-8 pb-2 pt-8">
                     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 leading-tight">
                         Register your <span className="text-green-500">restaurant</span>
                     </h2>
@@ -165,6 +134,11 @@ function RestaurantFormModal({ categories }) {
                     </div>
                     <p className="text-center text-xs text-gray-400 mt-4">
                         Note: Your restaurant will appear on Hapag once approved by our admin team. You'll be redirected to your dashboard after submission.
+                    </p>
+                    <p className="text-center mt-3">
+                        <button type="button" onClick={() => router.post(route('logout'))} className="text-xs text-gray-400 hover:underline">
+                            Changed your mind? Log out
+                        </button>
                     </p>
                 </form>
             </div>
