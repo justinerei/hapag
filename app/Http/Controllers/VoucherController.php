@@ -55,7 +55,7 @@ class VoucherController extends Controller
             'min_order_amount' => ['nullable', 'numeric', 'min:0'],
             'max_uses'         => ['nullable', 'integer', 'min:1'],
             'is_active'        => ['boolean'],
-            'expires_at'       => ['nullable', 'date'],
+            'expires_at'       => ['nullable', 'date', 'after:yesterday'],
             'restaurant_id'    => ['nullable', 'exists:restaurants,id'],
         ]);
 
