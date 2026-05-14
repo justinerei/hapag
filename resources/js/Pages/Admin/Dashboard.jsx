@@ -1568,7 +1568,6 @@ export default function AdminDashboard({
             setLastBackup(data.last_backup_at);
             setBackupFile(data.last_backup_file);
             addToast('Database backup complete.');
-            window.open(route('admin.backups.download', { filename: data.filename }), '_blank');
             fetchBackups();
         } catch {
             addToast('Backup failed. Check server logs.', 'error');
