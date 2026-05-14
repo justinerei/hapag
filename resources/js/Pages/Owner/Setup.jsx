@@ -89,12 +89,12 @@ function RestaurantFormModal({ categories }) {
                 <form onSubmit={submit} className="p-8 pt-6 max-h-[65vh] overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Restaurant Name</label>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Restaurant Name<span className="text-red-400 ml-0.5">*</span></label>
                             <input type="text" value={data.name} onChange={(e) => setData('name', e.target.value)} className={inputCls + ' bg-white'} placeholder="e.g. Burn's Kitchen" />
                             <InputError message={errors.name} className="mt-1" />
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Category</label>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Category<span className="text-red-400 ml-0.5">*</span></label>
                             <select value={data.category_id} onChange={(e) => setData('category_id', e.target.value)} className={inputCls + ' bg-white'}>
                                 <option value="">— Select —</option>
                                 {categories.map(cat => (
@@ -110,7 +110,7 @@ function RestaurantFormModal({ categories }) {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Municipality</label>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Municipality<span className="text-red-400 ml-0.5">*</span></label>
                                 <select value={data.municipality} onChange={(e) => setData('municipality', e.target.value)} className={inputCls + ' bg-white'}>
                                     <option value="">— Select —</option>
                                     {MUNICIPALITIES.map(m => (
