@@ -4,31 +4,39 @@ import CustomerLayout from '@/Layouts/CustomerLayout';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
 // Generate time slots for scheduling (next 3 days, 30-min intervals within restaurant hours)
-function generateTimeSlots() {
+function generateTimeSlots(openingTime, closingTime) {
     const slots = [];
     const now = new Date();
+
+    // Parse opening and closing hours from "HH:MM" strings, with fallbacks
+    const [openH, openM] = (openingTime ?? '10:00').split(':').map(Number);
+    const [closeH, closeM] = (closingTime ?? '21:00').split(':').map(Number);
 
     for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
         const date = new Date(now);
         date.setDate(date.getDate() + dayOffset);
 
-        const dayLabel = dayOffset === 0 ? 'Today' : dayOffset === 1 ? 'Tomorrow' : date.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' });
+        const dayLabel = dayOffset === 0
+            ? 'Today'
+            : dayOffset === 1
+                ? 'Tomorrow'
+                : date.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' });
 
         const daySlots = [];
-        // Generate slots from 10:00 AM to 9:00 PM
-        for (let hour = 10; hour <= 20; hour++) {
+
+        for (let hour = openH; hour <= closeH; hour++) {
             for (let min = 0; min < 60; min += 30) {
+                // Don't generate slots past closing time
+                if (hour === closeH && min >= closeM) continue;
+
                 const slotDate = new Date(date);
                 slotDate.setHours(hour, min, 0, 0);
 
-                // Skip past times for today
+                // Skip past times for today (add 30min buffer)
                 if (dayOffset === 0 && slotDate <= new Date(now.getTime() + 30 * 60000)) continue;
 
                 const timeStr = slotDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
-                daySlots.push({
-                    label: timeStr,
-                    value: slotDate.toISOString(),
-                });
+                daySlots.push({ label: timeStr, value: slotDate.toISOString() });
             }
         }
 
@@ -105,7 +113,10 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
     const [toast, setToast]                     = useState(null);
     const toastTimer = useRef(null);
 
-    const timeSlots = useMemo(() => generateTimeSlots(), []);
+    const timeSlots = useMemo(
+        () => generateTimeSlots(restaurant.opening_time, restaurant.closing_time),
+        [restaurant.opening_time, restaurant.closing_time]
+    );
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
