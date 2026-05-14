@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AIChatWidget from '@/Components/AIChatWidget';
+import SignInModal from '@/Components/SignInModal';
 
 const DELIVERY_FEE = 49;
 
@@ -107,6 +108,9 @@ export default function Show({
     const [orderType, setOrderType] = useState('pickup');
     const [cutlery, setCutlery] = useState(false);
     const [cartExpanded, setCartExpanded] = useState(false);
+
+    // Sign-in modal
+    const [signInOpen, setSignInOpen] = useState(false);
 
     // Promo claiming
     const [claimedCodes, setClaimedCodes] = useState(() => [...serverClaimedCodes]);
@@ -266,8 +270,13 @@ export default function Show({
     }
 
     function openModal(item) {
-        if (!isAuth) { window.location.href = route('login'); return; }
-        setModalItem(item); setModalQty(1); setInstructions('');
+        if (!isAuth) {
+            setSignInOpen(true);
+            return;
+        }
+        setModalItem(item);
+        setModalQty(1);
+        setInstructions('');
     }
 
     function scrollToSection(id) {
@@ -276,7 +285,7 @@ export default function Show({
     }
 
     async function claimVoucher(voucher) {
-        if (!isAuth) { window.location.href = route('login'); return; }
+        if (!isAuth) { setSignInOpen(true); return; }
         try {
             const res = await fetch('/api/vouchers/claim', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() },
@@ -935,6 +944,12 @@ export default function Show({
 
             {/* ── AI Chat ─────────────────────────────────────────── */}
             {isAuth && <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />}
+
+            <SignInModal
+                show={signInOpen}
+                onClose={() => setSignInOpen(false)}
+                onSwitchToSignUp={() => { setSignInOpen(false); }}
+            />
         </CustomerLayout>
     );
 }
