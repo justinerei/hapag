@@ -1396,10 +1396,11 @@ function HistoryTab({ restaurant }) {
 
 // ─── Tab: Settings ────────────────────────────────────────────────────────────
 
-function SettingsTab({ restaurant }) {
+function SettingsTab({ restaurant, categories }) {
     const [form, setForm] = useState({
         name: restaurant.name ?? '',
         description: restaurant.description ?? '',
+        category_id: restaurant.category_id ?? '',
         municipality: restaurant.municipality ?? '',
         address: restaurant.address ?? '',
         image_url: restaurant.image_url ?? '',
@@ -1471,12 +1472,21 @@ function SettingsTab({ restaurant }) {
                                 <textarea value={form.description} onChange={e => set('description', e.target.value)} className={inp + ' resize-none'} rows={4} placeholder="Tell customers about your kitchen…" />
                             </Field>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Field label="Municipality *" error={errors.municipality?.[0]}>
                                     <div className="relative">
                                         <select value={form.municipality} onChange={e => set('municipality', e.target.value)} className={inp + ' appearance-none pr-8'} required>
                                             <option value="">Select municipality</option>
                                             {MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                        <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                    </div>
+                                </Field>
+                                <Field label="Category" error={errors.category_id?.[0]}>
+                                    <div className="relative">
+                                        <select value={form.category_id} onChange={e => set('category_id', e.target.value)} className={inp + ' appearance-none pr-8'}>
+                                            <option value="">Select category</option>
+                                            {(categories ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                         <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                                     </div>
@@ -1604,7 +1614,7 @@ function SettingsTab({ restaurant }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants, auth }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
@@ -1750,7 +1760,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, auth }
             case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal({ mode: 'add', categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} onOpenEdit={item => setItemModal({ mode: 'edit', item, categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} />;
             case 'vouchers': return <VouchersTab restaurant={restaurant} onOpenAdd={() => setVoucherModal('add')} onOpenEdit={v => setVoucherModal(v)} onDelete={deleteVoucher} />;
             case 'history':  return <HistoryTab restaurant={restaurant} />;
-            case 'settings': return <SettingsTab restaurant={restaurant} />;
+            case 'settings': return <SettingsTab restaurant={restaurant} categories={categories} />;
             default: return null;
         }
     }

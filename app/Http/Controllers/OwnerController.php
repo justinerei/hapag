@@ -89,7 +89,9 @@ class OwnerController extends Controller
             ]);
         }
 
-        return Inertia::render('Owner/Dashboard', compact('restaurants'));
+        $categories = Category::orderBy('name')->get();
+
+        return Inertia::render('Owner/Dashboard', compact('restaurants', 'categories'));
     }
 
     public function storeItem(Request $request)
@@ -176,6 +178,7 @@ class OwnerController extends Controller
         $data = $request->validate([
             'name'         => ['required', 'string', 'max:255'],
             'description'  => ['nullable', 'string', 'max:1000'],
+            'category_id'  => ['nullable', 'exists:categories,id'],
             'municipality' => ['required', 'string', 'max:255'],
             'address'      => ['nullable', 'string', 'max:500'],
             'image_url'    => ['nullable', 'url', 'max:500'],
