@@ -215,7 +215,7 @@ function WeatherItemCard({ item, onAdd }) {
                     <span className="text-white font-extrabold text-sm">{fmt(item.price)}</span>
                     <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onAdd(item.id, item.restaurant?.name ?? ''); }}
+                        onClick={(e) => { e.stopPropagation(); onAdd(item.id, item.restaurant?.name ?? 'this restaurant'); }}
                         className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-95"
                         style={{ background: 'rgba(255,255,255,0.2)' }}
                         title="Add to cart"
