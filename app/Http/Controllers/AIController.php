@@ -101,6 +101,57 @@ class AIController extends Controller
         ]);
     }
 
+    // ── Customer: conversational chatbot ─────────────────────────────────────
+
+    public function chat(Request $request)
+    {
+        $request->validate([
+            'messages'             => 'required|array|min:1|max:20',
+            'messages.*.role'      => 'required|in:user,assistant',
+            'messages.*.content'   => 'required|string|max:500',
+            'restaurant_id'        => 'nullable|exists:restaurants,id',
+        ]);
+
+        $restaurantContext = '';
+        if ($request->filled('restaurant_id')) {
+            $restaurant = Restaurant::find($request->restaurant_id);
+            if ($restaurant) {
+                $items = MenuItem::where('restaurant_id', $restaurant->id)
+                    ->where('is_available', true)
+                    ->get(['name', 'price', 'category', 'description']);
+
+                $menuList = $items->map(fn ($i) => sprintf(
+                    '- %s (₱%.0f) [%s]%s',
+                    $i->name,
+                    $i->price,
+                    $i->category,
+                    $i->description ? ': ' . mb_substr($i->description, 0, 60) : ''
+                ))->join("\n");
+
+                $restaurantContext = "\n\nYou are specifically helping a customer at {$restaurant->name} "
+                    . "in {$restaurant->municipality}. Their available menu:\n{$menuList}";
+            }
+        }
+
+        $systemPrompt = 'You are Hapag AI, a friendly food assistant for restaurants in Laguna, Philippines. '
+            . 'Help customers discover great food, answer questions about the menu, and make personalized recommendations. '
+            . 'Keep replies short, warm, and conversational (2–4 sentences max). '
+            . 'You may sprinkle a little Filipino/Taglish when it feels natural.'
+            . $restaurantContext;
+
+        $messages = collect($request->messages)
+            ->map(fn ($m) => ['role' => $m['role'], 'content' => $m['content']])
+            ->toArray();
+
+        $reply = $this->callGroqMessages($systemPrompt, $messages);
+
+        if ($reply === null) {
+            return response()->json(['error' => 'AI service is unavailable. Please try again later.'], 503);
+        }
+
+        return response()->json(['reply' => $reply]);
+    }
+
     // ── Owner: menu item description generator ───────────────────────────────
 
     public function describe(Request $request)
@@ -134,6 +185,27 @@ PROMPT;
     }
 
     // ── Shared GROQ helper ────────────────────────────────────────────────────
+
+    private function callGroqMessages(string $systemPrompt, array $messages): ?string
+    {
+        $response = Http::timeout(15)
+            ->withToken(config('services.groq.key'))
+            ->post(config('services.groq.url'), [
+                'model'       => config('services.groq.model'),
+                'messages'    => array_merge(
+                    [['role' => 'system', 'content' => $systemPrompt]],
+                    $messages
+                ),
+                'max_tokens'  => 300,
+                'temperature' => 0.8,
+            ]);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        return $response->json('choices.0.message.content');
+    }
 
     private function callGroq(string $systemPrompt, string $userPrompt): ?string
     {

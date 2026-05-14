@@ -133,6 +133,7 @@ Route::middleware('auth')->group(function () {
         return back();
     })->name('notifications.read.one');
     Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
+    Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend'); 
 
     // Order status polling for customer notifications
     Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
