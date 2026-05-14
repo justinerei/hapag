@@ -421,8 +421,12 @@ export default function Show({
                                         placeholder="e.g. No onions, extra sauce..."
                                         value={instructions}
                                         onChange={e => setInstructions(e.target.value)}
+                                        maxLength={200}
                                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400 resize-none transition-all"
                                     />
+                                    <p className={`text-right text-[10px] mt-1 tabular-nums transition-colors ${instructions.length >= 180 ? 'text-orange-400' : 'text-gray-300'}`}>
+                                        {instructions.length}/200
+                                    </p>
                                 </div>
                             </div>
 
