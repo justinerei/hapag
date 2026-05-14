@@ -1355,7 +1355,7 @@ function HistoryTab({ restaurant }) {
     });
     return (
         <div className="space-y-4">
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap items-center">
                 {[{ k: 'all', label: 'All' }, { k: 'today', label: 'Today' }, { k: 'week', label: 'This Week' }, { k: 'month', label: 'This Month' }].map(({ k, label }) => (
                     <button key={k} onClick={() => setDateFilter(k)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${dateFilter === k ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
@@ -1363,25 +1363,32 @@ function HistoryTab({ restaurant }) {
                     </button>
                 ))}
             </div>
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-2 items-center">
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
                     className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/10 w-48 transition-all" />
-                <div className="flex gap-1.5 flex-wrap">
-                    {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
-                        <button key={s} onClick={() => setStatusFilter(s)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                            {s === 'all' ? 'All Status' : cap(s)}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex gap-1.5 flex-wrap">
-                    {['all', 'pickup', 'delivery'].map(t => (
-                        <button key={t} onClick={() => setTypeFilter(t)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                            {t === 'all' ? 'All Types' : cap(t)}
-                        </button>
-                    ))}
-                </div>
+                <details className="group">
+                    <summary className="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 cursor-pointer list-none select-none">
+                        Filters ▾
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                        <div className="flex gap-1.5 flex-wrap">
+                            {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
+                                <button key={s} onClick={() => setStatusFilter(s)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                    {s === 'all' ? 'All Status' : cap(s)}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                            {['all', 'pickup', 'delivery'].map(t => (
+                                <button key={t} onClick={() => setTypeFilter(t)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                    {t === 'all' ? 'All Types' : cap(t)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </details>
             </div>
             <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Results</span>
