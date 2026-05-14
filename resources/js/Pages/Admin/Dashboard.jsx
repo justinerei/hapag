@@ -499,6 +499,7 @@ function PeakHoursHeatmap({ data }) {
                 <span className="text-gray-500"><IcoFire c="w-4 h-4" /></span>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peak ordering hours</p>
             </div>
+            <div className="relative">
             <div className="overflow-x-auto">
                 <div className="flex gap-1 min-w-fit">
                     {/* Y-axis hour labels */}
@@ -530,7 +531,17 @@ function PeakHoursHeatmap({ data }) {
                                         transition={{ delay, duration: 0.15 }}
                                         className="relative w-7 h-5 rounded-sm cursor-default"
                                         style={{ backgroundColor: heatmapBg(ratio) }}
-                                        onMouseEnter={() => setHovered({ day: HEATMAP_DAY_LBLS[di], hour, count })}
+                                        onMouseEnter={e => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            const containerRect = ref.current.getBoundingClientRect();
+                                            setHovered({
+                                                day: HEATMAP_DAY_LBLS[di],
+                                                hour,
+                                                count,
+                                                x: rect.left - containerRect.left + rect.width / 2,
+                                                y: rect.top  - containerRect.top,
+                                            });
+                                        }}
                                         onMouseLeave={() => setHovered(null)}
                                     />
                                 );
@@ -539,15 +550,24 @@ function PeakHoursHeatmap({ data }) {
                     ))}
                 </div>
             </div>
-            {/* Tooltip */}
             {hovered && (
-                <p className="mt-3 text-[11px] text-gray-400">
-                    <span className="text-white font-semibold">{hovered.day}</span>{' '}
-                    {hovered.hour > 12 ? hovered.hour - 12 : hovered.hour}{hovered.hour >= 12 ? 'PM' : 'AM'}
+                <div
+                    className="absolute z-10 pointer-events-none px-2.5 py-1.5 rounded-lg bg-gray-950 border border-gray-700 text-[11px] text-gray-200 whitespace-nowrap shadow-xl"
+                    style={{
+                        left: hovered.x,
+                        top: hovered.y - 38,
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    <span className="text-white font-semibold">{hovered.day}</span>
+                    {' '}
+                    {hovered.hour > 12 ? hovered.hour - 12 : hovered.hour}
+                    {hovered.hour >= 12 ? 'PM' : 'AM'}
                     {' — '}
                     <span className="text-green-400 font-semibold">{hovered.count} orders</span>
-                </p>
+                </div>
             )}
+            </div>
             {/* Legend scale */}
             <div className="mt-3 flex items-center gap-2">
                 <span className="text-[9px] text-gray-600">Low</span>
