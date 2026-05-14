@@ -1286,7 +1286,7 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
     return (
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
             <motion.div variants={FADE_UP} className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-bold text-white">Site-wide vouchers</h2>
+                <h2 className="text-base font-bold text-white">All vouchers</h2>
                 <button onClick={onAdd}
                     className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-[0.98] transition-all">
                     + Create voucher
@@ -1299,6 +1299,7 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
                         <thead>
                             <tr className="border-b border-gray-700/50">
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Code</th>
+                                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:table-cell">Scope</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Discount</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:table-cell">Expiry</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Uses</th>
@@ -1309,14 +1310,20 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
                         <tbody className="divide-y divide-gray-700/30">
                             {vouchers.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-10 text-center text-gray-600 text-sm">
-                                        No site-wide vouchers yet.
+                                    <td colSpan={7} className="px-5 py-10 text-center text-gray-600 text-sm">
+                                        No vouchers yet.
                                     </td>
                                 </tr>
                             )}
                             {vouchers.map(v => (
                                 <tr key={v.id} className="hover:bg-gray-700/20 transition-colors">
                                     <td className="px-5 py-3 font-mono font-bold text-gray-200 text-xs tracking-wider">{v.code}</td>
+                                    <td className="px-5 py-3 hidden md:table-cell">
+                                        {v.restaurant_id
+                                            ? <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-400 border border-blue-700/40 font-bold">{v.restaurant?.name ?? 'Restaurant'}</span>
+                                            : <span className="text-[10px] px-2 py-0.5 rounded-md bg-gray-700/50 text-gray-400 border border-gray-600/40 font-bold">Site-wide</span>
+                                        }
+                                    </td>
                                     <td className="px-5 py-3">
                                         <span className="font-semibold text-gray-300">
                                             {v.type === 'percentage' ? `${v.value}% off` : `₱${Number(v.value).toFixed(2)} off`}

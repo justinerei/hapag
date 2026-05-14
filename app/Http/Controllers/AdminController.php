@@ -28,7 +28,7 @@ class AdminController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
-        $vouchers = Voucher::whereNull('restaurant_id')
+        $vouchers = Voucher::with('restaurant:id,name')
             ->orderByDesc('created_at')
             ->get();
 
