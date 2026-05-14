@@ -194,6 +194,11 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
 
     // ── Render ─────────────────────────────────────────────────────────────
 
+    const isDisabled =
+        submitting ||
+        (orderType === 'delivery' && !deliveryAddress.trim()) ||
+        (orderType === 'pickup' && pickupMode === 'scheduled' && !scheduledAt);
+
     return (
         <CustomerLayout cartCount={cartCount}>
             <Head title="Checkout — Hapag" />
@@ -642,8 +647,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                             <button
                                 type="button"
                                 onClick={handleCheckout}
-                                disabled={submitting || (orderType === 'delivery' && !deliveryAddress.trim())}
-                                className="w-full mt-4 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
+                                disabled={isDisabled}
+                                className="w-full mt-4 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {submitting
                                     ? 'Placing order…'
