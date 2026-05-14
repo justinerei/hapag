@@ -618,9 +618,9 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                     </div>
                 ) : (
                     /* This is the section updated for responsive multi-column layout */
-                    <div className="columns-1 md:columns-2 gap-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredOrders.map(order => (
-                            <div key={order.id} className="break-inside-avoid mb-4">
+                            <div key={order.id} className="min-w-0">
                                 <OrderCard
                                     order={order}
                                     isExpanded={expanded.has(order.id)}
