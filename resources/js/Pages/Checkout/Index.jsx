@@ -358,21 +358,28 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
 
                                                             {/* Time slots grid */}
                                                             {timeSlots[selectedDay] && (
-                                                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                                                                    {timeSlots[selectedDay].slots.map(slot => (
-                                                                        <button
-                                                                            key={slot.value}
-                                                                            type="button"
-                                                                            onClick={() => setScheduledAt(slot.value)}
-                                                                            className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-                                                                                scheduledAt === slot.value
-                                                                                    ? 'bg-green-500 text-white shadow-sm'
-                                                                                    : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-100'
-                                                                            }`}
-                                                                        >
-                                                                            {slot.label}
-                                                                        </button>
-                                                                    ))}
+                                                                <div className="relative">
+                                                                    <div
+                                                                        className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto pr-1"
+                                                                        style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
+                                                                    >
+                                                                        {timeSlots[selectedDay].slots.map(slot => (
+                                                                            <button
+                                                                                key={slot.value}
+                                                                                type="button"
+                                                                                onClick={() => setScheduledAt(slot.value)}
+                                                                                className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                                                    scheduledAt === slot.value
+                                                                                        ? 'bg-green-500 text-white shadow-sm'
+                                                                                        : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-100'
+                                                                                }`}
+                                                                            >
+                                                                                {slot.label}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    {/* Fade hint */}
+                                                                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent rounded-b-lg" />
                                                                 </div>
                                                             )}
                                                         </div>
