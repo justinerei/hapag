@@ -106,6 +106,7 @@ class OwnerController extends Controller
         // Confirm this restaurant belongs to the authenticated owner
         $restaurant = Restaurant::findOrFail($data['restaurant_id']);
         abort_if($restaurant->owner_id !== auth()->id(), 403);
+        abort_if($restaurant->status !== 'active', 403, 'Restaurant is not active.');
 
         $item = MenuItem::create([
             'restaurant_id' => $restaurant->id,
@@ -122,6 +123,7 @@ class OwnerController extends Controller
     public function updateItem(Request $request, MenuItem $menuItem)
     {
         $this->authorizeItem($menuItem);
+        abort_if($menuItem->restaurant->status !== 'active', 403, 'Restaurant is not active.');
 
         $data = $request->validate([
             'name'         => 'required|string|max:120',
@@ -155,6 +157,7 @@ class OwnerController extends Controller
     public function toggleAvailable(MenuItem $menuItem)
     {
         $this->authorizeItem($menuItem);
+        abort_if($menuItem->restaurant->status !== 'active', 403, 'Restaurant is not active.');
 
         $menuItem->update(['is_available' => ! $menuItem->is_available]);
 
