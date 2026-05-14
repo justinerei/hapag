@@ -526,6 +526,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                     type="text"
                                                     value={voucherCode}
                                                     onChange={e => { setVoucherCode(e.target.value.toUpperCase()); setVoucherStatus(null); }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyVoucher(); } }}
                                                     placeholder="Enter code"
                                                     maxLength={50}
                                                     className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
