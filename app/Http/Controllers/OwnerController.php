@@ -255,7 +255,7 @@ class OwnerController extends Controller
                 $itemCounts[$name]['revenue'] += $oi->unit_price * $oi->quantity;
             }
         }
-        arsort($itemCounts);
+        uasort($itemCounts, fn($a, $b) => $b['qty'] <=> $a['qty']);
         $topItems = array_slice($itemCounts, 0, 10, true);
 
         return response()->json([
