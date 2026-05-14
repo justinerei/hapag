@@ -832,7 +832,7 @@ export default function Show({
                                     </div>
 
                                     {/* Items */}
-                                    <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ maxHeight: '200px', scrollbarWidth: 'thin' }}>
+                                    <div className="overflow-y-auto px-4 py-3 space-y-3 max-h-[40vh]" style={{ scrollbarWidth: 'thin' }}>
                                         {cartItems.map(ci => (
                                             <div key={ci.id} className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 shrink-0">
