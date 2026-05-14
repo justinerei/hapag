@@ -1475,6 +1475,14 @@ export default function AdminDashboard({
     // ── Restaurant actions ──────────────────────────────────────────────────────
 
     async function handleRestaurantAction(restaurant, status) {
+        const isRejecting = status === 'rejected';
+        const confirmed = window.confirm(
+            isRejecting
+                ? `Reject "${restaurant.name}"? The owner will be notified. This cannot be undone.`
+                : `Approve "${restaurant.name}" and make it live on Hapag?`
+        );
+        if (!confirmed) return;
+
         try {
             await apiFetch(route('admin.restaurants.approve', restaurant.id), 'PATCH', { status });
             setPending(prev => prev.filter(r => r.id !== restaurant.id));
