@@ -304,7 +304,7 @@ function VoucherCard({ deal }) {
 
 // ── AI Chat Widget ────────────────────────────────────────────────────────────
 
-function AIChatWidget() {
+function AIChatWidget({ onCartAdd }) {
     const [open, setOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
@@ -360,7 +360,9 @@ function AIChatWidget() {
                 body: JSON.stringify({ menu_item_id: dishId, quantity: 1 }),
             });
             if (res.ok) {
+                const data = await res.json();
                 setAddingId('done-' + dishId);
+                if (data.cart_count !== undefined) onCartAdd?.(data.cart_count);
                 setTimeout(() => setAddingId(null), 1500);
             } else if (res.status === 409) {
                 setAddingId(null);
@@ -985,7 +987,7 @@ export default function Customer({
             </div>
 
             {/* AI Chat */}
-            <AIChatWidget />
+            <AIChatWidget onCartAdd={setLocalCartCount} />
         </CustomerLayout>
     );
 }
