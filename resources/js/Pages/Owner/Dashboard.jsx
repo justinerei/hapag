@@ -1419,6 +1419,7 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
     const [success, setSuccess] = useState(false);
     const [errors, setErrors] = useState({});
     const [isDirty, setIsDirty] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
 
     useEffect(() => { onDirtyChange?.(isDirty); }, [isDirty]);
 
@@ -1434,11 +1435,21 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
         setSaving(true);
         setSuccess(false);
         try {
-            await apiFetch(route('owner.settings.update', restaurant.id), 'PATCH', form);
+            const fd = new FormData();
+            Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== undefined) fd.append(k, v); });
+            if (imageFile) fd.append('image', imageFile);
+            fd.append('_method', 'PATCH');
+
+            const res = await fetch(route('owner.settings.update', restaurant.id), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok) { if (res.status === 422) setErrors(data.errors ?? {}); return; }
             setSuccess(true);
             setIsDirty(false);
-        } catch (err) {
-            if (err.status === 422) setErrors(err.data?.errors ?? {});
+            setImageFile(null);
         } finally {
             setSaving(false);
         }
@@ -1509,10 +1520,18 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
                                 </Field>
                             </div>
 
-                            <Field label="Cover image URL" error={errors.image_url?.[0]}>
-                                <div className="relative">
-                                    <input type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)} className={inp + ' pl-10'} placeholder="https://…" />
-                                    <ImageIcon cls="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <Field label="Cover Image" error={errors.image?.[0]}>
+                                <div className="space-y-2">
+                                    {form.image_url && (
+                                        <img src={form.image_url} alt="Current cover" className="w-full h-32 object-cover rounded-xl" />
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                                        onChange={e => { setImageFile(e.target.files[0]); setSuccess(false); setIsDirty(true); }}
+                                        className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 cursor-pointer"
+                                    />
+                                    <p className="text-xs text-gray-400">Max 2MB · JPG, PNG, or WEBP. Leave empty to keep current image.</p>
                                 </div>
                             </Field>
                         </div>

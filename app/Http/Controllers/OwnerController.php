@@ -7,6 +7,7 @@ use App\Models\MenuItem;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class OwnerController extends Controller
@@ -33,8 +34,13 @@ class OwnerController extends Controller
             'description'  => ['nullable', 'string', 'max:1000'],
             'category_id'  => ['required', 'exists:categories,id'],
             'municipality' => ['required', 'string', 'max:255'],
-            'image_url'    => ['nullable', 'url', 'max:500'],
+            'image'        => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('restaurants', 'public');
+        }
 
         $coords = [
             'Santa Cruz'  => [14.2794, 121.4117],
@@ -58,7 +64,7 @@ class OwnerController extends Controller
             'municipality' => $data['municipality'],
             'lat'          => $lat,
             'lng'          => $lng,
-            'image_url'    => $data['image_url'] ?? null,
+            'image_url'    => $imagePath ? Storage::disk('public')->url($imagePath) : null,
             'status'       => 'pending',
         ]);
 
@@ -197,10 +203,22 @@ class OwnerController extends Controller
             'category_id'  => ['nullable', 'exists:categories,id'],
             'municipality' => ['required', 'string', 'max:255'],
             'address'      => ['nullable', 'string', 'max:500'],
-            'image_url'    => ['nullable', 'url', 'max:500'],
+            'image'        => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'opening_time' => ['nullable', 'string', 'max:10'],
             'closing_time' => ['nullable', 'string', 'max:10'],
         ]);
+
+        if ($request->hasFile('image')) {
+            if ($restaurant->image_url && str_contains($restaurant->image_url, '/storage/')) {
+                $oldPath = str_replace('/storage/', '', parse_url($restaurant->image_url, PHP_URL_PATH));
+                Storage::disk('public')->delete($oldPath);
+            }
+            $data['image_url'] = Storage::disk('public')->url(
+                $request->file('image')->store('restaurants', 'public')
+            );
+        } else {
+            unset($data['image_url']);
+        }
 
         $coords = [
             'Santa Cruz' => [14.2794, 121.4117],

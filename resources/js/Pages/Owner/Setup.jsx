@@ -62,11 +62,11 @@ function RestaurantFormModal({ categories }) {
         description: '',
         category_id: '',
         municipality: '',
-        image_url: '',
+        image: null,
     });
     function submit(e) {
         e.preventDefault();
-        post(route('owner.setup.store'));
+        post(route('owner.setup.store'), { forceFormData: true });
     }
 
     return (
@@ -120,9 +120,15 @@ function RestaurantFormModal({ categories }) {
                                 <InputError message={errors.municipality} className="mt-1" />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Image URL</label>
-                                <input type="url" value={data.image_url} onChange={(e) => setData('image_url', e.target.value)} className={inputCls + ' bg-white'} placeholder="https://example.com/your-image.jpg" />
-                                <InputError message={errors.image_url} className="mt-1" />
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Cover Image</label>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                    onChange={e => setData('image', e.target.files[0])}
+                                    className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 cursor-pointer"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Max 2MB · JPG, PNG, or WEBP</p>
+                                <InputError message={errors.image} className="mt-1" />
                             </div>
                         </div>
                     </div>
