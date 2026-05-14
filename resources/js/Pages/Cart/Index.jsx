@@ -169,9 +169,16 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                     <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             type="button"
-                                            onClick={() => updateQty(item.id, item.quantity - 1)}
-                                            disabled={item.quantity <= 1}
-                                            className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-green-500 hover:text-green-500 disabled:opacity-40 transition-colors font-bold text-base leading-none"
+                                            onClick={() => {
+                                                if (item.quantity === 1) {
+                                                    if (window.confirm(`Remove ${item.menu_item.name} from your cart?`)) {
+                                                        removeItem(item.id);
+                                                    }
+                                                } else {
+                                                    updateQty(item.id, item.quantity - 1);
+                                                }
+                                            }}
+                                            className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-red-400 hover:text-red-400 transition-colors font-bold text-base leading-none"
                                         >−</button>
                                         <span className="w-6 text-center text-sm font-bold text-gray-800 tabular-nums">{item.quantity}</span>
                                         <button
