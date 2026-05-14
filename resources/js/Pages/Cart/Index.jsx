@@ -204,7 +204,11 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                             <div className="pt-1">
                                 <button
                                     type="button"
-                                    onClick={clearCart}
+                                    onClick={() => {
+                                        if (window.confirm('Remove all items from your cart?')) {
+                                            clearCart();
+                                        }
+                                    }}
                                     className="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                     ✕ Clear all items
