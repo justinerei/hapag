@@ -639,7 +639,7 @@ export default function Show({
             {/* ═══════════════════════════════════════════════════════
                  MAIN MENU — FULL WIDTH
                  ═══════════════════════════════════════════════════════ */}
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36">
+            <div className={`max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${isAuth && cartItems.length > 0 ? 'pb-36' : 'pb-10'}`}>
 
                 {/* Featured Items */}
                 {featuredItems.length > 0 && !menuSearch.trim() && (
