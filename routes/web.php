@@ -56,17 +56,6 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/my-orders', [OrderController::class, 'index'])->name('customer.orders');
-    Route::post('/notifications/read-all', function () {
-        auth()->user()->unreadNotifications->markAsRead();
-        return back();
-    })->name('notifications.read_all');
-
-    Route::post('/notifications/{id}/read', function ($id) {
-        auth()->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
-        return back();
-    })->name('notifications.read_one');
-
     // Profile (Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
