@@ -779,9 +779,8 @@ function OverviewTab({ restaurant, onSwitchTab }) {
         });
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
         if (sorted.length > 0) return sorted.map(([name, count]) => ({ name: name.length > 18 ? name.slice(0, 16) + '…' : name, count }));
-        return [...items].sort((a, b) => b.price - a.price).slice(0, 5)
-            .map(i => ({ name: i.name.length > 18 ? i.name.slice(0, 16) + '…' : i.name, count: Number(i.price) }));
-    }, [orders, items]);
+        return [];
+    }, [orders]);
 
     const { incomeData, volumeData } = useMemo(() => {
         const filt = o => {
@@ -1049,7 +1048,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                     )}
                 </ChartCard>
 
-                <ChartCard title="Top Menu Items" subtitle={topItems.length > 0 && orders.some(o => o.items?.length) ? 'By order frequency' : 'By price (order data unavailable)'} dot="bg-orange-400">
+                <ChartCard title="Top Menu Items" subtitle="By order frequency" dot="bg-orange-400">
                     {topItems.length === 0 ? (
                         <div className="flex items-center justify-center h-48 text-gray-300 text-xs">No menu items yet</div>
                     ) : (
