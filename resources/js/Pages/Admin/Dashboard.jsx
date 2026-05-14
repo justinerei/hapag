@@ -800,6 +800,8 @@ function OverviewSection({
     const periodOrders  = filteredOrders.reduce((s, d) => s + d.count, 0);
     const periodRevenue = filteredRevenue.reduce((s, d) => s + d.revenue, 0);
 
+    const isFiltered = timePeriod !== 'all';
+
     const statusData = useMemo(() => (ordersByStatus ?? []).map(s => ({
         name:   cap(s.status),
         status: s.status,
@@ -825,8 +827,22 @@ function OverviewSection({
             <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
                 <StatCard label="Total restaurants" value={totalRestaurants} gradient="red-pink"  icon={<IcoStore c="w-5 h-5" />} subtitle={`${activeRestaurants} active`} />
                 <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
-                <StatCard label="Total orders"       value={totalOrders}       gradient="blue-cyan" icon={<IcoBag c="w-5 h-5" />}   subtitle={`${periodOrders.toLocaleString('en-PH')} this period`} />
-                <StatCard label="Total revenue"      value={totalRevenue}      gradient="green"     icon={<IcoCoin c="w-5 h-5" />}  prefix="₱" decimals={2} subtitle={`${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`} />
+                <StatCard
+                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
+                    value={isFiltered ? periodOrders : totalOrders}
+                    gradient="blue-cyan"
+                    icon={<IcoBag c="w-5 h-5" />}
+                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
+                />
+                <StatCard
+                    label={isFiltered ? `Revenue — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total revenue'}
+                    value={isFiltered ? periodRevenue : totalRevenue}
+                    gradient="green"
+                    icon={<IcoCoin c="w-5 h-5" />}
+                    prefix="₱"
+                    decimals={2}
+                    subtitle={isFiltered ? `${fmtCurrency(totalRevenue)} all-time` : `${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`}
+                />
                 <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" suffix="%" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
                 <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" suffix="%" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
             </motion.div>
