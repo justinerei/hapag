@@ -613,7 +613,6 @@ export default function Customer({
     cartCount,
     promoRestaurantIds,
     popular,
-    featuredItemMap,
     favoriteIds,
     claimedCodes = [],
 }) {

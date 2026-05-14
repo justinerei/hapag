@@ -57,14 +57,6 @@ class HomeController extends Controller
             $popular = $restaurants->take(5);
         }
 
-        // First available menu item per restaurant for quick-add cart button
-        $featuredItemMap = MenuItem::where('is_available', true)
-            ->whereIn('restaurant_id', $restaurants->pluck('id'))
-            ->orderBy('id')
-            ->get(['id', 'restaurant_id'])
-            ->groupBy('restaurant_id')
-            ->map(fn ($items) => $items->first()->id);
-
         $cartCount = auth()->user()->cartItems()->count();
 
         $favoriteIds = auth()->user()->favorites()->pluck('restaurant_id')->toArray();
@@ -102,7 +94,6 @@ class HomeController extends Controller
             'cartCount'         => $cartCount,
             'promoRestaurantIds'=> $promoRestaurantIds,
             'popular'           => $popular,
-            'featuredItemMap'   => $featuredItemMap,
             'favoriteIds'       => $favoriteIds,
             'claimedCodes'      => $claimedCodes,
         ]);
