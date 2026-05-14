@@ -83,6 +83,11 @@ class HomeController extends Controller
                 ->toArray();
         }
 
+        $activeOrderCount = auth()->user()
+            ->orders()
+            ->whereIn('status', ['pending', 'accepted', 'preparing', 'ready'])
+            ->count();
+
         return Inertia::render('Home/Customer', [
             'restaurants'       => $restaurants,
             'categories'        => $categories,
@@ -96,6 +101,7 @@ class HomeController extends Controller
             'popular'           => $popular,
             'favoriteIds'       => $favoriteIds,
             'claimedCodes'      => $claimedCodes,
+            'activeOrderCount'  => $activeOrderCount,
         ]);
     }
 

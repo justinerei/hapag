@@ -615,6 +615,7 @@ export default function Customer({
     popular,
     favoriteIds,
     claimedCodes = [],
+    activeOrderCount = 0,
 }) {
     const [search, setSearch] = useState('');
     const [selectedCuisines, setSelectedCuisines] = useState([]);
@@ -731,7 +732,7 @@ export default function Customer({
     const filterKey = `${search}|${selectedCuisines.join(',')}|${hasDealsFilter}|${sortBy}`;
 
     return (
-        <CustomerLayout cartCount={localCartCount} orderNotifCount={0}>
+        <CustomerLayout cartCount={localCartCount} orderNotifCount={activeOrderCount}>
             <Head title="Home — Hapag" />
             <PageStyles />
 
