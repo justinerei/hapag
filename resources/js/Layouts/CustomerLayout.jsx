@@ -536,9 +536,15 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                         ) : (
                                             <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
                                                 {notifications.map(n => (
-                                                    <li key={n.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                                                        <p className="text-sm text-gray-700">{n.message}</p>
-                                                        <p className="text-xs text-gray-400 mt-0.5">{n.created_at}</p>
+                                                    <li key={n.id}>
+                                                        <Link
+                                                            href={route('orders.index')}
+                                                            onClick={() => setBellOpen(false)}
+                                                            className="block px-4 py-3 hover:bg-gray-50 transition-colors"
+                                                        >
+                                                            <p className="text-sm text-gray-700">{n.message}</p>
+                                                            <p className="text-xs text-gray-400 mt-0.5">{n.created_at}</p>
+                                                        </Link>
                                                     </li>
                                                 ))}
                                             </ul>
