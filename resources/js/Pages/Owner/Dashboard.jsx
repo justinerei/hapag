@@ -1370,6 +1370,7 @@ function HistoryTab({ restaurant }) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [search, setSearch] = useState('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const visible = orders.filter(o => {
         if (dateFilter === 'today' && new Date(o.created_at).toDateString() !== new Date().toDateString()) return false;
         if (dateFilter === 'week' && (Date.now() - new Date(o.created_at)) >= 7 * 86400000) return false;
@@ -1381,7 +1382,8 @@ function HistoryTab({ restaurant }) {
     });
     return (
         <div className="space-y-4">
-            <div className="flex gap-1.5 flex-wrap items-center">
+            {/* Date row — always visible */}
+            <div className="flex gap-1.5 flex-wrap">
                 {[{ k: 'all', label: 'All' }, { k: 'today', label: 'Today' }, { k: 'week', label: 'This Week' }, { k: 'month', label: 'This Month' }].map(({ k, label }) => (
                     <button key={k} onClick={() => setDateFilter(k)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${dateFilter === k ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
@@ -1389,33 +1391,46 @@ function HistoryTab({ restaurant }) {
                     </button>
                 ))}
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
-                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/10 w-48 transition-all" />
-                <details className="group">
-                    <summary className="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 cursor-pointer list-none select-none">
-                        Filters ▾
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                        <div className="flex gap-1.5 flex-wrap">
-                            {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
-                                <button key={s} onClick={() => setStatusFilter(s)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    {s === 'all' ? 'All Status' : cap(s)}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex gap-1.5 flex-wrap">
-                            {['all', 'pickup', 'delivery'].map(t => (
-                                <button key={t} onClick={() => setTypeFilter(t)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    {t === 'all' ? 'All Types' : cap(t)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </details>
+
+            {/* Search + toggle row */}
+            <div className="flex items-center gap-3">
+                <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search name or order #…"
+                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/10 w-48 transition-all"
+                />
+                <button
+                    onClick={() => setFiltersOpen(v => !v)}
+                    className="lg:hidden flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                    Filters
+                    <svg className={`w-3 h-3 transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
             </div>
+
+            {/* Status + type filters: hidden on mobile unless filtersOpen, always visible on lg+ */}
+            <div className={`flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'} lg:flex`}>
+                <div className="flex gap-1.5 flex-wrap">
+                    {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
+                        <button key={s} onClick={() => setStatusFilter(s)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                            {s === 'all' ? 'All Status' : cap(s)}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                    {['all', 'pickup', 'delivery'].map(t => (
+                        <button key={t} onClick={() => setTypeFilter(t)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                            {t === 'all' ? 'All Types' : cap(t)}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Results</span>
                 <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">{visible.length}</span>
