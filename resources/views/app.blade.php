@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Hapag</title>
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    <link rel="icon" type="image/png" href="/images/favicon_dark.png" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/png" href="/images/favicon.png" media="(prefers-color-scheme: dark)">
     @routes
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
