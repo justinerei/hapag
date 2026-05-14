@@ -360,8 +360,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                             {timeSlots[selectedDay] && (
                                                                 <div className="relative">
                                                                     <div
-                                                                        className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto pr-1"
-                                                                        style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
+                                                                        className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto pr-1"
+                                                                        style={{ scrollbarWidth: 'auto', scrollbarColor: '#d1d5db transparent' }}
                                                                     >
                                                                         {timeSlots[selectedDay].slots.map(slot => (
                                                                             <button
@@ -378,8 +378,6 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                                             </button>
                                                                         ))}
                                                                     </div>
-                                                                    {/* Fade hint */}
-                                                                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent rounded-b-lg" />
                                                                 </div>
                                                             )}
                                                         </div>
