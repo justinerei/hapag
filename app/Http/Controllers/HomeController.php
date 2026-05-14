@@ -38,8 +38,13 @@ class HomeController extends Controller
             ->unique()
             ->toArray();
 
+        $usedVoucherIds = \App\Models\VoucherUsage::where('user_id', auth()->id())
+            ->pluck('voucher_id')
+            ->toArray();
+
         $deals = Voucher::where('is_active', true)
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->whereNotIn('id', $usedVoucherIds)
             ->with('restaurant')
             ->get();
 
