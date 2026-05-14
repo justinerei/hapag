@@ -138,7 +138,7 @@ const IcoRepeat  = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24"
 
 // ── CountUp ────────────────────────────────────────────────────────────────────
 
-function CountUp({ to, prefix = '', decimals = 0 }) {
+function CountUp({ to, prefix = '', suffix = '', decimals = 0 }) {
     const [val, setVal] = useState(0);
 
     useEffect(() => {
@@ -159,7 +159,7 @@ function CountUp({ to, prefix = '', decimals = 0 }) {
         ? val.toLocaleString('en-PH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
         : Math.round(val).toLocaleString('en-PH');
 
-    return <>{prefix}{display}</>;
+    return <>{prefix}{display}{suffix}</>;
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ const CARD_GRADIENTS = {
     'rose':        'from-rose-600 to-red-500',
 };
 
-function StatCard({ label, value, prefix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
+function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-40px' });
     const grad   = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
@@ -308,7 +308,7 @@ function StatCard({ label, value, prefix = '', decimals = 0, subtitle, gradient 
                 </div>
             </div>
             <p className="text-[26px] font-bold text-white tracking-tight leading-none tabular-nums mb-1.5">
-                {inView ? <CountUp to={value} prefix={prefix} decimals={decimals} /> : `${prefix}0`}
+                {inView ? <CountUp to={value} prefix={prefix} suffix={suffix} decimals={decimals} /> : `${prefix}0${suffix}`}
             </p>
             <p className="text-xs font-semibold text-gray-400">{label}</p>
             {subtitle && <p className="text-[10px] text-gray-600 mt-1">{subtitle}</p>}
@@ -827,8 +827,8 @@ function OverviewSection({
                 <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
                 <StatCard label="Total orders"       value={totalOrders}       gradient="blue-cyan" icon={<IcoBag c="w-5 h-5" />}   subtitle={`${periodOrders.toLocaleString('en-PH')} this period`} />
                 <StatCard label="Total revenue"      value={totalRevenue}      gradient="green"     icon={<IcoCoin c="w-5 h-5" />}  prefix="₱" decimals={2} subtitle={`${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`} />
-                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
-                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
+                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" suffix="%" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
+                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" suffix="%" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
             </motion.div>
 
             {/* Row 2 — Order trends + Status donut */}
