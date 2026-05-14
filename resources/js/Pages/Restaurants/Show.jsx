@@ -785,7 +785,7 @@ export default function Show({
                         )}
                     </AnimatePresence>
 
-                  <div className="fixed bottom-6 right-20 sm:right-24 z-[39] w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px]">
+                  <div className="fixed bottom-24 right-4 z-[39] w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px]">
                         <AnimatePresence mode="wait">
                             {cartExpanded ? (
                                 /* ── EXPANDED CART PANEL ── */

@@ -182,9 +182,10 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
     return (
         <>
             {/* ── Floating Action Button ──────────────────────────────── */}
+            <div className="fixed bottom-6 right-6 z-[38] flex flex-col items-end gap-2 group/fab">
             <button
                 onClick={() => setOpen(v => !v)}
-                className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 flex items-center justify-center ${
+                className={`w-14 h-14 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 flex items-center justify-center ${
                     open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-green-500 hover:bg-green-600'
                 } text-white`}
                 aria-label="Hapag AI Chat"
@@ -202,10 +203,11 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
                     <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-orange-500 rounded-full border-2 border-white" />
                 )}
             </button>
+            </div>
 
             {/* ── Chat Panel ──────────────────────────────────────────── */}
             {open && (
-                <div className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+                <div className="fixed bottom-24 right-6 z-[38] w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
                      style={{ height: 'min(520px, calc(100vh - 8rem))' }}>
 
                     {/* Header */}
