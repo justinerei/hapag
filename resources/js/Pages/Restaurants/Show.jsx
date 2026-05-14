@@ -75,6 +75,165 @@ function FoodImg({ src, alt, className }) {
     );
 }
 
+// ── Cart Sidebar (desktop persistent panel) ───────────────────────────────────
+
+function CartSidebar({
+    cartItems, orderType, setOrderType,
+    cartSubtotal, cartTotal, totalItemCount,
+    deliveryFee, cutlery, setCutlery,
+    onUpdateQty, onRemove, restaurant,
+}) {
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <IcoBag c="h-4 w-4 text-green-500" />
+                    <span className="font-extrabold text-gray-900 text-sm tracking-tight">
+                        Your order
+                    </span>
+                    <span className="w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">
+                        {totalItemCount}
+                    </span>
+                </div>
+                <span className="text-xs text-gray-400 font-medium truncate max-w-[140px]">{restaurant.name}</span>
+            </div>
+
+            {/* Order type toggle */}
+            <div className="px-4 py-3 border-b border-gray-50">
+                <div className="grid grid-cols-2 gap-1 bg-gray-100 rounded-xl p-1">
+                    <button
+                        onClick={() => setOrderType('pickup')}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                            orderType === 'pickup'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                    >
+                        Pickup · 15–25 min
+                    </button>
+                    <button
+                        onClick={() => setOrderType('delivery')}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                            orderType === 'delivery'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                    >
+                        Delivery · 25–40 min
+                    </button>
+                </div>
+            </div>
+
+            {/* Items list */}
+            <div className="overflow-y-auto px-4 py-3 space-y-3 max-h-[45vh]"
+                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+                {cartItems.map(ci => (
+                    <div key={ci.id}
+                         className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 shrink-0 shadow-sm">
+                            <FoodImg
+                                src={ci.image_url}
+                                alt={ci.name}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 leading-snug truncate">
+                                {ci.name}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5 tabular-nums">
+                                {fmt(ci.price)} each
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <p className="text-sm font-extrabold text-gray-900 tabular-nums">
+                                {fmt(ci.price * ci.quantity)}
+                            </p>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => onUpdateQty(ci.id, ci.quantity - 1)}
+                                    className="w-6 h-6 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-red-300 hover:text-red-500 transition-colors text-xs font-bold shadow-sm"
+                                >
+                                    −
+                                </button>
+                                <span className="w-6 text-center text-xs font-extrabold text-gray-900 tabular-nums select-none">
+                                    {ci.quantity}
+                                </span>
+                                <button
+                                    onClick={() => onUpdateQty(ci.id, ci.quantity + 1)}
+                                    className="w-6 h-6 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-green-400 hover:text-green-600 transition-colors text-xs font-bold shadow-sm"
+                                >
+                                    +
+                                </button>
+                                <button
+                                    onClick={() => onRemove(ci.id)}
+                                    className="w-6 h-6 rounded-lg flex items-center justify-center text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors ml-0.5"
+                                >
+                                    <IcoTrash c="h-3 w-3" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Footer: cutlery + fees + checkout */}
+            <div className="border-t border-gray-100 px-5 py-4 space-y-3">
+
+                {/* Cutlery toggle */}
+                <div className="flex items-center justify-between py-1">
+                    <div>
+                        <p className="text-xs font-semibold text-gray-800">Cutlery</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Help reduce plastic waste</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setCutlery(v => !v)}
+                        className={`relative w-9 h-5 rounded-full shrink-0 transition-colors duration-200 ${
+                            cutlery ? 'bg-green-500' : 'bg-gray-200'
+                        }`}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                            cutlery ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                    </button>
+                </div>
+
+                {/* Fee breakdown */}
+                <div className="space-y-1.5 pt-2 border-t border-gray-50">
+                    <div className="flex justify-between text-xs">
+                        <span className="text-gray-400">Subtotal</span>
+                        <span className="font-semibold text-gray-800 tabular-nums">{fmt(cartSubtotal)}</span>
+                    </div>
+                    {orderType === 'delivery' && (
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Delivery fee</span>
+                            <span className="font-semibold text-gray-800 tabular-nums">{fmt(deliveryFee)}</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                        <span className="text-sm font-extrabold text-gray-900">Total</span>
+                        <span className="text-lg font-extrabold text-green-600 tabular-nums">{fmt(cartTotal)}</span>
+                    </div>
+                </div>
+
+                {/* Checkout button */}
+                <Link
+                    href={`${route('cart.index')}?type=${orderType}`}
+                    className="block w-full py-3.5 rounded-xl bg-green-500 text-white text-sm font-bold text-center hover:bg-green-600 active:scale-[0.98] transition-all shadow-sm shadow-green-500/30 mt-1"
+                >
+                    Review payment and address
+                </Link>
+            </div>
+        </div>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Show({
@@ -122,6 +281,7 @@ export default function Show({
     // Toast
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const cartRef = useRef(null);
 
     // ── Derived ─────────────────────────────────────────────────────────────
     const categoryKeys = useMemo(() => Object.keys(menuItems), [menuItems]);
@@ -207,6 +367,16 @@ export default function Show({
         document.body.style.overflow = modalItem ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
     }, [modalItem]);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (cartRef.current && !cartRef.current.contains(e.target)) {
+                setCartExpanded(false);
+            }
+        }
+        if (cartExpanded) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [cartExpanded]);
 
     function showToast(msg, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -637,9 +807,9 @@ export default function Show({
             </div>
 
             {/* ═══════════════════════════════════════════════════════
-                 MAIN MENU — FULL WIDTH
+                 MAIN MENU
                  ═══════════════════════════════════════════════════════ */}
-            <div className={`max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${isAuth && cartItems.length > 0 ? 'pb-36' : 'pb-10'}`}>
+            <div className={`max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${isAuth && cartItems.length > 0 ? 'pb-24' : 'pb-10'}`}>
 
                 {/* Featured Items */}
                 {featuredItems.length > 0 && !menuSearch.trim() && (
@@ -768,46 +938,31 @@ export default function Show({
                         <p className="text-gray-400 text-xs mt-1">Check back soon</p>
                     </div>
                 )}
-            </div>
+            </div>{/* end outer wrapper */}
 
-            {/* ═══════════════════════════════════════════════════════
-                 FLOATING CART — OPTION A
-                 ═══════════════════════════════════════════════════════ */}
-            {isAuth && cartItems.length > 0 && (
-                <>
-                    {/* Backdrop for expanded cart */}
-                    <AnimatePresence>
-                        {cartExpanded && (
-                            <motion.div
-                                key="cart-backdrop"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[38]"
-                                onClick={() => setCartExpanded(false)}
-                            />
-                        )}
-                    </AnimatePresence>
+            {/* ── Floating bottom bar: cart pill + AI chat side by side ── */}
+            {isAuth && (
+                <div className="fixed bottom-6 right-6 z-40 flex items-end gap-3">
 
-                  <div className="fixed bottom-24 right-4 z-[39] w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px]">
-                        <AnimatePresence mode="wait">
-                            {cartExpanded ? (
-                                /* ── EXPANDED CART PANEL ── */
-                                <motion.div
-                                    key="cart-expanded"
-                                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                                    transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-                                    className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
-                                    style={{ maxHeight: '72vh' }}
-                                >
+                    {cartItems.length > 0 && (
+                        <div className="relative" ref={cartRef}>
+                            <AnimatePresence mode="wait">
+                                {cartExpanded ? (
+                                    <motion.div
+                                        key="cart-expanded"
+                                        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                                        transition={{ type: 'spring', stiffness: 360, damping: 36 }}
+                                        className="absolute bottom-full mb-3 right-0 w-[320px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                                        style={{ maxHeight: '72vh' }}
+                                    >
                                     {/* Panel header */}
                                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                                         <div className="flex items-center gap-2">
                                             <IcoBag c="h-4 w-4 text-green-500" />
                                             <span className="font-bold text-gray-900 text-sm">Your Order</span>
-                                            <span className="w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-extrabold flex items-center justify-center">{totalItemCount}</span>
+                                            <span className="w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">{totalItemCount}</span>
                                         </div>
                                         <button
                                             onClick={() => setCartExpanded(false)}
@@ -836,32 +991,35 @@ export default function Show({
                                     </div>
 
                                     {/* Items */}
-                                    <div className="overflow-y-auto px-4 py-3 space-y-3 max-h-[40vh]" style={{ scrollbarWidth: 'thin' }}>
+                                    <div className="overflow-y-auto px-4 py-3 space-y-2.5" style={{ maxHeight: '40vh', scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
                                         {cartItems.map(ci => (
-                                            <div key={ci.id} className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                                            <div key={ci.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                                                <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 shrink-0">
                                                     <FoodImg src={ci.image_url} alt={ci.name} className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-gray-900 truncate">{ci.name}</p>
-                                                    <p className="text-xs text-gray-400">{fmt(ci.price)}</p>
+                                                    <p className="text-xs font-bold text-gray-900 leading-snug truncate">{ci.name}</p>
+                                                    <p className="text-[10px] text-gray-400 tabular-nums">{fmt(ci.price)} each</p>
                                                 </div>
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <button
-                                                        onClick={() => updateCartQty(ci.id, ci.quantity - 1)}
-                                                        className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors font-bold text-xs"
-                                                    >−</button>
-                                                    <span className="w-5 text-center text-xs font-bold text-gray-900 select-none">{ci.quantity}</span>
-                                                    <button
-                                                        onClick={() => updateCartQty(ci.id, ci.quantity + 1)}
-                                                        className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors font-bold text-xs"
-                                                    >+</button>
-                                                    <button
-                                                        onClick={() => removeCartItem(ci.id)}
-                                                        className="w-6 h-6 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors ml-0.5"
-                                                    >
-                                                        <IcoTrash c="h-3 w-3" />
-                                                    </button>
+                                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                    <p className="text-xs font-extrabold text-gray-900 tabular-nums">{fmt(ci.price * ci.quantity)}</p>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => updateCartQty(ci.id, ci.quantity - 1)}
+                                                            className="w-5 h-5 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:border-red-300 hover:text-red-400 transition-colors text-xs font-bold"
+                                                        >−</button>
+                                                        <span className="w-4 text-center text-[11px] font-extrabold text-gray-900 tabular-nums select-none">{ci.quantity}</span>
+                                                        <button
+                                                            onClick={() => updateCartQty(ci.id, ci.quantity + 1)}
+                                                            className="w-5 h-5 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:border-green-400 hover:text-green-500 transition-colors text-xs font-bold"
+                                                        >+</button>
+                                                        <button
+                                                            onClick={() => removeCartItem(ci.id)}
+                                                            className="w-5 h-5 rounded-md flex items-center justify-center text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors ml-0.5"
+                                                        >
+                                                            <IcoTrash c="h-2.5 w-2.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -894,17 +1052,17 @@ export default function Show({
                                         <div className="space-y-1 pt-2 border-t border-gray-50">
                                             <div className="flex justify-between text-xs">
                                                 <span className="text-gray-400">Subtotal</span>
-                                                <span className="font-semibold text-gray-800">{fmt(cartSubtotal)}</span>
+                                                <span className="font-semibold text-gray-800 tabular-nums">{fmt(cartSubtotal)}</span>
                                             </div>
                                             {orderType === 'delivery' && (
                                                 <div className="flex justify-between text-xs">
                                                     <span className="text-gray-400">Delivery fee</span>
-                                                    <span className="font-semibold text-gray-800">{fmt(DELIVERY_FEE)}</span>
+                                                    <span className="font-semibold text-gray-800 tabular-nums">{fmt(DELIVERY_FEE)}</span>
                                                 </div>
                                             )}
                                             <div className="flex justify-between items-center pt-1.5 border-t border-gray-100">
                                                 <span className="text-sm font-bold text-gray-900">Total</span>
-                                                <span className="text-base font-extrabold text-green-600">{fmt(cartTotal)}</span>
+                                                <span className="text-base font-extrabold text-green-600 tabular-nums">{fmt(cartTotal)}</span>
                                             </div>
                                         </div>
 
@@ -917,38 +1075,34 @@ export default function Show({
                                         </Link>
                                     </div>
                                 </motion.div>
-                            ) : (
-                                /* ── COLLAPSED CART PILL ── */
-                                <motion.button
-                                    key="cart-collapsed"
-                                    initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.96 }}
-                                    transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-                                    whileHover={{ y: -2 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={() => setCartExpanded(true)}
-                                    className="w-full flex items-center justify-between gap-3 px-4 py-3.5 bg-green-500 text-white rounded-2xl shadow-xl shadow-green-500/35 hover:bg-green-600 transition-colors"
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-7 h-7 rounded-xl bg-green-600 flex items-center justify-center">
-                                            <span className="text-xs font-extrabold">{totalItemCount}</span>
+                                ) : (
+                                    <motion.button
+                                        key="cart-collapsed"
+                                        initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.96 }}
+                                        transition={{ type: 'spring', stiffness: 360, damping: 36 }}
+                                        whileHover={{ y: -2 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => setCartExpanded(true)}
+                                        className="flex items-center gap-2.5 px-4 py-3 bg-green-500 text-white rounded-2xl shadow-xl shadow-green-500/35 hover:bg-green-600 transition-colors whitespace-nowrap"
+                                    >
+                                        <div className="w-6 h-6 rounded-xl bg-green-600 flex items-center justify-center">
+                                            <span className="text-[11px] font-extrabold tabular-nums">{totalItemCount}</span>
                                         </div>
                                         <span className="text-sm font-bold">View order</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-extrabold">{fmt(cartTotal)}</span>
-                                        <IcoChevUp c="h-4 w-4 opacity-70" />
-                                    </div>
-                                </motion.button>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </>
-            )}
+                                        <span className="text-sm font-extrabold tabular-nums">{fmt(cartTotal)}</span>
+                                        <IcoChevUp c="h-3.5 w-3.5 opacity-70" />
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
 
-            {/* ── AI Chat ─────────────────────────────────────────── */}
-            {isAuth && <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />}
+                    {/* AI Chat FAB — always on the right */}
+                    <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />
+                </div>
+            )}
 
             <SignInModal
                 show={signInOpen}

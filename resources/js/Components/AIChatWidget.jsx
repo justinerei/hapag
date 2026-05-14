@@ -182,7 +182,7 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
     return (
         <>
             {/* ── Floating Action Button ──────────────────────────────── */}
-            <div className="fixed bottom-6 right-6 z-[38] flex flex-col items-end gap-2 group/fab">
+            <div className="flex flex-col items-end gap-2 group/fab">
             <button
                 onClick={() => setOpen(v => !v)}
                 className={`w-14 h-14 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 flex items-center justify-center ${
@@ -207,7 +207,7 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
 
             {/* ── Chat Panel ──────────────────────────────────────────── */}
             {open && (
-                <div className="fixed bottom-24 right-6 z-[38] w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+                <div className="fixed bottom-24 right-6 z-40 w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
                      style={{ height: 'min(520px, calc(100vh - 8rem))' }}>
 
                     {/* Header */}
