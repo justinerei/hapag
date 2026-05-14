@@ -476,13 +476,14 @@ export default function Show({
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/65 to-gray-800/40" />
 
                 <div className="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-7">
-                    <Link
-                        href="/"
+                    <button
+                        type="button"
+                        onClick={() => window.history.back()}
                         className="inline-flex items-center gap-1.5 text-white/50 text-xs font-medium hover:text-white/80 transition-colors mb-5"
                     >
                         <IcoChevLeft c="h-3.5 w-3.5" />
-                        Back to restaurants
-                    </Link>
+                        Back
+                    </button>
 
                     <div className="flex items-end justify-between gap-4">
                         <div className="flex-1 min-w-0">
