@@ -240,7 +240,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
         : order.items.slice(0, 2).map(i => `${i.quantity}× ${i.menu_item.name}`).join(', ')
             + (order.items.length > 2 ? ` +${order.items.length - 2} more` : '');
 
-    const isActive = order.status === 'pending' || order.status === 'preparing';
+    const isActive = ['pending', 'accepted', 'preparing'].includes(order.status);
 
     return (
         <div className={`
