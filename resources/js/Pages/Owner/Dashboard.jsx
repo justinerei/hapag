@@ -1619,7 +1619,7 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0 }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
@@ -1633,8 +1633,8 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
     const [statusToast, setStatusToast]     = useState(null);
     const statusToastTimer                  = useRef(null);
     const [ownerBellOpen, setOwnerBellOpen]           = useState(false);
-    const [ownerNotifications, setOwnerNotifications] = useState([]);
-    const [ownerUnread, setOwnerUnread]               = useState(0);
+    const [ownerNotifications, setOwnerNotifications] = useState(notifications);
+    const [ownerUnread, setOwnerUnread]               = useState(unreadCount);
     const ownerBellRef                                = useRef(null);
     const [restaurantDropOpen, setRestaurantDropOpen] = useState(false);
     const restaurantDropRef                           = useRef(null);

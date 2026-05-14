@@ -91,7 +91,23 @@ class OwnerController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
-        return Inertia::render('Owner/Dashboard', compact('restaurants', 'categories'));
+        $notifications = auth()->user()
+            ->notifications()
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(fn ($n) => [
+                'id'            => $n->id,
+                'order_id'      => $n->data['order_id'] ?? null,
+                'customer_name' => $n->data['customer_name'] ?? 'Customer',
+                'order_type'    => $n->data['order_type'] ?? 'pickup',
+                'total'         => $n->data['total'] ?? 0,
+                'received_at'   => $n->created_at->diffForHumans(),
+                'read'          => !is_null($n->read_at),
+            ]);
+        $unreadCount = auth()->user()->unreadNotifications()->count();
+
+        return Inertia::render('Owner/Dashboard', compact('restaurants', 'categories', 'notifications', 'unreadCount'));
     }
 
     public function storeItem(Request $request)
