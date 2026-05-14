@@ -1134,6 +1134,7 @@ function VoucherModal({ mode, voucher, onClose, onSaved }) {
 // ── Pending Section (dark) ─────────────────────────────────────────────────────
 
 function PendingSection({ pending, onAction }) {
+    const [reasons, setReasons] = useState({});
     return (
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
             <motion.div variants={FADE_UP} className="flex items-center gap-3 mb-5">
@@ -1179,13 +1180,22 @@ function PendingSection({ pending, onAction }) {
                                 {r.description && (
                                     <p className="text-xs text-gray-600 italic mt-2 line-clamp-2">{r.description}</p>
                                 )}
+                                <div className="mt-3">
+                                    <textarea
+                                        value={reasons[r.id] ?? ''}
+                                        onChange={e => setReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                        placeholder="Rejection reason (optional — sent to owner)"
+                                        rows={2}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700/50 text-white placeholder:text-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 resize-none transition-colors"
+                                    />
+                                </div>
                             </div>
                             <div className="shrink-0 flex flex-col gap-2">
-                                <button onClick={() => onAction(r, 'active')}
+                                <button onClick={() => onAction(r, 'active', '')}
                                     className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-[0.98] transition-all">
                                     Approve
                                 </button>
-                                <button onClick={() => onAction(r, 'rejected')}
+                                <button onClick={() => onAction(r, 'rejected', reasons[r.id] ?? '')}
                                     className="px-4 py-1.5 rounded-lg border border-red-700/50 text-red-400 text-xs font-bold hover:bg-red-500/10 active:scale-[0.98] transition-all">
                                     Reject
                                 </button>
@@ -1474,17 +1484,20 @@ export default function AdminDashboard({
 
     // ── Restaurant actions ──────────────────────────────────────────────────────
 
-    async function handleRestaurantAction(restaurant, status) {
-        const isRejecting = status === 'rejected';
+    async function handleRestaurantAction(restaurant, status, reason = '') {
         const confirmed = window.confirm(
-            isRejecting
-                ? `Reject "${restaurant.name}"? The owner will be notified. This cannot be undone.`
+            status === 'rejected'
+                ? `Reject "${restaurant.name}"? The owner will be notified.`
                 : `Approve "${restaurant.name}" and make it live on Hapag?`
         );
         if (!confirmed) return;
 
         try {
-            await apiFetch(route('admin.restaurants.approve', restaurant.id), 'PATCH', { status });
+            await apiFetch(
+                route('admin.restaurants.approve', restaurant.id),
+                'PATCH',
+                { status, reason }
+            );
             setPending(prev => prev.filter(r => r.id !== restaurant.id));
             addToast(`Restaurant ${status === 'active' ? 'approved' : 'rejected'}.`);
         } catch {

@@ -11,7 +11,7 @@ class RestaurantStatusUpdated extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Restaurant $restaurant) {}
+    public function __construct(public Restaurant $restaurant, public string $reason = '') {}
 
     public function via(object $notifiable): array
     {
@@ -21,13 +21,15 @@ class RestaurantStatusUpdated extends Notification implements ShouldQueue
     public function toArray(object $notifiable): array
     {
         $message = $this->restaurant->status === 'active'
-            ? "Your restaurant {$this->restaurant->name} has been approved."
-            : "Your restaurant {$this->restaurant->name} was not approved.";
+            ? "Your restaurant {$this->restaurant->name} has been approved!"
+            : "Your restaurant {$this->restaurant->name} was not approved." .
+              ($this->reason ? " Reason: {$this->reason}" : '');
 
         return [
             'restaurant_id'   => $this->restaurant->id,
             'restaurant_name' => $this->restaurant->name,
             'status'          => $this->restaurant->status,
+            'reason'          => $this->reason,
             'message'         => $message,
         ];
     }

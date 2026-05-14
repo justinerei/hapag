@@ -163,9 +163,16 @@ class AdminController extends Controller
 
     public function approveRestaurant(Request $request, Restaurant $restaurant)
     {
-        $request->validate(['status' => 'required|in:active,rejected']);
+        $request->validate([
+            'status' => 'required|in:active,rejected',
+            'reason' => 'nullable|string|max:500',
+        ]);
         $restaurant->update(['status' => $request->status]);
-        $restaurant->owner->notify(new RestaurantStatusUpdated($restaurant));
+
+        $restaurant->owner->notify(
+            new RestaurantStatusUpdated($restaurant, $request->reason ?? '')
+        );
+
         return response()->json(['status' => $restaurant->status]);
     }
 
