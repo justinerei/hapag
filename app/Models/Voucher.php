@@ -8,14 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Voucher extends Model
 {
-    protected $appends = ['used_count'];
-
     protected $fillable = [
         'code',
         'type',
         'value',
         'min_order_amount',
         'max_uses',
+        'used_count',
         'restaurant_id',
         'created_by',
         'is_active',
@@ -30,11 +29,6 @@ class Voucher extends Model
             'is_active' => 'boolean',
             'expires_at' => 'datetime',
         ];
-    }
-
-    public function getUsedCountAttribute()
-    {
-        return $this->usages()->count();
     }
 
     public function restaurant(): BelongsTo
