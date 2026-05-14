@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NewOrderPlaced;
 use App\Models\CartItem;
 use App\Models\MenuItem;
 use App\Models\Order;
@@ -212,6 +213,7 @@ class CartController extends Controller
             'cartCount'        => $cartCount,
             'allVouchers'      => $allVouchers,
             'orderType'        => $request->query('type', 'pickup'),
+            'deliveryFee'      => 49,
         ]);
     }
 
@@ -313,6 +315,9 @@ class CartController extends Controller
                 CartItem::where('user_id', $user->id)->delete();
 
                 session(['last_order_id' => $order->id]);
+
+                $order->load(['restaurant', 'user', 'items']);
+                event(new NewOrderPlaced($order));
             });
         } catch (\RuntimeException $e) {
             return back()->withErrors(['voucher' => $e->getMessage()]);

@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import '@/bootstrap';
 import SignUpModal from '@/Components/SignUpModal';
 import SignInModal from '@/Components/SignInModal';
+import Footer from '@/Components/Footer';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
+import { useNotification } from '@/hooks/useNotification';
 
 const MUNICIPALITIES = [
     'Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba',
@@ -80,7 +83,7 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
     const showDropdown = focused && query.length >= 2 && results;
     const hasResults = results && (results.restaurants?.length > 0 || results.dishes?.length > 0);
-    
+
     return (
         <div className="relative" ref={wrapperRef}>
             <form onSubmit={handleSubmit}>
@@ -215,14 +218,20 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
 // ── Main Layout ───────────────────────────────────────────────────────────────
 
-export default function CustomerLayout({ children, cartCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
-    const { auth } = usePage().props;
+export default function CustomerLayout({ children, cartCount = 0, orderNotifCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
+    const { auth, notifications: initialNotifications = [], orderNotifCount: sharedOrderNotifCount = 0 } = usePage().props;
     const user = auth?.user ?? null;
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [bellOpen, setBellOpen] = useState(false);
+    const [notifications, setNotifications] = useState(initialNotifications);
+    const [unreadCount, setUnreadCount] = useState(initialNotifications.length);
+    // Always read from middleware shared props — works on every page without passing manually
+    const [liveOrderNotifCount, setLiveOrderNotifCount] = useState(sharedOrderNotifCount || orderNotifCount);
+    const bellRef = useRef(null);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
 
@@ -235,6 +244,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
     useEffect(() => {
         function onClickOutside(e) {
             if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
+            if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false);
         }
         document.addEventListener('mousedown', onClickOutside);
         return () => document.removeEventListener('mousedown', onClickOutside);
@@ -247,6 +257,29 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
         onScroll();
         return () => window.removeEventListener('scroll', onScroll);
     }, [user]);
+
+    useEffect(() => {
+        if (!user || user.role !== 'customer') return;
+        const channel = window.Echo.private('customer.' + user.id);
+        channel.listen('.order-status-updated', (event) => {
+            setNotifications(prev => [
+                {
+                    id: Date.now(),
+                    message: event.message,
+                    order_id: event.order_id,
+                    status: event.status,
+                    created_at: 'just now',
+                },
+                ...prev,
+            ]);
+            setUnreadCount(prev => prev + 1);
+            // Increment the My Orders badge live when resto updates status
+            setLiveOrderNotifCount(prev => prev + 1);
+        });
+        return () => {
+            window.Echo.leave('customer.' + user.id);
+        };
+    }, [user?.id]);
 
     const logout = () => router.post(route('logout'));
     const firstName = user ? user.name.split(' ')[0] : null;
@@ -269,7 +302,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
     }
 
     /* ====================================================================
-       GUEST NAVBAR
+       GUEST NAVBAR — unchanged
     ==================================================================== */
     if (!user) {
         const guestLinks = [
@@ -315,6 +348,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                     )}
                 </div>
                 <main className="flex-1">{children}</main>
+                <Footer onSignIn={() => setSignInOpen(true)} onSignUp={() => setSignUpOpen(true)} />
                 <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => setSignInOpen(true)} />
                 <SignInModal show={signInOpen} onClose={() => setSignInOpen(false)} onSwitchToSignUp={() => setSignUpOpen(true)} />
             </div>
@@ -336,7 +370,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                         Hapag
                     </Link>
 
-                    {/* Location pill — shows address or municipality */}
+                    {/* Location pill */}
                     <div className="hidden sm:block shrink-0">
                         <button
                             onClick={() => setLocationOpen(true)}
@@ -357,25 +391,16 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                         </button>
                     </div>
 
-                    {/* Address search overlay — positioned below navbar, Foodpanda-style */}
+                    {/* Location overlay */}
                     {locationOpen && (
                         <>
-                            {/* Dim overlay — only covers content below navbar */}
-                            <div
-                                className="fixed inset-0 top-14 bg-black/40 z-[60]"
-                                onClick={() => setLocationOpen(false)}
-                            />
-
-                            {/* Panel — anchored right below the navbar */}
+                            <div className="fixed inset-0 top-14 bg-black/40 z-[60]" onClick={() => setLocationOpen(false)} />
                             <div className="fixed top-14 left-0 right-0 z-[70] flex justify-center">
                                 <div className="w-full max-w-xl bg-white shadow-2xl border-t border-gray-100 rounded-b-2xl">
                                     {/* Header */}
                                     <div className="flex items-center justify-between px-5 pt-4 pb-2">
                                         <h2 className="text-sm font-extrabold text-gray-800">Enter your address</h2>
-                                        <button
-                                            onClick={() => setLocationOpen(false)}
-                                            className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                                        >
+                                        <button onClick={() => setLocationOpen(false)} className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
@@ -394,10 +419,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                                     await fetch(route('profile.municipality'), {
                                                         method: 'PATCH',
                                                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-                                                        body: JSON.stringify({
-                                                            municipality: extractedMunicipality,
-                                                            address: fullAddress,
-                                                        }),
+                                                        body: JSON.stringify({ municipality: extractedMunicipality, address: fullAddress }),
                                                     });
                                                     setLocationOpen(false);
                                                     router.reload();
@@ -418,11 +440,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                                     key={m}
                                                     onClick={() => changeMunicipality(m)}
                                                     disabled={updatingLocation}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                                        m === municipality
-                                                            ? 'bg-green-500 text-white'
-                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                    } ${updatingLocation ? 'opacity-50' : ''}`}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${m === municipality ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${updatingLocation ? 'opacity-50' : ''}`}
                                                 >
                                                     {m}
                                                 </button>
@@ -434,7 +452,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                         </>
                     )}
 
-                    {/* Desktop search with live dropdown */}
+                    {/* Desktop search */}
                     {!hideSearch && (
                         <div className="flex-1 max-w-lg mx-auto hidden md:block">
                             <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
@@ -474,6 +492,62 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                             </svg>
                         </Link>
 
+                        {/* Cart — unchanged */}
+                        {/* Notifications Bell */}
+                        {user && user.role === 'customer' && (
+                            <div className="relative" ref={bellRef}>
+                                <button
+                                    onClick={() => {
+                                        const opening = !bellOpen;
+                                        setBellOpen(opening);
+                                        if (opening) {
+                                            setUnreadCount(0);
+                                            if (notifications.length > 0) {
+                                                fetch(route('notifications.read'), {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                                                        'X-Requested-With': 'XMLHttpRequest',
+                                                    },
+                                                });
+                                            }
+                                        }
+                                    }}
+                                    className="relative p-2 rounded-full transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                    title="Notifications"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 leading-none">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {bellOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-gray-100">
+                                            <p className="text-sm font-bold text-gray-800">Notifications</p>
+                                        </div>
+                                        {notifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-center text-sm text-gray-400">You're all caught up!</div>
+                                        ) : (
+                                            <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                                                {notifications.map(n => (
+                                                    <li key={n.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                                                        <p className="text-sm text-gray-700">{n.message}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{n.created_at}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Cart */}
                         <Link
                             href={route('cart.index')}
@@ -489,6 +563,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                 </span>
                             )}
                         </Link>
+
 
                         {/* Profile dropdown */}
                         <div className="relative ml-1" ref={profileRef}>
@@ -506,9 +581,17 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                 <span className="hidden sm:block text-sm font-semibold text-gray-800 max-w-[80px] truncate">
                                     {firstName}
                                 </span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
+                                {/* ── CHANGE 3 of 4: red dot on chevron when there are unseen notifs ── */}
+                                <div className="relative">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    {liveOrderNotifCount > 0 && !profileOpen && (
+                                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 ring-1 ring-white" />
+                                    )}
+                                </div>
                             </button>
 
                             {profileOpen && (
@@ -517,14 +600,30 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                                         <p className="text-sm font-bold text-gray-800 truncate">{user.name}</p>
                                         <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                     </div>
-                                    <Link href={route('profile.edit')} className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setProfileOpen(false)}>
+                                    <Link
+                                        href={route('profile.edit')}
+                                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                        onClick={() => setProfileOpen(false)}
+                                    >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                         My Account
                                     </Link>
-                                    <Link href={route('orders.index')} className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setProfileOpen(false)}>
+
+                                    {/* ── CHANGE 4 of 4: red badge next to "My Orders" in dropdown ── */}
+                                    <Link
+                                        href={route('orders.index')}
+                                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                        onClick={() => setProfileOpen(false)}
+                                    >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                        My Orders
+                                        <span className="flex-1">My Orders</span>
+                                        {liveOrderNotifCount > 0 && (
+                                            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-extrabold leading-none">
+                                                {liveOrderNotifCount > 9 ? '9+' : liveOrderNotifCount}
+                                            </span>
+                                        )}
                                     </Link>
+
                                     <div className="border-t border-gray-100 mt-1 pt-1">
                                         <button onClick={logout} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
@@ -537,7 +636,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
                     </div>
                 </div>
 
-                {/* Mobile search bar — slides down */}
+                {/* Mobile search bar */}
                 {!hideSearch && mobileSearchOpen && (
                     <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2.5">
                         <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
@@ -546,6 +645,7 @@ export default function CustomerLayout({ children, cartCount = 0, onSearch, onSe
             </nav>
 
             <main className="flex-1">{children}</main>
+            <Footer />
         </div>
-    );
+     );
 }

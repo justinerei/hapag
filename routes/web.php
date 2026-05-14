@@ -18,6 +18,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+Route::get('/for-owners/faq', function () {
+    $cartCount = auth()->check()
+        ? \App\Models\CartItem::where('user_id', auth()->id())->sum('quantity')
+        : 0;
+    return inertia('OwnerFAQ', compact('cartCount'));
+})->name('owners.faq');
+
+Route::get('/partnership', function () {
+    $cartCount = auth()->check()
+        ? \App\Models\CartItem::where('user_id', auth()->id())->sum('quantity')
+        : 0;
+    return inertia('Partnership', compact('cartCount'));
+})->name('partnership');
+
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
 Route::get('/menu/{restaurant}', [RestaurantController::class, 'show'])->name('restaurants.show');
 
@@ -51,6 +65,7 @@ Route::middleware('auth')->group(function () {
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::patch('/orders/{order}/confirm', [OrderController::class, 'confirmReceived'])->name('orders.confirm');
 
     // Favorites
     Route::get('/favorites', [\App\Http\Controllers\FavoriteController::class, 'index'])->name('favorites');
@@ -107,9 +122,65 @@ Route::middleware('auth')->group(function () {
         return response()->json(['claimed' => true, 'code' => $voucher->code]);
     })->name('vouchers.claim');
 
-    // AI food recommender (customer)
-    Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend');
+    // Notifications — mark as read
+    Route::post('/notifications/read', function () {
+        auth()->user()->unreadNotifications->markAsRead();
+        return back();
+    })->name('notifications.read');
+
+    Route::post('/notifications/{id}/read', function (string $id) {
+        auth()->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
+        return back();
+    })->name('notifications.read.one');
     Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
+
+    // Order status polling for customer notifications
+    Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
+        $orders = $request->user()
+            ->orders()
+            ->whereIn('status', ['pending', 'preparing', 'ready'])
+            ->select('id', 'status')
+            ->get();
+        return response()->json(['orders' => $orders]);
+    })->name('api.orders.statuses');
+
+    // Owner: fetch a single order by ID (used by real-time Echo listener)
+    Route::get('/api/owner/orders/{order}', function (\App\Models\Order $order) {
+        abort_if($order->restaurant->owner_id !== auth()->id(), 403);
+
+        $order->load(['user', 'items.menuItem', 'restaurant']);
+
+        return response()->json([
+            'order' => [
+                'id'               => $order->id,
+                'status'           => $order->status,
+                'order_type'       => $order->order_type,
+                'total_amount'     => $order->total_amount,
+                'final_amount'     => $order->final_amount,
+                'delivery_fee'     => $order->delivery_fee,
+                'discount_amount'  => $order->discount_amount,
+                'delivery_address' => $order->delivery_address,
+                'pickup_note'      => $order->pickup_note,
+                'scheduled_at'     => $order->scheduled_at,
+                'created_at'       => $order->created_at,
+                'restaurant_id'    => $order->restaurant_id,
+                'user'             => [
+                    'id'           => $order->user->id,
+                    'name'         => $order->user->name,
+                    'municipality' => $order->user->municipality,
+                ],
+                'items'            => $order->items->map(fn($i) => [
+                    'id'         => $i->id,
+                    'quantity'   => $i->quantity,
+                    'unit_price' => $i->unit_price,
+                    'menu_item'  => [
+                        'id'   => $i->menuItem->id,
+                        'name' => $i->menuItem->name,
+                    ],
+                ])->values()->toArray(),
+            ],
+        ]);
+    })->name('api.owner.order');
 });
 
 // ── Owner portal ──────────────────────────────────────────────────────────────
@@ -142,6 +213,9 @@ Route::middleware(['auth', 'role:owner'])
 
         // Restaurant settings
         Route::patch('/restaurants/{restaurant}/settings', [OwnerController::class, 'updateSettings'])->name('settings.update');
+
+        // Sales export (full data, unbounded by the dashboard's 100-order limit)
+        Route::get('/export/sales', [OwnerController::class, 'exportSales'])->name('export.sales');
     });
 
 // ── Admin panel ───────────────────────────────────────────────────────────────
@@ -167,7 +241,9 @@ Route::middleware(['auth', 'role:admin'])
         Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy'])->name('vouchers.destroy');
 
         // DB backup
-        Route::post('/backup', [AdminController::class, 'backup'])->name('backup');
+        Route::post('/backup',              [AdminController::class, 'backup'])        ->name('backup');
+        Route::get('/backups',              [AdminController::class, 'listBackups'])   ->name('backups.list');
+        Route::get('/backups/{filename}',   [AdminController::class, 'downloadBackup'])->name('backups.download');
     });
 
 require __DIR__.'/auth.php';

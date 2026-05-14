@@ -39,6 +39,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+
             'auth' => [
                 'user' => $user ? [
                     'id'           => $user->id,
@@ -47,15 +48,28 @@ class HandleInertiaRequests extends Middleware
                     'role'         => $user->role,
                     'municipality' => $user->municipality,
                     'address'      => $user->address,
-                    // ← THIS is what was missing — explicitly passes the
-                    //   computed avatar_url to every Inertia page/component
                     'avatar_url'   => $user->avatar_url,
                 ] : null,
             ],
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-            ],
+
+            // Ito yung kailangan ng useNotification.js
+            'notifications' => function () use ($user) {
+                if (!$user) return [];
+
+                return $user->unreadNotifications->map(fn ($n) => [
+                    'id'         => $n->id,
+                    'message'    => $n->data['message'] ?? 'Status updated',
+                    'order_id'   => $n->data['order_id'] ?? null,
+                    'created_at' => $n->created_at->diffForHumans(),
+                ]);
+            },
+
+            // Bilang ng active orders para sa badge
+            'orderNotifCount' => $user 
+                ? $user->orders()->whereIn('status', ['pending', 'preparing', 'ready'])->count() 
+                : 0,
+
+            'cartCount' => $user ? $user->cartItems()->count() : 0,
         ];
     }
 }

@@ -173,8 +173,8 @@ Santa Cruz, Pagsanjan, Los Baños, Calamba, San Pablo, Bay, Nagcarlan, Pila
 | Santa Cruz | 14.2794 | 121.4117 |
 | Pagsanjan | 14.2713 | 121.4559 |
 | Los Baños | 14.1692 | 121.2435 |
-| Calamba | [Add Lat] | [Add Lng] |
-| San Pablo | [Add Lat] | [Add Lng] |
-| Bay | [Add Lat] | [Add Lng] |
-| Nagcarlan | [Add Lat] | [Add Lng] |
-| Pila | [Add Lat] | [Add Lng] |
+| Calamba | 14.2116 | 121.1653 |
+| San Pablo | 14.0688 | 121.3224 |
+| Bay | 14.1791 | 121.2840 |
+| Nagcarlan | 14.1390 | 121.4180 |
+| Pila | 14.2300 | 121.3670 |

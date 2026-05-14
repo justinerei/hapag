@@ -3,10 +3,6 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const DELIVERY_FEE = 49;
-
 // Generate time slots for scheduling (next 3 days, 30-min intervals within restaurant hours)
 function generateTimeSlots() {
     const slots = [];
@@ -92,7 +88,7 @@ function VoucherIcon({ className = 'h-4 w-4' }) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVouchers = [], orderType: initialOrderType }) {
-    const { auth } = usePage().props;
+    const { auth, deliveryFee } = usePage().props;
     const user = auth?.user;
 
     const orderType = initialOrderType || 'pickup';
@@ -121,8 +117,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
 
     const subtotal    = useMemo(() => cartItems.reduce((sum, i) => sum + Number(i.menu_item.price) * i.quantity, 0), [cartItems]);
     const discount    = voucherStatus?.valid ? Number(voucherStatus.discount) : 0;
-    const deliveryFee = orderType === 'delivery' ? DELIVERY_FEE : 0;
-    const total       = Math.max(0, subtotal - discount) + deliveryFee;
+    const appliedFee  = orderType === 'delivery' ? deliveryFee : 0;
+    const total       = Math.max(0, subtotal - discount) + appliedFee;
 
     // ── Voucher ────────────────────────────────────────────────────────────
 
@@ -413,7 +409,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                         <span className="text-xl">🛵</span>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-800">Restaurant delivery</p>
-                                            <p className="text-xs text-gray-500">Delivered by the restaurant's own staff · Flat fee of {fmt(DELIVERY_FEE)}</p>
+                                            <p className="text-xs text-gray-500">Delivered by the restaurant's own staff · Flat fee of {fmt(deliveryFee)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -621,7 +617,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                 {orderType === 'delivery' && (
                                     <div className="flex justify-between text-gray-600">
                                         <span>Delivery Fee</span>
-                                        <span className="font-semibold text-gray-800 tabular-nums">{fmt(DELIVERY_FEE)}</span>
+                                        <span className="font-semibold text-gray-800 tabular-nums">{fmt(deliveryFee)}</span>
                                     </div>
                                 )}
                             </div>

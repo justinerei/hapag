@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
+import '@/bootstrap';
+import { formatOrderId } from '@/utils/formatOrderId';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -12,16 +14,19 @@ const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content ??
 
 const STATUS_META = {
     pending:   { label: 'Pending',   pill: 'bg-amber-100 text-amber-700 border border-amber-200'      },
+    accepted:  { label: 'Accepted',  pill: 'bg-cyan-100 text-cyan-700 border border-cyan-200'         },
     preparing: { label: 'Preparing', pill: 'bg-blue-100 text-blue-700 border border-blue-200'          },
     ready:     { label: 'Ready',     pill: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+    completed: { label: 'Completed', pill: 'bg-green-100 text-green-700 border border-green-200'       },
+    cancelled: { label: 'Cancelled', pill: 'bg-red-100 text-red-700 border border-red-200'             },
 };
-const NEXT_STATUS   = { pending: 'preparing', preparing: 'ready' };
+const NEXT_STATUS   = { pending: 'accepted', accepted: 'preparing', preparing: 'ready' };
 const EMPTY_ITEM    = { name: '', description: '', price: '', category: '', image_url: '', is_available: true };
 const EMPTY_VOUCHER = { code: '', type: 'percentage', value: '', min_order_amount: '', max_uses: '', is_active: true, expires_at: '' };
 const MUNICIPALITIES = ['Santa Cruz','Pagsanjan','Los Baños','Calamba','San Pablo','Bay','Nagcarlan','Pila'];
 
 const STATUS_CHART_COLORS = {
-    pending: '#f59e0b', preparing: '#3b82f6', ready: '#10b981',
+    pending: '#f59e0b', accepted: '#06b6d4', preparing: '#3b82f6', ready: '#10b981',
     completed: '#22c55e', cancelled: '#ef4444',
 };
 
@@ -113,13 +118,13 @@ function Field({ label, error, children }) {
 
 function StatCard({ label, value, sub, accent = 'green', icon, trend, animateTarget, formatValue }) {
     const styles = {
-        green:   { wrap: 'border-green-100',   icon: 'bg-green-100 text-green-600'    },
-        emerald: { wrap: 'border-emerald-100', icon: 'bg-emerald-100 text-emerald-600' },
-        orange:  { wrap: 'border-orange-100',  icon: 'bg-orange-100 text-orange-500'  },
-        blue:    { wrap: 'border-blue-100',    icon: 'bg-blue-100 text-blue-500'       },
-        amber:   { wrap: 'border-amber-100',   icon: 'bg-amber-100 text-amber-600'    },
-        purple:  { wrap: 'border-purple-100',  icon: 'bg-purple-100 text-purple-600'  },
-        gray:    { wrap: 'border-gray-200',    icon: 'bg-gray-100 text-gray-400'       },
+        green:   { icon: 'bg-green-100 text-green-600'    },
+        emerald: { icon: 'bg-emerald-100 text-emerald-600' },
+        orange:  { icon: 'bg-orange-100 text-orange-500'  },
+        blue:    { icon: 'bg-blue-100 text-blue-500'       },
+        amber:   { icon: 'bg-amber-100 text-amber-600'    },
+        purple:  { icon: 'bg-purple-100 text-purple-600'  },
+        gray:    { icon: 'bg-gray-100 text-gray-400'       },
     };
     const s = styles[accent] ?? styles.gray;
     const count = useCountUp(animateTarget ?? 0);
@@ -129,11 +134,11 @@ function StatCard({ label, value, sub, accent = 'green', icon, trend, animateTar
 
     return (
         <motion.div
-            variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 28 } } }}
-            className={`bg-white border ${s.wrap} rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md transition-shadow duration-200`}
+            variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } } }}
+            className="bg-white rounded-2xl p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow duration-200"
         >
             <div className="flex items-center justify-between">
-                {icon && <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.icon}`}>{icon}</div>}
+                {icon && <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${s.icon}`}>{icon}</div>}
                 {trend !== undefined && (
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${trend >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
                         {trend >= 0 ? '+' : ''}{Math.abs(trend)}%
@@ -142,7 +147,7 @@ function StatCard({ label, value, sub, accent = 'green', icon, trend, animateTar
             </div>
             <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
-                <p className="text-2xl font-extrabold leading-tight text-gray-900">{displayed}</p>
+                <p className="text-2xl font-extrabold leading-tight text-gray-900 tabular-nums">{displayed}</p>
                 {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
             </div>
         </motion.div>
@@ -160,7 +165,7 @@ function TypePill({ type }) {
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
 
-function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved }) {
+function ItemModal({ mode, item, existingCategories, restaurantId, restaurantName, onClose, onSaved }) {
     const [form, setForm] = useState(
         mode === 'add' ? { ...EMPTY_ITEM }
             : { name: item.name, description: item.description ?? '', price: item.price, category: item.category, image_url: item.image_url ?? '', is_available: item.is_available }
@@ -169,16 +174,35 @@ function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved 
     const [processing, setProcessing] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState('');
+    const [imageFile, setImageFile] = useState(null);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     async function handleSubmit(e) {
         e.preventDefault(); setErrors({}); setProcessing(true);
         try {
-            const url = mode === 'add' ? route('owner.items.store') : route('owner.items.update', item.id);
-            const data = await apiFetch(url, mode === 'add' ? 'POST' : 'PATCH', mode === 'add' ? { ...form, restaurant_id: restaurantId } : form);
+            const fd = new FormData();
+            fd.append('name', form.name);
+            fd.append('description', form.description ?? '');
+            fd.append('price', form.price);
+            fd.append('category', form.category);
+            fd.append('is_available', form.is_available ? '1' : '0');
+            if (mode === 'add') fd.append('restaurant_id', restaurantId);
+            if (imageFile) fd.append('image', imageFile);
+            if (mode === 'edit') fd.append('_method', 'PATCH');
+
+            const url = mode === 'add'
+                ? route('owner.items.store')
+                : route('owner.items.update', item.id);
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok) { if (res.status === 422) setErrors(data.errors ?? {}); return; }
             onSaved(data.item, mode);
-        } catch (err) { if (err.status === 422) setErrors(err.data?.errors ?? {}); }
-        finally { setProcessing(false); }
+        } finally { setProcessing(false); }
     }
 
     async function generateDescription() {
@@ -203,37 +227,61 @@ function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved 
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 12 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-7 max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-base font-extrabold text-gray-800">{mode === 'add' ? '+ Add Menu Item' : 'Edit Menu Item'}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-base font-extrabold text-gray-800 tracking-tight">{mode === 'add' ? 'Add Menu Item' : 'Edit Menu Item'}</h2>
+                    <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <Field label="Item Name *" error={errors.name?.[0]}>
-                        <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} placeholder="e.g. Sinigang na Baboy" required />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Category *" error={errors.category?.[0]}>
-                            <input type="text" value={form.category} onChange={e => set('category', e.target.value)} className={inp} placeholder="e.g. Soups" required />
-                        </Field>
-                        <Field label="Price (₱) *" error={errors.price?.[0]}>
-                            <input type="number" step="0.01" min="0" value={form.price} onChange={e => set('price', e.target.value)} className={inp} required />
-                        </Field>
-                    </div>
-                    <Field label="Photo URL" error={errors.image_url?.[0]}>
-                        <input type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)} className={inp} placeholder="https://…" />
-                        {form.image_url && (
-                            <div className="mt-2 rounded-xl overflow-hidden border border-gray-100 h-28 bg-gray-50">
-                                <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+                <form onSubmit={handleSubmit}>
+                    <div className={`space-y-4 ${processing ? 'opacity-60 pointer-events-none' : ''}`}>
+                    {/* Top row: image preview left, core fields right */}
+                    <div className="flex gap-4 items-start">
+                        <div className="flex-shrink-0 w-20 space-y-1.5">
+                            <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Photo</label>
+                            <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
+                                {(imageFile ? URL.createObjectURL(imageFile) : form.image_url)
+                                    ? <img src={imageFile ? URL.createObjectURL(imageFile) : form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+                                    : <ImageIcon cls="w-7 h-7 text-gray-300" />
+                                }
                             </div>
-                        )}
-                    </Field>
+                            <label className="block w-full text-center cursor-pointer">
+                                <span className="text-[10px] text-green-600 font-semibold hover:text-green-700 transition-colors">
+                                    {imageFile ? 'Change' : 'Upload'}
+                                </span>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                    className="hidden"
+                                    onChange={e => { const file = e.target.files[0]; if (file) setImageFile(file); }}
+                                />
+                            </label>
+                            <p className="text-[9px] text-gray-400 text-center leading-tight">Max 2MB</p>
+                            {errors.image?.[0] && <p className="text-[10px] text-red-500">{errors.image[0]}</p>}
+                        </div>
+                        <div className="flex-1 space-y-3">
+                            <Field label="Item Name *" error={errors.name?.[0]}>
+                                <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} placeholder="e.g. Sinigang na Baboy" required />
+                            </Field>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <Field label="Category *" error={errors.category?.[0]}>
+                                    <input type="text" list="cat-suggestions" value={form.category} onChange={e => set('category', e.target.value)} className={inp} placeholder="e.g. Soups" required />
+                                    <datalist id="cat-suggestions">
+                                        {existingCategories.map(c => <option key={c} value={c} />)}
+                                    </datalist>
+                                </Field>
+                                <Field label="Price (₱) *" error={errors.price?.[0]}>
+                                    <input type="number" step="0.01" min="0" value={form.price} onChange={e => set('price', e.target.value)} className={inp} required />
+                                </Field>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Description */}
                     <Field label="Description" error={errors.description?.[0]}>
                         <div className="relative">
                             <textarea value={form.description} onChange={e => set('description', e.target.value)}
-                                className={inp + ' resize-none pr-28'} rows={3} placeholder="Short appetizing description…" />
+                                className={inp + ' resize-none pr-28'} rows={4} placeholder="Short appetizing description…" />
                             <button type="button" onClick={generateDescription} disabled={aiLoading}
                                 className="absolute right-2 bottom-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 disabled:opacity-60 transition-colors">
                                 <SparkleIcon cls="w-3.5 h-3.5" />
@@ -242,16 +290,18 @@ function ItemModal({ mode, item, restaurantId, restaurantName, onClose, onSaved 
                         </div>
                         {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
                     </Field>
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={form.is_available} onChange={e => set('is_available', e.target.checked)}
-                            className="rounded border-gray-300 text-green-500 focus:ring-green-400" />
+                    <button type="button" onClick={() => set('is_available', !form.is_available)} className="flex items-center gap-3 select-none">
+                        <div className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${form.is_available ? 'bg-green-500' : 'bg-gray-200'}`}>
+                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${form.is_available ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </div>
                         <span className="text-sm text-gray-700">Available now</span>
-                    </label>
-                    <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                    </button>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-100">
                         <button type="button" onClick={onClose}
                             className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
                         <button type="submit" disabled={processing}
-                            className="px-5 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-50 transition-colors">
+                            className="px-6 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-50 transition-colors shadow-sm shadow-green-200">
                             {processing ? 'Saving…' : mode === 'add' ? 'Add Item' : 'Save Changes'}
                         </button>
                     </div>
@@ -267,6 +317,7 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
     const [form, setForm] = useState(mode === 'add' ? { ...EMPTY_VOUCHER } : { code: voucher.code, type: voucher.type, value: voucher.value, min_order_amount: voucher.min_order_amount ?? '', max_uses: voucher.max_uses ?? '', is_active: voucher.is_active, expires_at: voucher.expires_at ? voucher.expires_at.slice(0, 10) : '' });
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+    const [codeFlash, setCodeFlash] = useState(false);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     async function handleSubmit(e) {
@@ -279,6 +330,15 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
         finally { setProcessing(false); }
     }
 
+    function handleCodeBlur() {
+        if (form.code) { setCodeFlash(true); setTimeout(() => setCodeFlash(false), 600); }
+    }
+
+    const fv = {
+        hidden: { opacity: 0, y: 6 },
+        show: i => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.2 } }),
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -287,41 +347,161 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
             <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97, y: 8 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="bg-green-50 border-b border-green-100 px-6 py-5 flex items-start justify-between">
+                    <div>
+                        <h2 className="text-base font-extrabold text-gray-800 tracking-tight">
+                            {mode === 'add' ? 'Create Voucher' : 'Edit Voucher'}
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Set up a discount code for your customers.</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-green-100 transition-colors ml-4 flex-shrink-0"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    {/* Body */}
+                    <div className={`px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto transition-opacity duration-150 ${processing ? 'opacity-60 pointer-events-none' : ''}`}>
+
+                        {/* Code */}
+                        <motion.div custom={0} variants={fv} initial="hidden" animate="show">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                                Voucher Code <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                                type="text" value={form.code}
+                                onChange={e => set('code', e.target.value.toUpperCase())}
+                                onBlur={handleCodeBlur}
+                                className={`w-full px-3 py-2.5 rounded-xl border text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-150 font-mono tracking-widest uppercase bg-white ${codeFlash ? 'border-green-400' : 'border-gray-200'}`}
+                                placeholder="e.g. WELCOME20"
+                                required
+                            />
+                            {errors.code?.[0] && <p className="text-xs text-red-500 mt-1">{errors.code[0]}</p>}
+                        </motion.div>
+
+                        {/* Type + Value */}
+                        <motion.div custom={1} variants={fv} initial="hidden" animate="show" className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Type <span className="text-red-400">*</span></label>
+                                <div className="relative">
+                                    <select value={form.type} onChange={e => set('type', e.target.value)} className={inp + ' appearance-none pr-8'}>
+                                        <option value="percentage">Percentage (%)</option>
+                                        <option value="fixed">Fixed (₱)</option>
+                                    </select>
+                                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                                    {form.type === 'percentage' ? 'Value (%)' : 'Value (₱)'} <span className="text-red-400">*</span>
+                                </label>
+                                <input type="number" step="0.01" min="0" max={form.type === 'percentage' ? 100 : undefined} value={form.value} onChange={e => set('value', e.target.value)} className={inp} required />
+                                {errors.value?.[0] && <p className="text-xs text-red-500 mt-1">{errors.value[0]}</p>}
+                            </div>
+                        </motion.div>
+
+                        {/* Min Order + Max Uses */}
+                        <motion.div custom={2} variants={fv} initial="hidden" animate="show" className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Min. Order</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₱</span>
+                                    <input type="number" step="0.01" min="0" value={form.min_order_amount} onChange={e => set('min_order_amount', e.target.value)} className={inp + ' pl-7'} placeholder="Optional" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Max Uses</label>
+                                <input type="number" min="1" value={form.max_uses} onChange={e => set('max_uses', e.target.value)} className={inp} placeholder="Unlimited" />
+                            </div>
+                        </motion.div>
+
+                        {/* Expires At */}
+                        <motion.div custom={3} variants={fv} initial="hidden" animate="show">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Expires At</label>
+                            <div className="relative">
+                                <input type="date" value={form.expires_at} onChange={e => set('expires_at', e.target.value)} className={inp + ' pr-10'} />
+                                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                            </div>
+                        </motion.div>
+
+                        {/* Active toggle */}
+                        <motion.div custom={4} variants={fv} initial="hidden" animate="show">
+                            <button type="button" onClick={() => set('is_active', !form.is_active)} className="flex items-center gap-3 select-none">
+                                <div className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${form.is_active ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${form.is_active ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
+                                <span className="text-sm font-medium text-gray-700">{form.is_active ? 'Active' : 'Paused'}</span>
+                            </button>
+                        </motion.div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                        <button type="submit" disabled={processing} className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-60 transition-colors shadow-sm shadow-green-200">
+                            {processing && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                            {processing ? 'Saving…' : mode === 'add' ? 'Create Voucher' : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+
+function DeleteConfirmModal({ confirm, onCancel, onConfirm }) {
+    const [processing, setProcessing] = useState(false);
+    async function handleConfirm() {
+        setProcessing(true);
+        await onConfirm();
+        setProcessing(false);
+    }
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+        >
+            <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 12 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-base font-extrabold text-gray-800">{mode === 'add' ? 'Create Voucher' : 'Edit Voucher'}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+                <h2 className="text-base font-extrabold text-gray-800 mb-2">
+                    Delete {confirm.type === 'item' ? `"${confirm.target.name}"` : 'voucher'}?
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                    {confirm.type === 'item'
+                        ? "This can't be undone."
+                        : `Voucher ${confirm.target.code} will be permanently deleted.`}
+                </p>
+                <div className="flex justify-end gap-3">
+                    <button type="button" onClick={onCancel}
+                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" onClick={handleConfirm} disabled={processing}
+                        className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-50 transition-colors">
+                        {processing ? 'Deleting…' : 'Yes, delete'}
+                    </button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-3.5">
-                    <Field label="Code *" error={errors.code?.[0]}>
-                        <input type="text" value={form.code} onChange={e => set('code', e.target.value.toUpperCase())} className={inp} placeholder="SAVE20" required />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Type *"><select value={form.type} onChange={e => set('type', e.target.value)} className={inp}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed (₱)</option></select></Field>
-                        <Field label={form.type === 'percentage' ? 'Value (%)' : 'Value (₱)'} error={errors.value?.[0]}>
-                            <input type="number" step="0.01" min="0" max={form.type === 'percentage' ? 100 : undefined} value={form.value} onChange={e => set('value', e.target.value)} className={inp} required />
-                        </Field>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Min. Order (₱)"><input type="number" step="0.01" min="0" value={form.min_order_amount} onChange={e => set('min_order_amount', e.target.value)} className={inp} placeholder="Optional" /></Field>
-                        <Field label="Max Uses"><input type="number" min="1" value={form.max_uses} onChange={e => set('max_uses', e.target.value)} className={inp} placeholder="Unlimited" /></Field>
-                    </div>
-                    <Field label="Expires At"><input type="date" value={form.expires_at} onChange={e => set('expires_at', e.target.value)} className={inp} /></Field>
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} className="rounded border-gray-300 text-green-500 focus:ring-green-400" />
-                        <span className="text-sm text-gray-700">Active</span>
-                    </label>
-                    <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                        <button type="submit" disabled={processing} className="px-5 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-50 transition-colors">{processing ? 'Saving…' : 'Save'}</button>
-                    </div>
-                </form>
             </motion.div>
         </motion.div>
     );
@@ -332,10 +512,10 @@ function VoucherModal({ mode, voucher, restaurantId, onClose, onSaved }) {
 function OrderCard({ order, onAdvance }) {
     const isPending = order.status === 'pending';
     return (
-        <div className={`bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all duration-200 ${isPending ? 'border-l-4 border-l-amber-400' : ''}`}>
+        <div className={`bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 ${isPending ? 'border-l-[3px] border-l-amber-400' : ''}`}>
             <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-extrabold text-gray-800">Order #{order.id}</span>
+                    <span className="text-sm font-extrabold text-gray-800">Order #{formatOrderId(order.id)}</span>
                     <TypePill type={order.order_type} />
                     <StatusPill status={order.status} />
                 </div>
@@ -358,14 +538,22 @@ function OrderCard({ order, onAdvance }) {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
                 <div className="text-sm">
                     <span className="text-gray-500">Total </span>
-                    <span className="font-extrabold text-gray-800">₱{fmt(order.final_amount ?? order.total_amount)}</span>
+                    <span className="font-extrabold text-gray-800 tabular-nums">₱{fmt(order.final_amount ?? order.total_amount)}</span>
                     {Number(order.delivery_fee) > 0 && <span className="text-xs text-gray-400 ml-1">(+₱{fmt(order.delivery_fee)} delivery)</span>}
                 </div>
                 {onAdvance && NEXT_STATUS[order.status] ? (
-                    <button onClick={() => onAdvance(order)}
-                        className="px-4 py-1.5 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-95 transition-all">
-                        Mark as {cap(NEXT_STATUS[order.status])}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onAdvance(order, NEXT_STATUS[order.status])}
+                            className="px-6 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 active:scale-95 transition-all shadow-sm shadow-green-200">
+                            Mark as {cap(NEXT_STATUS[order.status])}
+                        </button>
+                        {(order.status === 'pending' || order.status === 'accepted') && (
+                            <button onClick={() => onAdvance(order, 'cancelled')}
+                                className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 active:scale-95 transition-all">
+                                Cancel
+                            </button>
+                        )}
+                    </div>
                 ) : order.status === 'ready' ? (
                     <span className="text-xs font-semibold text-green-600">✓ Ready for {order.order_type === 'delivery' ? 'dispatch' : 'pickup'}</span>
                 ) : null}
@@ -378,7 +566,7 @@ function OrderCard({ order, onAdvance }) {
 
 function ChartCard({ title, subtitle, dot = 'bg-green-500', children, actions }) {
     return (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${dot}`} />
@@ -398,16 +586,206 @@ function OverviewTab({ restaurant, onSwitchTab }) {
     const orders = restaurant.orders ?? [];
     const items  = restaurant.menu_items ?? [];
     const [chartRange, setChartRange] = useState('week');
+    const [exporting, setExporting]     = useState(false);
+    const [exportRange, setExportRange] = useState('month');
+    const [exportError, setExportError] = useState('');
+    const [exportSuccess, setExportSuccess] = useState(false);
+
+    async function handleExport() {
+        setExporting(true);
+        setExportError('');
+        try {
+            const params = new URLSearchParams({
+                restaurant_id: restaurant.id,
+                range: exportRange,
+            });
+            const res = await fetch(`/owner/export/sales?${params}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF(),
+                },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) throw new Error('Export failed');
+            const data = await res.json();
+            generatePDF(data);
+            setExportSuccess(true);
+            setTimeout(() => setExportSuccess(false), 2000);
+        } catch {
+            setExportError('Could not generate report. Try again.');
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    function generatePDF(data) {
+        const { restaurant: r, range, generated_at, summary, top_items, orders: ords } = data;
+
+        const rangeLabels = { today: 'Today', week: 'This Week', month: 'This Month', all: 'All Time' };
+
+        const fmt = n => '₱' + Number(n || 0).toLocaleString('en-PH', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+
+        const fmtDate = d => new Date(d).toLocaleDateString('en-PH', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+        });
+
+        const statusLabel = {
+            pending: 'Pending', accepted: 'Accepted', preparing: 'Preparing',
+            ready: 'Ready', completed: 'Completed', cancelled: 'Cancelled',
+        };
+
+        const ordersHTML = ords.map(o => `
+            <div class="order-block">
+                <div class="order-header">
+                    <span class="order-id">Order #${String(o.id).padStart(5, '0')}</span>
+                    <span class="order-meta">${fmtDate(o.created_at)}</span>
+                    <span class="order-meta">${o.customer_name}</span>
+                    <span class="order-meta">${o.order_type.toUpperCase()}</span>
+                    <span class="status-badge status-${o.status}">${statusLabel[o.status] ?? o.status}</span>
+                </div>
+                ${o.delivery_address ? `<div class="delivery-addr">&#128205; ${o.delivery_address}</div>` : ''}
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="right">Qty</th>
+                            <th class="right">Unit Price</th>
+                            <th class="right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${o.items.map(i => `
+                            <tr>
+                                <td>${i.name}</td>
+                                <td class="right">${i.quantity}</td>
+                                <td class="right">${fmt(i.unit_price)}</td>
+                                <td class="right">${fmt(i.subtotal)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="order-totals">
+                    ${Number(o.discount_amount) > 0
+                        ? `<div class="total-row"><span>Subtotal</span><span>${fmt(o.total_amount)}</span></div>
+                           <div class="total-row discount"><span>Discount${o.voucher_code ? ` (${o.voucher_code})` : ''}</span><span>- ${fmt(o.discount_amount)}</span></div>`
+                        : ''}
+                    ${Number(o.delivery_fee) > 0
+                        ? `<div class="total-row"><span>Delivery Fee</span><span>${fmt(o.delivery_fee)}</span></div>`
+                        : ''}
+                    <div class="total-row final"><span>Total</span><span>${fmt(o.final_amount)}</span></div>
+                </div>
+            </div>
+        `).join('');
+
+        const topItemsHTML = Object.entries(top_items).map(([name, d]) => `
+            <tr>
+                <td>${name}</td>
+                <td class="right">${d.qty}</td>
+                <td class="right">${fmt(d.revenue)}</td>
+            </tr>
+        `).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sales Report &#8212; ${r.name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; color: #1f2937; padding: 32px 40px; }
+        .header { border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h1 { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 2px; }
+        .header p { color: #6b7280; font-size: 11px; }
+        .header .range-badge { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 99px; margin-top: 6px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #374151; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+        .summary-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }
+        .summary-card .label { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+        .summary-card .value { font-size: 17px; font-weight: 800; color: #111827; }
+        .summary-card .sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9fafb; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; }
+        .right { text-align: right; }
+        .order-block { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; page-break-inside: avoid; }
+        .order-header { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        .order-id { font-weight: 700; font-size: 13px; }
+        .order-meta { color: #6b7280; font-size: 11px; }
+        .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: auto; }
+        .status-completed { background:#dcfce7; color:#166534; }
+        .status-cancelled { background:#fee2e2; color:#991b1b; }
+        .status-ready     { background:#d1fae5; color:#065f46; }
+        .status-preparing { background:#dbeafe; color:#1e40af; }
+        .status-accepted  { background:#cffafe; color:#155e75; }
+        .status-pending   { background:#fef3c7; color:#92400e; }
+        .delivery-addr { font-size: 11px; color: #ea580c; background: #fff7ed; border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; }
+        .items-table { margin-bottom: 8px; }
+        .items-table th, .items-table td { font-size: 11px; padding: 5px 8px; }
+        .order-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; border-top: 1px solid #f3f4f6; padding-top: 6px; }
+        .total-row { display: flex; gap: 16px; font-size: 11px; }
+        .total-row.discount { color: #16a34a; }
+        .total-row.final { font-weight: 800; font-size: 13px; color: #111827; margin-top: 2px; }
+        .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: center; }
+        @media print { body { padding: 20px 28px; } .order-block { page-break-inside: avoid; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${r.name}</h1>
+        <p>${r.municipality}, Laguna, Philippines</p>
+        <span class="range-badge">${rangeLabels[range] ?? range}</span>
+        <p style="margin-top:6px;color:#9ca3af">Generated: ${fmtDate(generated_at)}</p>
+    </div>
+    <div class="section-title">Summary</div>
+    <div class="summary-grid">
+        <div class="summary-card"><div class="label">Total Revenue</div><div class="value">${fmt(summary.total_revenue)}</div></div>
+        <div class="summary-card"><div class="label">Total Orders</div><div class="value">${summary.total_orders}</div><div class="sub">${summary.completed_orders} completed &middot; ${summary.cancelled_orders} cancelled</div></div>
+        <div class="summary-card"><div class="label">Avg. Order Value</div><div class="value">${fmt(summary.avg_order_value)}</div></div>
+        <div class="summary-card"><div class="label">Pickup</div><div class="value">${fmt(summary.pickup_revenue)}</div><div class="sub">${summary.pickup_orders} orders</div></div>
+        <div class="summary-card"><div class="label">Delivery</div><div class="value">${fmt(summary.delivery_revenue)}</div><div class="sub">${summary.delivery_orders} orders</div></div>
+    </div>
+    ${Object.keys(top_items).length > 0 ? `
+    <div class="section-title">Top Menu Items</div>
+    <table><thead><tr><th>Item</th><th class="right">Qty Sold</th><th class="right">Revenue</th></tr></thead><tbody>${topItemsHTML}</tbody></table>
+    ` : ''}
+    <div class="section-title">Orders (${ords.length})</div>
+    ${ords.length === 0 ? '<p style="color:#9ca3af;font-size:12px">No orders for this period.</p>' : ordersHTML}
+    <div class="footer">Hapag &middot; Sales Report &middot; ${r.name} &middot; Generated ${fmtDate(generated_at)}</div>
+</body>
+</html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;';
+        document.body.appendChild(iframe);
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+        iframe.onload = () => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => document.body.removeChild(iframe), 1000);
+        };
+    }
 
     const now = new Date();
     const today = now.toDateString();
 
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+
     const todayTotal  = useMemo(() => orders.filter(o => new Date(o.created_at).toDateString() === today).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
     const totalIncome = useMemo(() => orders.reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
-    const weekTotal   = useMemo(() => orders.filter(o => (now - new Date(o.created_at)) < 7 * 86400000).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
+    const weekTotal   = useMemo(() => orders.filter(o => new Date(o.created_at) >= startOfWeek).reduce((s, o) => s + Number(o.final_amount ?? 0), 0), [orders]);
     const pending     = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
     const available   = useMemo(() => items.filter(i => i.is_available).length, [items]);
     const avgOrderValue = orders.length > 0 ? totalIncome / orders.length : 0;
+    const isDataCapped  = orders.length >= 100;
+    const cappedNote    = isDataCapped ? ' · dashboard shows last 100 orders' : '';
 
     const ordersByStatus = useMemo(() => {
         const counts = { pending: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };
@@ -427,9 +805,8 @@ function OverviewTab({ restaurant, onSwitchTab }) {
         });
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
         if (sorted.length > 0) return sorted.map(([name, count]) => ({ name: name.length > 18 ? name.slice(0, 16) + '…' : name, count }));
-        return [...items].sort((a, b) => b.price - a.price).slice(0, 5)
-            .map(i => ({ name: i.name.length > 18 ? i.name.slice(0, 16) + '…' : i.name, count: Number(i.price) }));
-    }, [orders, items]);
+        return [];
+    }, [orders]);
 
     const { incomeData, volumeData } = useMemo(() => {
         const filt = o => {
@@ -502,22 +879,22 @@ function OverviewTab({ restaurant, onSwitchTab }) {
         <div className="space-y-6">
 
             {/* Welcome banner */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 text-white">
+            <div className="bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 rounded-2xl p-6 sm:p-8 text-white">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <p className="text-green-100 text-xs font-semibold uppercase tracking-widest mb-1">Good day</p>
-                        <h2 className="text-xl font-extrabold">{restaurant.name}</h2>
+                        <p className="text-green-100/80 text-xs font-semibold uppercase tracking-widest mb-1.5">Good day</p>
+                        <h2 className="text-xl font-extrabold tracking-tight">{restaurant.name}</h2>
                         <div className="flex items-center gap-2 mt-1">
                             <span className={`w-1.5 h-1.5 rounded-full ${restaurant.status === 'active' ? 'bg-green-200 animate-pulse' : 'bg-white/40'}`} />
-                            <p className="text-green-100 text-sm">{restaurant.municipality} · {cap(restaurant.status)}</p>
+                            <p className="text-green-100/80 text-sm">{restaurant.municipality} · {cap(restaurant.status)}</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-green-100 text-xs mb-1">{fmtDate()}</p>
-                        <p className="text-green-100 text-xs">Today's Revenue</p>
-                        <p className="text-3xl font-extrabold">₱{fmt(todayTotal)}</p>
+                        <p className="text-green-100/70 text-xs mb-0.5">{fmtDate()}</p>
+                        <p className="text-green-100/80 text-xs font-medium mb-1">Today's Revenue</p>
+                        <p className="text-4xl font-extrabold tracking-tight tabular-nums">₱{fmt(todayTotal)}</p>
                         {pending > 0 && (
-                            <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-3 py-1">
+                            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-3 py-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
                                 <span className="text-xs font-bold text-white">{pending} pending order{pending !== 1 ? 's' : ''}</span>
                             </div>
@@ -525,6 +902,68 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                     </div>
                 </div>
             </div>
+
+            {/* Export Sales Report */}
+            <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.05 }}
+                className="bg-white border border-gray-200 rounded-2xl p-5"
+            >
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    {/* Left: icon + text */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                            <ChartBarIcon cls="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-base font-extrabold text-gray-800 leading-tight">Sales Report</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Export your revenue and order data as a PDF.</p>
+                        </div>
+                    </div>
+                    {/* Right: range + button */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="relative">
+                            <select
+                                value={exportRange}
+                                onChange={e => setExportRange(e.target.value)}
+                                className="h-10 pl-3 pr-8 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white appearance-none transition-all duration-150"
+                            >
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="all">All Time</option>
+                            </select>
+                            <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <motion.button
+                            onClick={handleExport}
+                            disabled={exporting}
+                            whileTap={{ scale: 0.97 }}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm disabled:opacity-60 ${exportSuccess ? 'bg-green-600 text-white shadow-green-200' : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'}`}
+                        >
+                            {exporting ? (
+                                <>
+                                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                    <span className="animate-pulse">Generating…</span>
+                                </>
+                            ) : exportSuccess ? (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                    Done
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                    Download PDF
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
+                </div>
+                {exportError && <p className="text-xs text-red-500 mt-3">{exportError}</p>}
+                <p className="text-xs text-gray-400 mt-2 md:hidden">Opens your browser's print dialog — select Save as PDF as the destination.</p>
+            </motion.div>
 
             {/* 6 Stat cards */}
             <motion.div
@@ -534,13 +973,13 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                 initial="hidden"
                 animate="show"
             >
-                <StatCard label="Total Income" sub="All-time revenue" accent="green"
+                <StatCard label="Total Income" sub={`All-time revenue${cappedNote}`} accent="green"
                     animateTarget={totalIncome} formatValue={v => `₱${fmt(v)}`}
                     icon={<MoneyIcon cls="w-5 h-5" />} />
                 <StatCard label="Today's Revenue" sub="Revenue today" accent="emerald"
                     animateTarget={todayTotal} formatValue={v => `₱${fmt(v)}`}
                     icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-                <StatCard label="Total Orders" sub="All-time orders" accent="blue"
+                <StatCard label="Total Orders" sub={`All-time orders${cappedNote}`} accent="blue"
                     animateTarget={orders.length} formatValue={v => String(Math.round(v))}
                     icon={<ListIcon cls="w-5 h-5" />} />
                 <StatCard label="Pending Orders" sub={pending > 0 ? 'Need attention' : 'All caught up'} accent={pending > 0 ? 'amber' : 'gray'}
@@ -549,7 +988,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                 <StatCard label="Menu Items" sub={`${available} available`} accent="orange"
                     value={`${available}/${items.length}`}
                     icon={<MenuItemsIcon cls="w-5 h-5" />} />
-                <StatCard label="Avg. Order Value" sub="Per transaction" accent="purple"
+                <StatCard label="Avg. Order Value" sub={`Per transaction${cappedNote}`} accent="purple"
                     animateTarget={avgOrderValue} formatValue={v => `₱${fmt(v)}`}
                     icon={<AvgIcon cls="w-5 h-5" />} />
             </motion.div>
@@ -635,7 +1074,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                     )}
                 </ChartCard>
 
-                <ChartCard title="Top Menu Items" subtitle={topItems.length > 0 && orders.some(o => o.items?.length) ? 'By order frequency' : 'By price (order data unavailable)'} dot="bg-orange-400">
+                <ChartCard title="Top Menu Items" subtitle="By order frequency" dot="bg-orange-400">
                     {topItems.length === 0 ? (
                         <div className="flex items-center justify-center h-48 text-gray-300 text-xs">No menu items yet</div>
                     ) : (
@@ -653,10 +1092,10 @@ function OverviewTab({ restaurant, onSwitchTab }) {
             </div>
 
             {/* Recent orders */}
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-gray-400" />
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
                         <h3 className="text-sm font-extrabold text-gray-800">Recent Orders</h3>
                     </div>
                     <button onClick={() => onSwitchTab('orders')}
@@ -674,9 +1113,9 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                     </div>
                     : <div className="divide-y divide-gray-50">
                         {orders.slice(0, 6).map(o => (
-                            <div key={o.id} className={`flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 hover:bg-gray-50/60 transition-colors ${o.status === 'pending' ? 'border-l-2 border-l-amber-300' : ''}`}>
+                            <div key={o.id} className={`flex flex-wrap items-center justify-between gap-2 px-5 py-4 hover:bg-gray-50 transition-colors ${o.status === 'pending' ? 'border-l-[3px] border-l-amber-400' : ''}`}>
                                 <div className="flex items-center gap-2.5">
-                                    <span className="text-xs font-extrabold text-gray-400 w-8">#{o.id}</span>
+                                    <span className="text-xs font-extrabold text-gray-400 w-8">#{formatOrderId(o.id)}</span>
                                     <TypePill type={o.order_type} />
                                     <StatusPill status={o.status} />
                                     <span className="text-xs text-gray-600 font-medium hidden sm:inline">{o.user?.name ?? 'Customer'}</span>
@@ -692,12 +1131,15 @@ function OverviewTab({ restaurant, onSwitchTab }) {
             </div>
 
             {/* Roadmap card */}
-            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-gray-300" />
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide">Roadmap — What's Next</h3>
+            <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-600">What's next</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">Upcoming features in development</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-200 border border-gray-300 px-2.5 py-1 rounded-full uppercase tracking-wider">In progress</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     {[
                         'Real-time order notifications via WebSockets',
                         'Customer reviews and ratings per menu item',
@@ -711,7 +1153,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                         <div key={i} className="flex items-center gap-2.5 py-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
                             <p className="text-xs text-gray-400 flex-1">{item}</p>
-                            <span className="text-[10px] font-semibold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap">Soon</span>
+                            <span className="text-[10px] font-semibold text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap">Soon</span>
                         </div>
                     ))}
                 </div>
@@ -725,19 +1167,23 @@ function OverviewTab({ restaurant, onSwitchTab }) {
 function OrdersTab({ restaurant, onAdvance }) {
     const orders = restaurant.orders ?? [];
     const [filter, setFilter] = useState('pending');
-    const counts = { pending: orders.filter(o => o.status === 'pending').length, preparing: orders.filter(o => o.status === 'preparing').length, ready: orders.filter(o => o.status === 'ready').length };
-    const FILTERS = [{ k: 'pending', label: `Pending (${counts.pending})` }, { k: 'preparing', label: `Preparing (${counts.preparing})` }, { k: 'ready', label: `Ready (${counts.ready})` }, { k: 'all', label: `All (${orders.length})` }];
-    const visible = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+    const counts = { pending: orders.filter(o => o.status === 'pending').length, accepted: orders.filter(o => o.status === 'accepted').length, preparing: orders.filter(o => o.status === 'preparing').length, ready: orders.filter(o => o.status === 'ready').length };
+    const activeCount = orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)).length;
+    const FILTERS = [{ k: 'pending', label: `Pending (${counts.pending})` }, { k: 'accepted', label: `Accepted (${counts.accepted})` }, { k: 'preparing', label: `Preparing (${counts.preparing})` }, { k: 'ready', label: `Ready (${counts.ready})` }, { k: 'all', label: `All Active (${activeCount})` }];
+    const visible = filter === 'all' ? orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)) : orders.filter(o => o.status === filter);
     return (
         <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
                 {FILTERS.map(f => (
                     <button key={f.k} onClick={() => setFilter(f.k)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors ${filter === f.k ? 'bg-green-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${filter === f.k ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
                         {f.label}
                     </button>
                 ))}
             </div>
+            {orders.some(o => o.status === 'completed' || o.status === 'cancelled') && (
+                <p className="text-xs text-gray-400">Completed and cancelled orders are in Order History.</p>
+            )}
             {visible.length === 0
                 ? <div className="bg-white border border-gray-200 rounded-2xl flex flex-col items-center justify-center py-16 gap-2">
                     <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-1"><ListIcon cls="w-6 h-6 text-gray-300" /></div>
@@ -801,8 +1247,8 @@ function MenuTab({ restaurant, onToggle, onDelete, onOpenAdd, onOpenEdit }) {
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {catItems.map(item => (
-                                        <div key={item.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200 group">
-                                            <div className="relative h-36 overflow-hidden">
+                                        <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group">
+                                            <div className="relative h-44 overflow-hidden">
                                                 {item.image_url ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} /> : null}
                                                 <div className={`${item.image_url ? 'hidden' : 'flex'} w-full h-full bg-gradient-to-br ${catColor(cat)} items-center justify-center`}>
                                                     <ImageIcon cls="w-8 h-8 text-white/60" />
@@ -839,7 +1285,7 @@ function MenuTab({ restaurant, onToggle, onDelete, onOpenAdd, onOpenEdit }) {
                                 </div>
                                 <div className="divide-y divide-gray-50">
                                     {catItems.map(item => (
-                                        <div key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50/50 transition-colors">
+                                        <div key={item.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50/50 transition-colors ${item.is_available ? 'border-l-2 border-l-green-500' : 'border-l-2 border-l-transparent'}`}>
                                             <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
                                                 {item.image_url ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} /> : null}
                                                 <div className={`${item.image_url ? 'hidden' : 'flex'} w-full h-full bg-gradient-to-br ${catColor(cat)} items-center justify-center`}><ImageIcon cls="w-5 h-5 text-white/60" /></div>
@@ -896,12 +1342,12 @@ function VouchersTab({ restaurant, onOpenAdd, onOpenEdit, onDelete }) {
                         </tr></thead>
                         <tbody className="divide-y divide-gray-100">
                             {vouchers.map(v => (
-                                <tr key={v.id} className="hover:bg-gray-50/50 transition-colors">
+                                <tr key={v.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50/80 transition-colors">
                                     <td className="px-4 py-3"><span className="font-bold text-gray-800 tracking-widest font-mono text-xs">{v.code}</span></td>
                                     <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{v.type === 'percentage' ? `${Number(v.value)}% off` : `₱${fmt(v.value)} off`}{v.min_order_amount && <span className="text-xs text-gray-400 ml-1">(min ₱{Number(v.min_order_amount).toFixed(0)})</span>}</td>
                                     <td className="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">{v.expires_at ? new Date(v.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-300">No expiry</span>}</td>
                                     <td className="px-4 py-3 text-xs text-gray-500 text-center hidden md:table-cell">{v.used_count ?? 0}/{v.max_uses ?? '∞'}</td>
-                                    <td className="px-4 py-3 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${v.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{v.is_active ? 'Active' : 'Inactive'}</span></td>
+                                    <td className="px-4 py-3 text-center"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${v.is_active ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>{v.is_active ? 'Active' : 'Inactive'}</span></td>
                                     <td className="px-4 py-3"><div className="flex items-center gap-2 justify-end">
                                         <button onClick={() => onOpenEdit(v)} className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Edit</button>
                                         <button onClick={() => onDelete(v)} className="px-2.5 py-1 rounded-lg border border-red-100 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors">Delete</button>
@@ -920,10 +1366,14 @@ function VouchersTab({ restaurant, onOpenAdd, onOpenEdit, onDelete }) {
 
 function HistoryTab({ restaurant }) {
     const orders = restaurant.orders ?? [];
+    const [dateFilter, setDateFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [search, setSearch] = useState('');
     const visible = orders.filter(o => {
+        if (dateFilter === 'today' && new Date(o.created_at).toDateString() !== new Date().toDateString()) return false;
+        if (dateFilter === 'week' && (Date.now() - new Date(o.created_at)) >= 7 * 86400000) return false;
+        if (dateFilter === 'month' && (Date.now() - new Date(o.created_at)) >= 30 * 86400000) return false;
         if (statusFilter !== 'all' && o.status !== statusFilter) return false;
         if (typeFilter !== 'all' && o.order_type !== typeFilter) return false;
         if (search && !`${o.id} ${o.user?.name ?? ''}`.toLowerCase().includes(search.toLowerCase())) return false;
@@ -931,27 +1381,45 @@ function HistoryTab({ restaurant }) {
     });
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap gap-3 items-center">
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
-                    className="px-3 py-1.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 w-48" />
-                <div className="flex gap-1.5 flex-wrap">
-                    {['all', 'pending', 'preparing', 'ready'].map(s => (
-                        <button key={s} onClick={() => setStatusFilter(s)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                            {s === 'all' ? 'All Status' : cap(s)}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex gap-1.5 flex-wrap">
-                    {['all', 'pickup', 'delivery'].map(t => (
-                        <button key={t} onClick={() => setTypeFilter(t)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                            {t === 'all' ? 'All Types' : cap(t)}
-                        </button>
-                    ))}
-                </div>
+            <div className="flex gap-1.5 flex-wrap items-center">
+                {[{ k: 'all', label: 'All' }, { k: 'today', label: 'Today' }, { k: 'week', label: 'This Week' }, { k: 'month', label: 'This Month' }].map(({ k, label }) => (
+                    <button key={k} onClick={() => setDateFilter(k)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${dateFilter === k ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                        {label}
+                    </button>
+                ))}
             </div>
-            <p className="text-xs text-gray-400">{visible.length} order{visible.length !== 1 ? 's' : ''} found</p>
+            <div className="flex flex-wrap gap-2 items-center">
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
+                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/10 w-48 transition-all" />
+                <details className="group">
+                    <summary className="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 cursor-pointer list-none select-none">
+                        Filters ▾
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                        <div className="flex gap-1.5 flex-wrap">
+                            {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
+                                <button key={s} onClick={() => setStatusFilter(s)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                    {s === 'all' ? 'All Status' : cap(s)}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                            {['all', 'pickup', 'delivery'].map(t => (
+                                <button key={t} onClick={() => setTypeFilter(t)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                    {t === 'all' ? 'All Types' : cap(t)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </details>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Results</span>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">{visible.length}</span>
+            </div>
             {visible.length === 0
                 ? <div className="bg-white border border-gray-200 rounded-2xl flex items-center justify-center py-16"><p className="text-gray-400 text-sm">No orders match.</p></div>
                 : <div className="space-y-3">{visible.map(o => <OrderCard key={o.id} order={o} onAdvance={null} />)}</div>
@@ -962,66 +1430,336 @@ function HistoryTab({ restaurant }) {
 
 // ─── Tab: Settings ────────────────────────────────────────────────────────────
 
-function SettingsTab({ restaurant }) {
-    const [form, setForm] = useState({ name: restaurant.name ?? '', description: restaurant.description ?? '', municipality: restaurant.municipality ?? '', address: restaurant.address ?? '', image_url: restaurant.image_url ?? '', opening_time: restaurant.opening_time ?? '', closing_time: restaurant.closing_time ?? '' });
+function SettingsTab({ restaurant, categories, onDirtyChange }) {
+    const [form, setForm] = useState({
+        name: restaurant.name ?? '',
+        description: restaurant.description ?? '',
+        category_id: restaurant.category_id ?? '',
+        municipality: restaurant.municipality ?? '',
+        address: restaurant.address ?? '',
+        image_url: restaurant.image_url ?? '',
+        opening_time: restaurant.opening_time ?? '',
+        closing_time: restaurant.closing_time ?? ''
+    });
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errors, setErrors] = useState({});
-    const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setSuccess(false); };
+    const [isDirty, setIsDirty] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
+
+    useEffect(() => { onDirtyChange?.(isDirty); }, [isDirty]);
+
+    const set = (k, v) => {
+        setForm(p => ({ ...p, [k]: v }));
+        setSuccess(false);
+        setIsDirty(true);
+    };
 
     async function handleSave(e) {
-        e.preventDefault(); setErrors({}); setSaving(true); setSuccess(false);
-        try { await apiFetch(route('owner.settings.update', restaurant.id), 'PATCH', form); setSuccess(true); }
-        catch (err) { if (err.status === 422) setErrors(err.data?.errors ?? {}); }
-        finally { setSaving(false); }
+        e.preventDefault();
+        setErrors({});
+        setSaving(true);
+        setSuccess(false);
+        try {
+            const fd = new FormData();
+            Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== undefined) fd.append(k, v); });
+            if (imageFile) fd.append('image', imageFile);
+            fd.append('_method', 'PATCH');
+
+            const res = await fetch(route('owner.settings.update', restaurant.id), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok) { if (res.status === 422) setErrors(data.errors ?? {}); return; }
+            setSuccess(true);
+            setIsDirty(false);
+            setImageFile(null);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    function fmtTime(t) {
+        if (!t) return null;
+        const [h, m] = t.split(':');
+        const hour = parseInt(h, 10);
+        return `${hour > 12 ? hour - 12 : hour || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
     }
 
     return (
-        <div className="max-w-xl space-y-4">
-            <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                <h2 className="text-sm font-extrabold text-gray-800 mb-5">Restaurant Settings</h2>
-                <form onSubmit={handleSave} className="space-y-4">
-                    <Field label="Restaurant Name *" error={errors.name?.[0]}><input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} required /></Field>
-                    <Field label="Description" error={errors.description?.[0]}><textarea value={form.description} onChange={e => set('description', e.target.value)} className={inp + ' resize-none'} rows={3} placeholder="Brief description…" /></Field>
-                    <Field label="Municipality *" error={errors.municipality?.[0]}><select value={form.municipality} onChange={e => set('municipality', e.target.value)} className={inp} required><option value="">Select municipality…</option>{MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}</select></Field>
-                    <Field label="Address / Landmark" error={errors.address?.[0]}><input type="text" value={form.address} onChange={e => set('address', e.target.value)} className={inp} placeholder="e.g. Near SM City, Brgy. Poblacion" /></Field>
-                    <Field label="Cover Image URL" error={errors.image_url?.[0]}><input type="url" value={form.image_url} onChange={e => set('image_url', e.target.value)} className={inp} placeholder="https://…" /></Field>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Opening Time"><input type="time" value={form.opening_time} onChange={e => set('opening_time', e.target.value)} className={inp} /></Field>
-                        <Field label="Closing Time"><input type="time" value={form.closing_time} onChange={e => set('closing_time', e.target.value)} className={inp} /></Field>
-                    </div>
-                    <div className="flex items-center gap-3 pt-2">
-                        <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-50 transition-colors">{saving ? 'Saving…' : 'Save Changes'}</button>
-                        {success && <span className="text-xs font-semibold text-green-600">✓ Saved successfully!</span>}
-                    </div>
-                </form>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-5xl space-y-6 pb-20"
+        >
+            {/* Page header */}
+            <div className="pb-2">
+                <h2 className="text-2xl font-extrabold text-gray-800 tracking-tight">Settings</h2>
+                <p className="text-sm text-gray-400 mt-0.5">{restaurant.name}</p>
             </div>
-            <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-wide mb-3">Quick Info</h3>
-                <div className="space-y-2 text-sm">
-                    {[
-                        ['Status', <span key="s" className={`font-bold ${restaurant.status === 'active' ? 'text-green-600' : 'text-yellow-600'}`}>{cap(restaurant.status)}</span>],
-                        ['Location', restaurant.municipality],
-                        ['Hours', restaurant.opening_time ? `${restaurant.opening_time} – ${restaurant.closing_time}` : '—'],
-                        ['Menu Items', restaurant.menu_items?.length ?? 0],
-                    ].map(([k, v]) => (
-                        <div key={k} className="flex justify-between"><span className="text-gray-400">{k}</span><span className="font-semibold text-gray-700">{v}</span></div>
-                    ))}
+
+            <form id="settings-form" onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
+                {/* Left column */}
+                <div className="lg:col-span-2 space-y-5">
+
+                    {/* Restaurant profile card */}
+                    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-3.5 h-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016 2.993 2.993 0 002.25-1.016 3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z"/></svg>
+                            </div>
+                            <h3 className="text-sm font-bold text-gray-800">Restaurant profile</h3>
+                        </div>
+                        <div className="px-6 py-6 space-y-5">
+                            <Field label="Restaurant name *" error={errors.name?.[0]}>
+                                <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} required />
+                            </Field>
+
+                            <Field label="Description" error={errors.description?.[0]}>
+                                <textarea value={form.description} onChange={e => set('description', e.target.value)} className={inp + ' resize-none'} rows={4} placeholder="Tell customers about your kitchen…" />
+                            </Field>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Field label="Municipality *" error={errors.municipality?.[0]}>
+                                    <div className="relative">
+                                        <select value={form.municipality} onChange={e => set('municipality', e.target.value)} className={inp + ' appearance-none pr-8'} required>
+                                            <option value="">Select municipality</option>
+                                            {MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                        <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                    </div>
+                                </Field>
+                                <Field label="Category" error={errors.category_id?.[0]}>
+                                    <div className="relative">
+                                        <select value={form.category_id} onChange={e => set('category_id', e.target.value)} className={inp + ' appearance-none pr-8'}>
+                                            <option value="">Select category</option>
+                                            {(categories ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                        <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                    </div>
+                                </Field>
+                                <Field label="Address / Landmark" error={errors.address?.[0]}>
+                                    <input type="text" value={form.address} onChange={e => set('address', e.target.value)} className={inp} placeholder="Street, building, landmark" />
+                                </Field>
+                            </div>
+
+                            <Field label="Cover Image" error={errors.image?.[0]}>
+                                <div className="space-y-2">
+                                    {form.image_url && (
+                                        <img src={form.image_url} alt="Current cover" className="w-full h-32 object-cover rounded-xl" />
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                                        onChange={e => { setImageFile(e.target.files[0]); setSuccess(false); setIsDirty(true); }}
+                                        className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 cursor-pointer"
+                                    />
+                                    <p className="text-xs text-gray-400">Max 2MB · JPG, PNG, or WEBP. Leave empty to keep current image.</p>
+                                </div>
+                            </Field>
+                        </div>
+                    </section>
+
+                    {/* Business hours card */}
+                    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <ClockIcon cls="w-3.5 h-3.5 text-blue-500" />
+                            </div>
+                            <h3 className="text-sm font-bold text-gray-800">Business hours</h3>
+                        </div>
+                        <div className="px-6 py-6">
+                            <div className="grid grid-cols-2 gap-5">
+                                <Field label="Opening time">
+                                    <input type="time" value={form.opening_time} onChange={e => set('opening_time', e.target.value)} className={inp} />
+                                </Field>
+                                <Field label="Closing time">
+                                    <input type="time" value={form.closing_time} onChange={e => set('closing_time', e.target.value)} className={inp} />
+                                </Field>
+                            </div>
+                            {form.opening_time && form.closing_time && (
+                                <p className="mt-3 text-xs text-gray-400">
+                                    Customers will see: <span className="font-semibold text-gray-600">{fmtTime(form.opening_time)} – {fmtTime(form.closing_time)}</span>
+                                </p>
+                            )}
+                        </div>
+                    </section>
                 </div>
+
+                {/* Right column — sticky */}
+                <div className="space-y-4 lg:sticky lg:top-6">
+
+                    {/* Cover preview */}
+                    <div className="bg-gray-900 rounded-2xl overflow-hidden shadow-md relative aspect-video group">
+                        {form.image_url ? (
+                            <img
+                                src={form.image_url}
+                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
+                                alt={`${form.name} cover`}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-gray-800 to-gray-900">
+                                <ImageIcon cls="w-8 h-8 text-gray-600" />
+                                <p className="text-xs text-gray-600">No cover image</p>
+                            </div>
+                        )}
+                        <div className="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/10 to-transparent">
+                            <p className="text-white font-bold text-sm leading-tight truncate">{form.name || 'Restaurant name'}</p>
+                            <p className="text-white/55 text-xs mt-0.5 truncate">{form.municipality || 'Location'}</p>
+                        </div>
+                    </div>
+
+                    {/* Store status */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Store status</p>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-500">Status</span>
+                                <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold ${restaurant.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {cap(restaurant.status)}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between border-t border-gray-50 pt-3">
+                                <span className="text-sm text-gray-500">Menu items</span>
+                                <span className="text-sm font-bold text-gray-800 tabular-nums">{restaurant.menu_items?.length ?? 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between border-t border-gray-50 pt-3">
+                                <span className="text-sm text-gray-500">Hours</span>
+                                <span className="text-sm font-bold text-gray-800 tabular-nums text-right">
+                                    {form.opening_time
+                                        ? <>{fmtTime(form.opening_time)}<br />{fmtTime(form.closing_time)}</>
+                                        : <span className="text-gray-400 font-normal">Not set</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+
+            {/* Sticky save footer */}
+            <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-100 py-3 px-1 flex items-center justify-between gap-4">
+                <AnimatePresence>
+                    {success && (
+                        <motion.div
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            Changes saved
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                <button
+                    form="settings-form"
+                    type="submit"
+                    disabled={saving}
+                    className="ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 shadow-sm shadow-green-200 transition-all active:scale-95 disabled:opacity-50"
+                >
+                    {saving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                    {saving ? 'Saving…' : 'Save changes'}
+                </button>
             </div>
-        </div>
+        </motion.div>
     );
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0 }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
     const [sidebarOpen, setSidebarOpen]   = useState(false);
     const [itemModal, setItemModal]       = useState(null);
     const [voucherModal, setVoucherModal] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [newOrderCount, setNewOrderCount] = useState(0);
+    const [orderToast, setOrderToast]       = useState(null);
+    const orderToastTimer                   = useRef(null);
+    const [statusToast, setStatusToast]     = useState(null);
+    const statusToastTimer                  = useRef(null);
+    const [ownerBellOpen, setOwnerBellOpen]           = useState(false);
+    const [ownerNotifications, setOwnerNotifications] = useState(notifications);
+    const [ownerUnread, setOwnerUnread]               = useState(unreadCount);
+    const ownerBellRef                                = useRef(null);
+    const [restaurantDropOpen, setRestaurantDropOpen] = useState(false);
+    const restaurantDropRef                           = useRef(null);
+    const [isSettingsDirty, setIsSettingsDirty]       = useState(false);
+
+    useEffect(() => {
+        if (!auth?.user?.id) return;
+        const channel = window.Echo.private('owner.' + auth.user.id);
+        channel.listen('.new-order', (event) => {
+            setNewOrderCount(prev => prev + 1);
+            setOwnerUnread(prev => prev + 1);
+            setOwnerNotifications(prev => [
+                {
+                    id: Date.now(),
+                    order_id: event.order_id,
+                    customer_name: event.customer_name,
+                    order_type: event.order_type,
+                    total: event.total,
+                    received_at: 'just now',
+                },
+                ...prev,
+            ]);
+            if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
+            setOrderToast(event);
+            orderToastTimer.current = setTimeout(() => setOrderToast(null), 5000);
+
+            fetch(`/api/owner/orders/${event.order_id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data?.order) return;
+                setRestaurants(prev => prev.map(r =>
+                    r.id === data.order.restaurant_id
+                        ? { ...r, orders: [data.order, ...r.orders] }
+                        : r
+                ));
+            })
+            .catch(() => {});
+        });
+        channel.listen('.order-status-updated', (event) => {
+            setRestaurants(prev => prev.map(r => ({
+                ...r,
+                orders: r.orders.map(o =>
+                    o.id === event.order_id
+                        ? { ...o, status: event.status }
+                        : o
+                ),
+            })));
+        });
+        return () => {
+            window.Echo.leave('owner.' + auth.user.id);
+            if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
+        };
+    }, [auth?.user?.id]);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (ownerBellRef.current && !ownerBellRef.current.contains(e.target)) {
+                setOwnerBellOpen(false);
+            }
+            if (restaurantDropRef.current && !restaurantDropRef.current.contains(e.target)) {
+                setRestaurantDropOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const restaurant = restaurants.find(r => r.id === selectedId) ?? restaurants[0] ?? null;
 
@@ -1036,21 +1774,30 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
     async function toggleItem(item) {
         try { const d = await apiFetch(route('owner.items.toggle', item.id), 'PATCH'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.map(i => i.id === item.id ? { ...i, is_available: d.is_available } : i) })); } catch { }
     }
-    async function deleteItem(item) {
-        if (!confirm(`Delete "${item.name}"?`)) return;
-        try { await apiFetch(route('owner.items.destroy', item.id), 'DELETE'); patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== item.id) })); } catch (e) { if (e?.data?.error) alert(e.data.error); }
+    function deleteItem(item) {
+        setDeleteConfirm({ type: 'item', target: item });
     }
     function onItemSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, menu_items: mode === 'add' ? [...r.menu_items, saved] : r.menu_items.map(i => i.id === saved.id ? saved : i) }));
         setItemModal(null);
     }
-    async function advanceStatus(order) {
-        const next = NEXT_STATUS[order.status]; if (!next) return;
-        try { const d = await apiFetch(route('owner.orders.status', order.id), 'PATCH', { status: next }); patchRestaurant(r => ({ ...r, orders: r.orders.map(o => o.id === order.id ? { ...o, status: d.status } : o) })); } catch { }
+    async function advanceStatus(order, targetStatus) {
+        if (!targetStatus) return;
+        try {
+            const d = await apiFetch(route('owner.orders.status', order.id), 'PATCH', { status: targetStatus });
+            patchRestaurant(r => ({ ...r, orders: r.orders.map(o => o.id === order.id ? { ...o, status: d.status } : o) }));
+            if (targetStatus === 'accepted' || targetStatus === 'cancelled') {
+                setOwnerUnread(prev => Math.max(0, prev - 1));
+                setNewOrderCount(prev => Math.max(0, prev - 1));
+            }
+            if (statusToastTimer.current) clearTimeout(statusToastTimer.current);
+            const label = { accepted: 'Accepted', preparing: 'Preparing', ready: 'Ready for pickup', cancelled: 'Cancelled' };
+            setStatusToast(`Order #${formatOrderId(order.id)} marked as ${label[targetStatus] ?? targetStatus}`);
+            statusToastTimer.current = setTimeout(() => setStatusToast(null), 3000);
+        } catch { }
     }
-    async function deleteVoucher(v) {
-        if (!confirm(`Delete voucher "${v.code}"?`)) return;
-        try { await apiFetch(route('owner.vouchers.destroy', v.id), 'DELETE'); patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== v.id) })); } catch { }
+    function deleteVoucher(v) {
+        setDeleteConfirm({ type: 'voucher', target: v });
     }
     function onVoucherSaved(saved, mode) {
         patchRestaurant(r => ({ ...r, vouchers: mode === 'add' ? [saved, ...r.vouchers] : r.vouchers.map(v => v.id === saved.id ? saved : v) }));
@@ -1059,14 +1806,23 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
 
     const pendingCount = (restaurant.orders ?? []).filter(o => o.status === 'pending').length;
 
+    function handleTabChange(key) {
+        if (activeTab === 'settings' && isSettingsDirty) {
+            if (!window.confirm('You have unsaved changes. Leave anyway?')) return;
+        }
+        if (key === 'orders') setNewOrderCount(0);
+        setActiveTab(key);
+        setSidebarOpen(false);
+    }
+
     function renderTab() {
         switch (activeTab) {
-            case 'overview': return <OverviewTab restaurant={restaurant} onSwitchTab={setActiveTab} />;
+            case 'overview': return <OverviewTab restaurant={restaurant} onSwitchTab={handleTabChange} />;
             case 'orders':   return <OrdersTab restaurant={restaurant} onAdvance={advanceStatus} />;
-            case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal('add')} onOpenEdit={item => setItemModal(item)} />;
+            case 'menu':     return <MenuTab restaurant={restaurant} onToggle={toggleItem} onDelete={deleteItem} onOpenAdd={() => setItemModal({ mode: 'add', categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} onOpenEdit={item => setItemModal({ mode: 'edit', item, categories: [...new Set(restaurant.menu_items.map(i => i.category))] })} />;
             case 'vouchers': return <VouchersTab restaurant={restaurant} onOpenAdd={() => setVoucherModal('add')} onOpenEdit={v => setVoucherModal(v)} onDelete={deleteVoucher} />;
             case 'history':  return <HistoryTab restaurant={restaurant} />;
-            case 'settings': return <SettingsTab restaurant={restaurant} />;
+            case 'settings': return <SettingsTab restaurant={restaurant} categories={categories} onDirtyChange={setIsSettingsDirty} />;
             default: return null;
         }
     }
@@ -1082,7 +1838,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                 {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
                 {/* ── Sidebar ── */}
-                <aside className={`fixed top-0 left-0 h-full z-50 w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:z-auto`}>
+              <aside className={`fixed top-0 left-0 h-full z-50 w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto`}>
 
                     {/* Logo */}
                     <div className="h-16 flex items-center px-5 border-b border-gray-100">
@@ -1105,10 +1861,37 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                             <p className="text-xs text-gray-400">{restaurant.municipality}</p>
                         </div>
                         {restaurants.length > 1 && (
-                            <select value={selectedId} onChange={e => { setSelectedId(Number(e.target.value)); setActiveTab('overview'); }}
-                                className="mt-3 w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 focus:outline-none focus:border-green-400 bg-gray-50">
-                                {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
+                            <div className="relative mt-3" ref={restaurantDropRef}>
+                                <button
+                                    onClick={() => setRestaurantDropOpen(v => !v)}
+                                    className="w-full flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300 bg-gray-50 transition-colors"
+                                >
+                                    <span className="truncate">{restaurant.name}</span>
+                                    <svg className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150 ${restaurantDropOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                                <AnimatePresence>
+                                    {restaurantDropOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4, scaleY: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                                            exit={{ opacity: 0, y: -4, scaleY: 0.95 }}
+                                            transition={{ duration: 0.12 }}
+                                            style={{ transformOrigin: 'top' }}
+                                            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
+                                        >
+                                            {restaurants.map(r => (
+                                                <button
+                                                    key={r.id}
+                                                    onClick={() => { setSelectedId(r.id); setActiveTab('overview'); setRestaurantDropOpen(false); }}
+                                                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors ${r.id === selectedId ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                >
+                                                    {r.name}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         )}
                     </div>
 
@@ -1123,7 +1906,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-green-500 rounded-r-full" />
                                     )}
                                     <button
-                                        onClick={() => { setActiveTab(key); setSidebarOpen(false); }}
+                                        onClick={() => handleTabChange(key)}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                             ${active ? 'bg-green-50 text-green-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}
                                     >
@@ -1140,6 +1923,15 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
 
                     {/* Logout */}
                     <div className="px-3 py-4 border-t border-gray-100">
+                        <a
+                            href={route('restaurants.show', restaurant.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+                        >
+                            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            View my page
+                        </a>
                         <button onClick={() => router.post(route('logout'))}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
                             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
@@ -1163,13 +1955,61 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         </div>
                         <div className="flex items-center gap-2.5">
                             <span className="text-xs text-gray-400 hidden lg:inline">{fmtDate()}</span>
-                            {pendingCount > 0 && (
-                                <button onClick={() => setActiveTab('orders')}
-                                    className="relative p-2 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors">
-                                    <BellIcon cls="w-5 h-5 text-orange-500" />
-                                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">{pendingCount}</span>
+                            <div className="relative" ref={ownerBellRef}>
+                                <button
+                                    onClick={() => {
+                                        setOwnerBellOpen(v => !v);
+                                        setOwnerUnread(0);
+                                    }}
+                                    className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                                    title="Notifications"
+                                >
+                                    <BellIcon cls="w-5 h-5 text-gray-500" />
+                                    {ownerUnread > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">
+                                            {ownerUnread > 9 ? '9+' : ownerUnread}
+                                        </span>
+                                    )}
                                 </button>
-                            )}
+
+                                {ownerBellOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                            <p className="text-sm font-bold text-gray-800">New Orders</p>
+                                            {ownerNotifications.length > 0 && (
+                                                <button
+                                                    onClick={() => { handleTabChange('orders'); setOwnerBellOpen(false); }}
+                                                    className="text-xs text-green-600 font-semibold hover:text-green-700 transition-colors"
+                                                >
+                                                    View all orders →
+                                                </button>
+                                            )}
+                                        </div>
+                                        {ownerNotifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-center text-sm text-gray-400">No new orders yet</div>
+                                        ) : (
+                                            <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                                                {ownerNotifications.map(n => (
+                                                    <li
+                                                        key={n.id}
+                                                        onClick={() => { handleTabChange('orders'); setOwnerBellOpen(false); }}
+                                                        className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-gray-800">Order #{formatOrderId(n.order_id)}</p>
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${n.order_type === 'delivery' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                                                {n.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-0.5">From {n.customer_name} · ₱{Number(n.total).toFixed(2)}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{n.received_at}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <span className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${restaurant.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${restaurant.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
                                 {cap(restaurant.status)}
@@ -1181,10 +2021,10 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                exit={{ opacity: 0, y: -12 }}
+                                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                             >
                                 {renderTab()}
                             </motion.div>
@@ -1198,8 +2038,9 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                 {itemModal !== null && (
                     <ItemModal
                         key="item-modal"
-                        mode={itemModal === 'add' ? 'add' : 'edit'}
-                        item={itemModal === 'add' ? null : itemModal}
+                        mode={itemModal.mode}
+                        item={itemModal.mode === 'edit' ? itemModal.item : null}
+                        existingCategories={itemModal.categories}
                         restaurantId={restaurant.id}
                         restaurantName={restaurant.name}
                         onClose={() => setItemModal(null)}
@@ -1217,6 +2058,76 @@ export default function OwnerDashboard({ restaurants: initialRestaurants }) {
                         onClose={() => setVoucherModal(null)}
                         onSaved={onVoucherSaved}
                     />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {deleteConfirm !== null && (
+                    <DeleteConfirmModal
+                        key="delete-confirm-modal"
+                        confirm={deleteConfirm}
+                        onCancel={() => setDeleteConfirm(null)}
+                        onConfirm={async () => {
+                            if (deleteConfirm.type === 'item') {
+                                try {
+                                    await apiFetch(route('owner.items.destroy', deleteConfirm.target.id), 'DELETE');
+                                    patchRestaurant(r => ({ ...r, menu_items: r.menu_items.filter(i => i.id !== deleteConfirm.target.id) }));
+                                } catch (e) { if (e?.data?.error) alert(e.data.error); }
+                            } else {
+                                try {
+                                    await apiFetch(route('owner.vouchers.destroy', deleteConfirm.target.id), 'DELETE');
+                                    patchRestaurant(r => ({ ...r, vouchers: r.vouchers.filter(vch => vch.id !== deleteConfirm.target.id) }));
+                                } catch {}
+                            }
+                            setDeleteConfirm(null);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Status advance toast */}
+            <AnimatePresence>
+                {statusToast && (
+                    <motion.div
+                        key="status-toast"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-bold text-white bg-gray-800 pointer-events-none"
+                    >
+                        ✓ {statusToast}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* New-order toast */}
+            <AnimatePresence>
+                {orderToast && (
+                    <motion.div
+                        key="order-toast"
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => { handleTabChange('orders'); setOrderToast(null); }}
+                        className="fixed bottom-6 right-6 z-[200] flex items-start gap-3 bg-green-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-sm cursor-pointer"
+                    >
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-extrabold leading-snug">New order #{formatOrderId(orderToast.order_id)} received!</p>
+                            <p className="text-xs font-medium mt-0.5 opacity-90">
+                                From {orderToast.customer_name} · {orderToast.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setOrderToast(null); }}
+                            className="shrink-0 p-0.5 rounded-full hover:bg-green-600 transition-colors"
+                            aria-label="Dismiss"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

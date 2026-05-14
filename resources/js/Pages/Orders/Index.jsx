@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import '@/bootstrap';
+import { formatOrderId } from '@/utils/formatOrderId';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -16,15 +18,23 @@ function fmtDate(dateStr) {
 
 const STATUS_STYLES = {
     pending:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    accepted:  'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
     preparing: 'bg-blue-50  text-blue-700  ring-1 ring-blue-200',
     ready:     'bg-green-50 text-green-700 ring-1 ring-green-200',
+    completed: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+    cancelled: 'bg-red-50   text-red-600   ring-1 ring-red-200',
 };
 
 const STATUS_LABELS = {
     pending:   'Pending',
+    accepted:  'Accepted',
     preparing: 'Preparing',
     ready:     'Ready',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
 };
+
+// ── NEW: friendly messages for each status transition ─────────────────────────
 
 const TIMELINE_STEPS = [
     {
@@ -34,6 +44,16 @@ const TIMELINE_STEPS = [
         icon: (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+        ),
+    },
+    {
+        key: 'accepted',
+        label: 'Accepted',
+        sublabel: 'Restaurant confirmed your order',
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
         ),
     },
@@ -58,9 +78,19 @@ const TIMELINE_STEPS = [
             </svg>
         ),
     },
+    {
+        key: 'completed',
+        label: 'Completed',
+        sublabel: 'Order completed. Enjoy your meal!',
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+            </svg>
+        ),
+    },
 ];
 
-const STATUS_STEP_INDEX = { pending: 0, preparing: 1, ready: 2 };
+const STATUS_STEP_INDEX = { pending: 0, accepted: 1, preparing: 2, ready: 3, completed: 4 };
 
 // ── Status Timeline ────────────────────────────────────────────────────────────
 
@@ -95,7 +125,7 @@ function StatusTimeline({ status }) {
                             <div className={`
                                 relative z-10 w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all duration-300
                                 ${isDone    ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : ''}
-                               ${isActive ? 'bg-green-600 text-white shadow-md shadow-green-600/20 scale-105' : ''}
+                                ${isActive  ? 'bg-green-600 text-white shadow-md shadow-green-600/20 scale-105' : ''}
                                 ${isPending ? 'bg-white border-2 border-gray-200 text-gray-300 shadow-sm' : ''}
                             `}>
                                 {isActive && (
@@ -160,7 +190,32 @@ function OrderTypeBadge({ type }) {
 
 // ── Order card ─────────────────────────────────────────────────────────────────
 
-function OrderCard({ order, isExpanded, onToggle }) {
+function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
+    const [confirming, setConfirming] = useState(false);
+    const [loading, setLoading]       = useState(false);
+
+    async function handleConfirm() {
+        setLoading(true);
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            const res = await fetch(route('orders.confirm', order.id), {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+            });
+            if (!res.ok) throw new Error('Failed');
+            onConfirm(order.id);
+        } catch {
+            // silently reset — the page polling will sync eventually
+        } finally {
+            setLoading(false);
+            setConfirming(false);
+        }
+    }
+
     const itemsSummary = order.items.length === 0
         ? 'No items'
         : order.items.slice(0, 2).map(i => `${i.quantity}× ${i.menu_item.name}`).join(', ')
@@ -194,7 +249,7 @@ function OrderCard({ order, isExpanded, onToggle }) {
                         <StatusBadge status={order.status} />
                         <OrderTypeBadge type={order.order_type} />
                         <span className="text-[11px] text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded">
-                            #{order.id}
+                            #{formatOrderId(order.id)}
                         </span>
                     </div>
 
@@ -229,12 +284,7 @@ function OrderCard({ order, isExpanded, onToggle }) {
                                 <div key={item.id} className="flex items-center gap-3">
                                     <div className="w-10 h-10 shrink-0 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
                                         {item.menu_item?.image_url ? (
-                                            <img
-                                                src={item.menu_item.image_url}
-                                                alt={item.menu_item.name}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
+                                            <img src={item.menu_item.image_url} alt={item.menu_item.name} className="w-full h-full object-cover" loading="lazy" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-sm">🍽️</div>
                                         )}
@@ -286,6 +336,43 @@ function OrderCard({ order, isExpanded, onToggle }) {
                         </div>
                     )}
 
+                    {/* Confirm received — only when order is ready */}
+                    {order.status === 'ready' && (
+                        <div>
+                            {!confirming ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirming(true)}
+                                    className="w-full py-2.5 rounded-xl border-2 border-green-500 text-green-600 text-sm font-bold hover:bg-green-50 transition-colors duration-150"
+                                >
+                                    Confirm received
+                                </button>
+                            ) : (
+                                <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                                    <p className="text-sm text-green-800 font-semibold">Mark this order as received?</p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={handleConfirm}
+                                            disabled={loading}
+                                            className="px-3.5 py-1.5 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600 disabled:opacity-60 transition-colors duration-150"
+                                        >
+                                            {loading ? 'Saving…' : 'Yes, received'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirming(false)}
+                                            disabled={loading}
+                                            className="px-3 py-1.5 rounded-lg text-gray-500 text-sm font-semibold hover:text-gray-700 transition-colors duration-150"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-1.5 text-sm">
                         <div className="flex justify-between text-gray-500">
                             <span>Subtotal</span>
@@ -317,62 +404,108 @@ function OrderCard({ order, isExpanded, onToggle }) {
     );
 }
 
-// ── Filter Tabs ────────────────────────────────────────────────────────────────
+// ── Date filter helpers ────────────────────────────────────────────────────────
 
-const TABS = [
-    {
-        key: 'active',
-        label: 'Active',
-        filter: o => o.status === 'pending' || o.status === 'preparing',
-        emptyIcon: '⏳',
-        emptyText: 'No active orders',
-        emptySubtext: 'Your ongoing orders will appear here.',
-    },
-    {
-        key: 'ready',
-        label: 'Ready',
-        filter: o => o.status === 'ready',
-        emptyIcon: '✅',
-        emptyText: 'No ready orders',
-        emptySubtext: 'Orders ready for pickup or delivery will appear here.',
-    },
-    {
-        key: 'all',
-        label: 'All',
-        filter: () => true,
-        emptyIcon: '🧾',
-        emptyText: 'No orders yet',
-        emptySubtext: 'Your order history will appear here once you place an order.',
-    },
+const DATE_FILTERS = [
+    { key: 'today',     label: 'Today' },
+    { key: 'this_week', label: 'This week' },
+    { key: 'this_month',label: 'This month' },
+    { key: 'all',       label: 'All' },
 ];
+
+function toDateString(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function filterByDate(orders, filter) {
+    const now = new Date();
+    if (filter === 'all') return orders;
+    if (filter === 'today') {
+        const todayStr = toDateString(now);
+        return orders.filter(o => toDateString(o.created_at) === todayStr);
+    }
+    if (filter === 'this_week') {
+        const day = now.getDay(); // 0 Sun … 6 Sat
+        const diffToMon = (day === 0 ? -6 : 1 - day);
+        const monday = new Date(now);
+        monday.setHours(0, 0, 0, 0);
+        monday.setDate(now.getDate() + diffToMon);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        return orders.filter(o => {
+            const d = new Date(o.created_at);
+            return d >= monday && d <= sunday;
+        });
+    }
+    if (filter === 'this_month') {
+        return orders.filter(o => {
+            const d = new Date(o.created_at);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+    }
+    return orders;
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function OrdersIndex({ orders, cartCount = 0 }) {
-    const { flash } = usePage().props;
-    const [activeTab, setActiveTab]   = useState('active');
-    const [expanded, setExpanded]     = useState(() => new Set());
-    const [toast, setToast]           = useState(null);
-    const toastTimer = useRef(null);
+export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
+    const { flash, auth } = usePage().props;
 
-    function showToast(message, isError = false) {
+    // ── NEW: local orders state so polling can update the list live ───────────
+    const [orders, setOrders] = useState(initialOrders);
+
+    const [dateFilter, setDateFilter] = useState('today');
+    const [expanded, setExpanded]     = useState(() => new Set());
+    const [toast, setToast]         = useState(null);
+    const toastTimer                = useRef(null);
+
+    function showToast(message, isError = false, isStatus = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
-        setToast({ message, isError });
-        toastTimer.current = setTimeout(() => setToast(null), 4000);
+        setToast({ message, isError, isStatus });
+        toastTimer.current = setTimeout(() => setToast(null), 5000);
     }
 
-    // Show flash message from checkout redirect
+    // Flash messages from checkout redirect
     useEffect(() => {
         if (flash?.success) showToast(flash.success);
         if (flash?.error)   showToast(flash.error, true);
     }, [flash?.success, flash?.error]);
 
-   
+    // Background Inertia reload every 15s — only while active orders exist
+    const hasActiveOrders = orders.some(
+        o => o.status === 'pending' || o.status === 'preparing' || o.status === 'accepted'
+    );
 
     useEffect(() => {
-        const hasActive = orders.some(o => o.status === 'pending' || o.status === 'preparing');
-        if (!hasActive) setActiveTab('all');
-    }, [orders]);
+        if (!hasActiveOrders) return;
+        const id = setInterval(() => {
+            router.reload({ only: ['orders'], onSuccess: (page) => {
+                setOrders(page.props.orders);
+            }});
+        }, 15_000);
+        return () => clearInterval(id);
+    }, [hasActiveOrders]);
+
+    useEffect(() => {
+        if (!auth?.user?.id) return;
+
+        const channel = window.Echo.private('customer.' + auth.user.id);
+
+        channel.listen('.order-status-updated', (event) => {
+            setOrders(prev => prev.map(order =>
+                order.id === event.order_id
+                    ? { ...order, status: event.status }
+                    : order
+            ));
+            showToast(`Order #${formatOrderId(event.order_id)}: ${event.message}`, false, true);
+        });
+
+        return () => {
+            window.Echo.leave('customer.' + auth.user.id);
+        };
+    }, [auth?.user?.id]);
 
     function toggle(orderId) {
         setExpanded(prev => {
@@ -382,22 +515,30 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
         });
     }
 
-    const currentTab     = TABS.find(t => t.key === activeTab);
-    const filteredOrders = orders.filter(currentTab.filter);
-
-    const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
-    const readyCount  = orders.filter(o => o.status === 'ready').length;
+    const filteredOrders = filterByDate(orders, dateFilter);
 
     return (
-        <CustomerLayout cartCount={cartCount}>
+        // ── NEW: orderNotifCount=0 because we're already on this page ─────────
+        <CustomerLayout cartCount={cartCount} orderNotifCount={0}>
             <Head title="My Orders — Hapag" />
 
-            {/* ── Toast ─────────────────────────────────────────────────────── */}
+            {/* ── Toast (updated to support isStatus blue variant) ───────────── */}
             {toast && (
-                <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg text-sm font-bold text-white pointer-events-none ${toast.isError ? 'bg-red-500' : 'bg-green-500'}`}>
+                <div className={`
+                    fixed top-20 left-1/2 -translate-x-1/2 z-[200]
+                    flex items-center gap-2.5 px-6 py-3.5 rounded-2xl shadow-xl
+                    text-sm font-bold text-white pointer-events-none
+                    ${toast.isError  ? 'bg-red-500'  : ''}
+                    ${toast.isStatus ? 'bg-blue-600' : ''}
+                    ${!toast.isError && !toast.isStatus ? 'bg-green-500' : ''}
+                `}>
                     {toast.isError ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    ) : toast.isStatus ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -415,49 +556,39 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
                     <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">My Orders</h1>
                     <p className="text-gray-500 text-sm mt-0.5">
                         {orders.length} {orders.length === 1 ? 'order' : 'orders'} total
+                        {/* ── NEW: subtle live indicator ── */}
+                        <span className="ml-2 text-gray-300 text-xs">· updates every 15s</span>
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2 mb-5 flex-wrap">
-                    {TABS.map(tab => {
-                        const count = tab.key === 'active' ? activeCount
-                                    : tab.key === 'ready'  ? readyCount
-                                    : orders.length;
-                        const isSelected = activeTab === tab.key;
-
-                        return (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all duration-150 ${
-                                    isSelected
-                                        ? 'bg-green-500 text-white shadow-md shadow-green-200'
-                                        : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                                }`}
-                            >
-                                {tab.label}
-                                {count > 0 && (
-                                    <span className={`text-[11px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ${
-                                        isSelected
-                                            ? 'bg-white/25 text-white'
-                                            : tab.key === 'active' && activeCount > 0
-                                                ? 'bg-orange-100 text-orange-600'
-                                                : 'bg-gray-100 text-gray-500'
-                                    }`}>
-                                        {count}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
+                    {DATE_FILTERS.map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => setDateFilter(f.key)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-150 ${
+                                dateFilter === f.key
+                                    ? 'bg-green-500 text-white shadow-md shadow-green-200'
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
                 </div>
 
                 {filteredOrders.length === 0 ? (
                     <div className="text-center py-20">
-                        <span className="text-5xl block mb-4">{currentTab.emptyIcon}</span>
-                        <p className="text-gray-600 font-bold text-base mb-1">{currentTab.emptyText}</p>
-                        <p className="text-gray-400 text-sm mb-6">{currentTab.emptySubtext}</p>
-                        {activeTab === 'all' && (
+                        <span className="text-5xl block mb-4">📭</span>
+                        <p className="text-gray-600 font-bold text-base mb-1">
+                            {dateFilter === 'all' ? 'No orders yet' : 'No orders for this period'}
+                        </p>
+                        <p className="text-gray-400 text-sm mb-6">
+                            {dateFilter === 'all'
+                                ? 'Your order history will appear here once you place an order.'
+                                : 'Try selecting a different time range.'}
+                        </p>
+                        {dateFilter === 'all' && (
                             <Link
                                 href={route('restaurants.index')}
                                 className="inline-block px-6 py-2.5 rounded-full bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors shadow-md shadow-green-200"
@@ -468,14 +599,19 @@ export default function OrdersIndex({ orders, cartCount = 0 }) {
                     </div>
                 ) : (
                     /* This is the section updated for responsive multi-column layout */
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 items-start">
+                    <div className="columns-1 md:columns-2 gap-4 space-y-4">
                         {filteredOrders.map(order => (
-                            <OrderCard
-                                key={order.id}
-                                order={order}
-                                isExpanded={expanded.has(order.id)}
-                                onToggle={() => toggle(order.id)}
-                            />
+                            <div key={order.id} className="break-inside-avoid mb-4">
+                                <OrderCard
+                                    order={order}
+                                    isExpanded={expanded.has(order.id)}
+                                    onToggle={() => toggle(order.id)}
+                                    onConfirm={(id) => {
+                                        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'completed' } : o));
+                                        showToast('Order marked as received. Enjoy your meal! 🎉');
+                                    }}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

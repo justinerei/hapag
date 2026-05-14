@@ -14,14 +14,6 @@ const inputCls = [
     'transition-colors',
 ].join(' ');
 
-function CloseIcon() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-    );
-}
-
 function CheckCircleIcon({ className = 'h-16 w-16' }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -70,16 +62,11 @@ function RestaurantFormModal({ categories }) {
         description: '',
         category_id: '',
         municipality: '',
-        image_url: '',
+        image: null,
     });
-
     function submit(e) {
         e.preventDefault();
-        post(route('owner.setup.store'));
-    }
-
-    function handleClose() {
-        router.post(route('logout'));
+        post(route('owner.setup.store'), { forceFormData: true });
     }
 
     return (
@@ -90,13 +77,7 @@ function RestaurantFormModal({ categories }) {
                     <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-green-500/5" />
                 </div>
 
-                <div className="flex justify-end p-4 pb-0 relative z-10">
-                    <button type="button" onClick={handleClose} className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 transition-colors" title="Log out and exit">
-                        <CloseIcon />
-                    </button>
-                </div>
-
-                <div className="text-center px-8 pb-2">
+                <div className="text-center px-8 pb-2 pt-8">
                     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 leading-tight">
                         Register your <span className="text-green-500">restaurant</span>
                     </h2>
@@ -108,12 +89,12 @@ function RestaurantFormModal({ categories }) {
                 <form onSubmit={submit} className="p-8 pt-6 max-h-[65vh] overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Restaurant Name</label>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Restaurant Name<span className="text-red-400 ml-0.5">*</span></label>
                             <input type="text" value={data.name} onChange={(e) => setData('name', e.target.value)} className={inputCls + ' bg-white'} placeholder="e.g. Burn's Kitchen" />
                             <InputError message={errors.name} className="mt-1" />
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Category</label>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Category<span className="text-red-400 ml-0.5">*</span></label>
                             <select value={data.category_id} onChange={(e) => setData('category_id', e.target.value)} className={inputCls + ' bg-white'}>
                                 <option value="">— Select —</option>
                                 {categories.map(cat => (
@@ -129,7 +110,7 @@ function RestaurantFormModal({ categories }) {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Municipality</label>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Municipality<span className="text-red-400 ml-0.5">*</span></label>
                                 <select value={data.municipality} onChange={(e) => setData('municipality', e.target.value)} className={inputCls + ' bg-white'}>
                                     <option value="">— Select —</option>
                                     {MUNICIPALITIES.map(m => (
@@ -139,9 +120,15 @@ function RestaurantFormModal({ categories }) {
                                 <InputError message={errors.municipality} className="mt-1" />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Image URL</label>
-                                <input type="url" value={data.image_url} onChange={(e) => setData('image_url', e.target.value)} className={inputCls + ' bg-white'} placeholder="https://example.com/your-image.jpg" />
-                                <InputError message={errors.image_url} className="mt-1" />
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Cover Image</label>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                    onChange={e => setData('image', e.target.files[0])}
+                                    className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 cursor-pointer"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Max 2MB · JPG, PNG, or WEBP</p>
+                                <InputError message={errors.image} className="mt-1" />
                             </div>
                         </div>
                     </div>
@@ -153,6 +140,11 @@ function RestaurantFormModal({ categories }) {
                     </div>
                     <p className="text-center text-xs text-gray-400 mt-4">
                         Note: Your restaurant will appear on Hapag once approved by our admin team. You'll be redirected to your dashboard after submission.
+                    </p>
+                    <p className="text-center mt-3">
+                        <button type="button" onClick={() => router.post(route('logout'))} className="text-xs text-gray-400 hover:underline">
+                            Changed your mind? Log out
+                        </button>
                     </p>
                 </form>
             </div>

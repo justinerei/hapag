@@ -10,9 +10,11 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
+use App\Notifications\RestaurantStatusUpdated;
+use App\Services\BackupService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -163,18 +165,58 @@ class AdminController extends Controller
     {
         $request->validate(['status' => 'required|in:active,rejected']);
         $restaurant->update(['status' => $request->status]);
+        $restaurant->owner->notify(new RestaurantStatusUpdated($restaurant));
         return response()->json(['status' => $restaurant->status]);
     }
 
-    public function backup()
+    public function backup(BackupService $service)
     {
-        Artisan::call('db:backup');
-        $lastBackup     = SystemSetting::where('key', 'last_backup_at')->value('value');
-        $lastBackupFile = SystemSetting::where('key', 'last_backup_file')->value('value');
-        return response()->json([
-            'success'          => true,
-            'last_backup_at'   => $lastBackup,
-            'last_backup_file' => $lastBackupFile,
-        ]);
+        try {
+            $result = $service->run();
+
+            return response()->json([
+                'success'          => true,
+                'filename'         => $result['filename'],
+                'last_backup_at'   => $result['last_backup_at'],
+                'last_backup_file' => $result['filename'],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listBackups(): \Illuminate\Http\JsonResponse
+    {
+        $files = Storage::disk('local')->files('backups');
+
+        $backups = collect($files)
+            ->filter(fn($f) => str_ends_with($f, '.sql'))
+            ->map(fn($file) => [
+                'filename'   => basename($file),
+                'size_kb'    => round(Storage::disk('local')->size($file) / 1024, 1),
+                'created_at' => date('Y-m-d H:i:s', Storage::disk('local')->lastModified($file)),
+            ])
+            ->sortByDesc('created_at')
+            ->values();
+
+        return response()->json($backups);
+    }
+
+    public function downloadBackup(string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        if (! preg_match('/^hapag_backup_[\d_\-]+\.sql$/', $filename)) {
+            abort(404);
+        }
+
+        $path = 'backups/' . $filename;
+
+        if (! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('local')->download($path);
     }
 }
