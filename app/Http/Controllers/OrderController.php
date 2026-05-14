@@ -46,6 +46,17 @@ class OrderController extends Controller
         // Only the owner of the restaurant this order belongs to may update it
         abort_if($order->restaurant->owner_id !== auth()->id(), 403);
 
+        $allowed = [
+            'pending'  => ['accepted', 'cancelled'],
+            'accepted' => ['preparing', 'cancelled'],
+            'preparing' => ['ready'],
+            'ready'    => ['completed'],
+        ];
+
+        if (!in_array($request->status, $allowed[$order->status] ?? [], true)) {
+            return response()->json(['message' => 'Invalid status transition.'], 422);
+        }
+
         $order->update(['status' => $request->status]);
 
         // Notify the customer about the status change
