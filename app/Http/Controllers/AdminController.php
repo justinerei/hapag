@@ -10,6 +10,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
+use App\Notifications\RestaurantStatusUpdated;
 use App\Services\BackupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,7 @@ class AdminController extends Controller
     {
         $request->validate(['status' => 'required|in:active,rejected']);
         $restaurant->update(['status' => $request->status]);
+        $restaurant->owner->notify(new RestaurantStatusUpdated($restaurant));
         return response()->json(['status' => $restaurant->status]);
     }
 
