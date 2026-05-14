@@ -1678,15 +1678,6 @@ export default function AdminDashboard({
                             </div>
                         )}
 
-                        {/* Backup DB button */}
-                        <button
-                            onClick={handleBackup}
-                            disabled={backupLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 text-xs font-semibold disabled:opacity-50 transition-all"
-                        >
-                            <IcoDB c="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">{backupLoading ? 'Backing up…' : 'Backup DB'}</span>
-                        </button>
                     </header>
 
                     {/* Page content */}
