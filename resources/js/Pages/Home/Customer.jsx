@@ -694,7 +694,12 @@ export default function Customer({
     }
 
     function handleCuisineCircleClick(catId) {
-        setSelectedCuisines([catId]);
+        setSelectedCuisines(prev => {
+            // If already selected, deselect it (toggle off)
+            if (prev.includes(catId)) return prev.filter(id => id !== catId);
+            // Otherwise add it to existing selections instead of replacing
+            return [...prev, catId];
+        });
         setSearch('');
         setHasDealsFilter(false);
         setTimeout(() => gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
