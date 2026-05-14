@@ -758,6 +758,8 @@ function OverviewTab({ restaurant, onSwitchTab }) {
     const pending     = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
     const available   = useMemo(() => items.filter(i => i.is_available).length, [items]);
     const avgOrderValue = orders.length > 0 ? totalIncome / orders.length : 0;
+    const isDataCapped  = orders.length >= 100;
+    const cappedNote    = isDataCapped ? ' · dashboard shows last 100 orders' : '';
 
     const ordersByStatus = useMemo(() => {
         const counts = { pending: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };
@@ -946,13 +948,13 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                 initial="hidden"
                 animate="show"
             >
-                <StatCard label="Total Income" sub="All-time revenue" accent="green"
+                <StatCard label="Total Income" sub={`All-time revenue${cappedNote}`} accent="green"
                     animateTarget={totalIncome} formatValue={v => `₱${fmt(v)}`}
                     icon={<MoneyIcon cls="w-5 h-5" />} />
                 <StatCard label="Today's Revenue" sub="Revenue today" accent="emerald"
                     animateTarget={todayTotal} formatValue={v => `₱${fmt(v)}`}
                     icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-                <StatCard label="Total Orders" sub="All-time orders" accent="blue"
+                <StatCard label="Total Orders" sub={`All-time orders${cappedNote}`} accent="blue"
                     animateTarget={orders.length} formatValue={v => String(Math.round(v))}
                     icon={<ListIcon cls="w-5 h-5" />} />
                 <StatCard label="Pending Orders" sub={pending > 0 ? 'Need attention' : 'All caught up'} accent={pending > 0 ? 'amber' : 'gray'}
@@ -961,7 +963,7 @@ function OverviewTab({ restaurant, onSwitchTab }) {
                 <StatCard label="Menu Items" sub={`${available} available`} accent="orange"
                     value={`${available}/${items.length}`}
                     icon={<MenuItemsIcon cls="w-5 h-5" />} />
-                <StatCard label="Avg. Order Value" sub="Per transaction" accent="purple"
+                <StatCard label="Avg. Order Value" sub={`Per transaction${cappedNote}`} accent="purple"
                     animateTarget={avgOrderValue} formatValue={v => `₱${fmt(v)}`}
                     icon={<AvgIcon cls="w-5 h-5" />} />
             </motion.div>
