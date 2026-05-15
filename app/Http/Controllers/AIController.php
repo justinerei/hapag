@@ -106,73 +106,205 @@ class AIController extends Controller
     public function chat(Request $request)
     {
         $request->validate([
-            'messages'             => 'required|array|min:1|max:20',
-            'messages.*.role'      => 'required|in:user,assistant',
-            'messages.*.content'   => 'required|string|max:500',
-            'restaurant_id'        => 'nullable|exists:restaurants,id',
+            'messages'           => 'required|array|min:1|max:20',
+            'messages.*.role'    => 'required|in:user,assistant',
+            'messages.*.content' => 'required|string|max:2000',
+            'restaurant_id'      => 'nullable|exists:restaurants,id',
         ]);
 
-        $restaurantContext = '';
-        if ($request->filled('restaurant_id')) {
-            $restaurant = Restaurant::find($request->restaurant_id);
-            if ($restaurant) {
-                $items = MenuItem::where('restaurant_id', $restaurant->id)
-                    ->where('is_available', true)
-                    ->get(['name', 'price', 'category', 'description']);
+        $user             = auth()->user();
+        $userMunicipality = $user?->municipality ?? null;
 
-                $menuList = $items->map(fn ($i) => sprintf(
-                    '- %s (₱%.0f) [%s]%s',
-                    $i->name,
-                    $i->price,
-                    $i->category,
-                    $i->description ? ': ' . mb_substr($i->description, 0, 60) : ''
+        // ── Build context ──────────────────────────────────────────────────
+        if ($request->filled('restaurant_id')) {
+            // Single-restaurant context (menu page)
+            $restaurant = Restaurant::with('menuItems')->find($request->restaurant_id);
+            $items      = $restaurant
+                ? MenuItem::where('restaurant_id', $restaurant->id)
+                    ->where('is_available', true)
+                    ->get(['id', 'name', 'price', 'category', 'description'])
+                : collect();
+
+            $menuList = $items->map(fn ($i) => sprintf(
+                '[ID:%d] %s (₱%.0f) [%s]%s',
+                $i->id, $i->name, $i->price, $i->category,
+                $i->description ? ': ' . mb_substr($i->description, 0, 60) : ''
+            ))->join("\n");
+
+            $dataContext = "\n\n--- RESTAURANT CONTEXT ---"
+                . "\nRestaurant: {$restaurant->name} in {$restaurant->municipality}."
+                . "\nOnly suggest dishes from this menu. Each item has an [ID:X] — use these IDs in menu_ids."
+                . "\n\nMenu:\n{$menuList}"
+                . "\n--- END CONTEXT ---";
+
+            $activeVouchers = \App\Models\Voucher::where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where(fn ($q) => $q->whereNull('max_uses')->orWhereColumn('used_count', '<', 'max_uses'))
+                ->where(fn ($q) => $q->whereNull('restaurant_id')->orWhere('restaurant_id', $restaurant?->id))
+                ->get(['id', 'code', 'type', 'value', 'min_order_amount', 'expires_at', 'restaurant_id']);
+        } else {
+            // System-wide context (customer dashboard)
+            $restaurants = Restaurant::where('status', 'active')
+                ->select('id', 'name', 'municipality')
+                ->get();
+
+            $localRestaurants = $userMunicipality
+                ? $restaurants->where('municipality', $userMunicipality)
+                : collect();
+
+            $otherRestaurants = $userMunicipality
+                ? $restaurants->where('municipality', '!=', $userMunicipality)
+                : $restaurants;
+
+            $localList = $localRestaurants->isEmpty()
+                ? 'None in their municipality.'
+                : $localRestaurants->map(fn ($r) => "• {$r->name} ({$r->municipality})")->join("\n");
+
+            $otherList = $otherRestaurants->map(fn ($r) => "• {$r->name} ({$r->municipality})")->join("\n");
+
+            $activeVouchers = \App\Models\Voucher::where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where(fn ($q) => $q->whereNull('max_uses')->orWhereColumn('used_count', '<', 'max_uses'))
+                ->with('restaurant:id,name')
+                ->get(['id', 'code', 'type', 'value', 'min_order_amount', 'expires_at', 'restaurant_id']);
+
+            $voucherList = $activeVouchers->isEmpty()
+                ? 'No active promos right now.'
+                : $activeVouchers->map(fn ($v) => sprintf(
+                    '[ID:%d] Code: %s | %s %s%s%s',
+                    $v->id,
+                    $v->code,
+                    $v->type === 'percentage' ? number_format($v->value, 0) . '% off' : '₱' . number_format($v->value, 0) . ' off',
+                    $v->restaurant ? "at {$v->restaurant->name}" : '(all restaurants)',
+                    $v->min_order_amount ? ' | Min. ₱' . number_format($v->min_order_amount, 0) : '',
+                    $v->expires_at ? ' | Expires ' . $v->expires_at->format('M d') : ''
                 ))->join("\n");
 
-                $restaurantContext = "\n\nYou are specifically helping a customer at {$restaurant->name} "
-                    . "in {$restaurant->municipality}. Their available menu:\n{$menuList}";
-            }
+            $locationNote = $userMunicipality
+                ? "The customer is in {$userMunicipality}. Prioritize local restaurants, but you can suggest others — just note they're from a different municipality."
+                : "Customer municipality is unknown — suggest freely across Laguna.";
+
+            $dataContext = "\n\n--- HAPAG SYSTEM DATA ---"
+                . "\n{$locationNote}"
+                . "\n\nLocal restaurants (same municipality — recommend these first):\n{$localList}"
+                . "\n\nOther restaurants in Laguna:\n{$otherList}"
+                . "\n\nActive promos (use [ID:X] in voucher_ids when mentioning promos):\n{$voucherList}"
+                . "\n--- END SYSTEM DATA ---";
         }
 
         $systemPrompt = <<<PROMPT
-You are Hapag AI — a fun, food-obsessed assistant exclusively for Hapag, a food ordering platform serving Laguna, Philippines.
-You exist inside the Hapag app, so you only talk about food, restaurants, menus, orders, delivery, pickup, and promos available on Hapag.
+You are Hapag AI — a fun, food-obsessed assistant for Hapag, a food ordering platform in Laguna, Philippines.
 
 Your personality:
-- You're like a food-loving friend who's always excited to help — warm, witty, and a little extra when it comes to food
-- You naturally mix in a little Filipino/Taglish when it feels right (e.g. "Ay sarap nyan!", "Gutom na ako nito!")
-- You're enthusiastic but never annoying — keep it real and conversational
+- Like a food-loving friend — warm, witty, a little extra about food
+- Natural Filipino/Taglish when it fits ("Ay sarap nyan!", "Subukan mo 'to!")
+- Enthusiastic but never annoying
 
-What you can do:
-- Recommend dishes and restaurants based on the customer's mood, craving, or the weather
-- Answer questions about how Hapag works — ordering, pickup, delivery, scheduling, vouchers, cart, etc.
-- Mention promos and vouchers when they're relevant — but naturally, not pushy (e.g. "By the way, may voucher ka pa pala!")
-- Help customers decide between menu items if they're unsure
+CRITICAL — Response format:
+You MUST always respond in valid JSON with this exact structure:
+{
+  "reply": "Your conversational response here. Use \\n for line breaks. Use • for bullet lists.",
+  "menu_ids": [1, 4, 7],
+  "voucher_ids": [2]
+}
 
-How you respond:
-- Medium length — enough to actually be helpful, but never a wall of text
-- Use line breaks to keep it easy to read
-- If you mention multiple dishes or options, use a short list format
+Rules for menu_ids and voucher_ids:
+- Include menu_ids ONLY when you have [ID:X] values in the system data (restaurant page context). On the dashboard, always use []
+- Include voucher_ids when mentioning promos — use the [ID:X] values from the voucher list
+- Use empty arrays [] when not applicable
+- Max 4 menu_ids, max 3 voucher_ids per response
+- ONLY use IDs that exist in the system data — never invent IDs
 
-Hard rules — never break these:
-- ONLY discuss food, restaurants, and anything related to Hapag. If someone asks about anything else (politics, homework, other apps, general knowledge, etc.), politely but clearly refuse and redirect: "Haha sorry, food lang ang alam ko! 🍽️ Anything I can help you find on Hapag?"
-- You are ONLY for Laguna, Philippines. If someone asks about restaurants or food outside Laguna, let them know Hapag only covers Laguna for now
-- Never make up restaurant names, prices, or menu items that aren't in the provided menu data
-- Never discuss competitors or recommend ordering from anywhere other than Hapag
+Rules for the reply text:
+- Structure: short intro → • bullet list → closing line
+- One blank line (\\n\\n) between sections
+- Medium length — helpful but never a wall of text
+- Municipality awareness: if customer is in a specific area, recommend local places first; if suggesting other municipalities, say so naturally
+
+Hard rules — NEVER break:
+- ONLY mention restaurants, dishes, and promos from the system data
+- Never invent restaurant names, dishes, prices, or promo codes
+- Refuse off-topic questions: "Haha sorry, food lang ang alam ko! 🍽️"
+- Laguna only — never suggest outside Laguna
+- Never mention competitors
 PROMPT;
 
-        $systemPrompt .= $restaurantContext;
+        $systemPrompt .= $dataContext;
 
+        // Strip card data from message history before sending to AI
+        // (cards are UI-only, the AI only needs the text)
         $messages = collect($request->messages)
             ->map(fn ($m) => ['role' => $m['role'], 'content' => $m['content']])
             ->toArray();
 
-        $reply = $this->callGroqMessages($systemPrompt, $messages);
+        $rawReply = $this->callGroqMessages($systemPrompt, $messages, 600);
 
-        if ($reply === null) {
+        if ($rawReply === null) {
             return response()->json(['error' => 'AI service is unavailable. Please try again later.'], 503);
         }
 
-        return response()->json(['reply' => $reply]);
+        // Parse structured JSON response from AI
+        $cleaned = trim($rawReply);
+        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
+        $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+        $parsed  = json_decode($cleaned, true);
+
+        $replyText  = $parsed['reply']       ?? $rawReply; // fallback to raw if AI ignores format
+        $menuIds    = $parsed['menu_ids']    ?? [];
+        $voucherIds = $parsed['voucher_ids'] ?? [];
+
+        // Resolve menu cards from real DB data
+        $menuCards = [];
+        if (!empty($menuIds)) {
+            $menuCards = MenuItem::whereIn('id', $menuIds)
+                ->where('is_available', true)
+                ->with('restaurant:id,name,municipality')
+                ->get(['id', 'restaurant_id', 'name', 'price', 'category', 'image_url', 'description'])
+                ->map(fn ($i) => [
+                    'id'              => $i->id,
+                    'name'            => $i->name,
+                    'price'           => (float) $i->price,
+                    'category'        => $i->category,
+                    'image_url'       => $i->image_url,
+                    'description'     => $i->description,
+                    'restaurant_id'   => $i->restaurant_id,
+                    'restaurant_name' => $i->restaurant->name,
+                    'municipality'    => $i->restaurant->municipality,
+                ])->values()->toArray();
+        }
+
+        // Resolve voucher cards from real DB data
+        $voucherCards = [];
+        if (!empty($voucherIds)) {
+            $usedVoucherIds = $user
+                ? \App\Models\VoucherUsage::where('user_id', $user->id)->pluck('voucher_id')->toArray()
+                : [];
+            $claimedIds = $user
+                ? \App\Models\ClaimedVoucher::where('user_id', $user->id)->pluck('voucher_id')->toArray()
+                : [];
+
+            $voucherCards = \App\Models\Voucher::whereIn('id', $voucherIds)
+                ->where('is_active', true)
+                ->with('restaurant:id,name')
+                ->get()
+                ->map(fn ($v) => [
+                    'id'               => $v->id,
+                    'code'             => $v->code,
+                    'type'             => $v->type,
+                    'value'            => (float) $v->value,
+                    'min_order_amount' => $v->min_order_amount ? (float) $v->min_order_amount : null,
+                    'expires_at'       => $v->expires_at?->format('M d, Y'),
+                    'restaurant_name'  => $v->restaurant?->name ?? null,
+                    'is_claimed'       => in_array($v->id, $claimedIds),
+                    'is_used'          => in_array($v->id, $usedVoucherIds),
+                ])->values()->toArray();
+        }
+
+        return response()->json([
+            'reply'        => $replyText,
+            'menu_cards'   => $menuCards,
+            'voucher_cards'=> $voucherCards,
+        ]);
     }
 
     // ── Owner: menu item description generator ───────────────────────────────
@@ -209,9 +341,9 @@ PROMPT;
 
     // ── Shared GROQ helper ────────────────────────────────────────────────────
 
-    private function callGroqMessages(string $systemPrompt, array $messages): ?string
+    private function callGroqMessages(string $systemPrompt, array $messages, int $maxTokens = 400): ?string
     {
-        $response = Http::timeout(15)
+        $response = Http::timeout(20)
             ->withToken(config('services.groq.key'))
             ->post(config('services.groq.url'), [
                 'model'       => config('services.groq.model'),
@@ -219,8 +351,8 @@ PROMPT;
                     [['role' => 'system', 'content' => $systemPrompt]],
                     $messages
                 ),
-                'max_tokens'  => 300,
-                'temperature' => 0.8,
+                'max_tokens'  => $maxTokens,
+                'temperature' => 0.7,
             ]);
 
         if ($response->failed()) {
