@@ -21,6 +21,7 @@ class User extends Authenticatable
         'municipality',
         'address',
         'avatar_url',
+        'google_id',
     ];
 
     protected $hidden = [
