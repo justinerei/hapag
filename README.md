@@ -1,58 +1,275 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<div align="center">
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+<img src="public/images/logo_hapag.svg" alt="Hapag Logo" width="180"/>
 
-## About Laravel
+# Hapag 🍽️
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Good food, right to your table.**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+A multi-restaurant online food ordering web application built for Laguna province, Philippines.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?style=flat&logo=laravel&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
+![Inertia.js](https://img.shields.io/badge/Inertia.js-1.x-9553E9?style=flat)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=flat&logo=mysql&logoColor=white)
 
-## Learning Laravel
+</div>
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 📖 About
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+**Hapag** (Filipino for _dining table_) is a full-stack food ordering platform developed as an academic project for **ITEL 203 — Web Systems and Technologies** at Laguna State Polytechnic University (LSPU). It covers 8 municipalities in Laguna, featuring 6 fictional restaurant brands with multiple branches.
 
-## Agentic Development
+The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no payment gateway integration. Delivery is handled directly by the restaurant.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+---
+
+## ✨ Features
+
+### For Customers
+
+- 🔍 Browse and search restaurants and menu items across Laguna
+- 🛒 Cart system (one restaurant per cart enforced)
+- 🎟️ Voucher/promo code support (global and restaurant-specific)
+- 📦 Order tracking (Pending → Accepted → Preparing → Ready → Completed)
+- ❤️ Favorite restaurants
+- 🤖 AI-powered food recommender and chatbot (GROQ/LLaMA)
+- 🌤️ Weather-based food suggestions (OpenWeatherMap)
+- 📍 Interactive Laguna restaurant map (Leaflet.js)
+- 🔔 Real-time order status notifications (Laravel Echo + Reverb)
+- 🔐 Google OAuth login
+
+### For Restaurant Owners
+
+- 🏪 Restaurant setup and management (pending admin approval)
+- 🍴 Menu item management (add, edit, toggle availability, upload images)
+- 📋 Order management pipeline with live incoming order alerts
+- 🎟️ Create restaurant-scoped vouchers
+- ✍️ AI-generated menu descriptions (GROQ)
+- 📊 Sales dashboard and CSV export
+
+### For Admins
+
+- ✅ Restaurant approval/rejection workflow
+- 🗂️ Category management (with weather tags)
+- 🎟️ Site-wide voucher management
+- 📈 Platform analytics (revenue, growth charts, retention rate)
+- 💾 One-click database backups
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer           | Technology                    |
+| --------------- | ----------------------------- |
+| Backend         | Laravel 11, PHP 8.2+          |
+| Frontend        | React 18, Inertia.js          |
+| Styling         | Tailwind CSS                  |
+| Database        | MySQL (via Laragon)           |
+| Auth            | Laravel Breeze + Google OAuth |
+| Real-time       | Laravel Reverb + Echo         |
+| Maps            | Leaflet.js                    |
+| AI              | GROQ API (LLaMA 3)            |
+| Weather         | OpenWeatherMap API            |
+| Dev Environment | Laragon (Windows)             |
+
+---
+
+## 🗂️ User Roles
+
+| Role       | Description                                                      |
+| ---------- | ---------------------------------------------------------------- |
+| `customer` | Browses restaurants, places orders, manages cart and favorites   |
+| `owner`    | Manages their restaurant(s), menu, and incoming orders           |
+| `admin`    | Full system oversight — approvals, categories, vouchers, backups |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- PHP 8.2+
+- Composer
+- Node.js 18+ and npm
+- MySQL (Laragon recommended for Windows)
+- GROQ API key
+- OpenWeatherMap API key
+
+### Installation
+
+**1. Clone the repository**
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/your-username/hapag.git
+cd hapag
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**2. Install PHP dependencies**
 
-## Contributing
+```bash
+composer install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**3. Install JS dependencies**
 
-## Code of Conduct
+```bash
+npm install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**4. Set up environment**
 
-## Security Vulnerabilities
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**5. Configure your `.env`**
 
-## License
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=hapag
+DB_USERNAME=root
+DB_PASSWORD=
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# OpenWeatherMap
+OWM_API_KEY=your_key_here
+OWM_CITY=Santa Cruz,PH
+
+# GROQ (AI features)
+GROQ_API_KEY=your_key_here
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost/auth/google/callback
+
+# Laravel Reverb (real-time)
+REVERB_APP_ID=hapag
+REVERB_APP_KEY=hapag-key
+REVERB_APP_SECRET=hapag-secret
+```
+
+**6. Run migrations and seed**
+
+```bash
+php artisan migrate --seed
+```
+
+**7. Link storage**
+
+```bash
+php artisan storage:link
+```
+
+**8. Start the dev servers**
+
+```bash
+# In one terminal — Laravel
+php artisan serve
+
+# In another — Vite (React)
+npm run dev
+
+# Optional — Reverb (real-time)
+php artisan reverb:start
+```
+
+Visit `http://localhost:8000` in your browser.
+
+### Seeded Test Accounts
+
+| Role     | Email              | Password |
+| -------- | ------------------ | -------- |
+| Admin    | admin@hapag.com    | password |
+| Owner    | owner@hapag.com    | password |
+| Customer | customer@hapag.com | password |
+
+---
+
+## 🍽️ Restaurant Brands
+
+| Brand                      | Cuisine         |
+| -------------------------- | --------------- |
+| Lutong Bahay ni Aling Rosa | Filipino        |
+| Grill Masters PH           | BBQ / Ihaw-Ihaw |
+| Kape't Tinapay             | Café            |
+| La Preciosa Bakery         | Bakery          |
+| Mama Nena's Carinderia     | Filipino        |
+| Bida Burger                | Fast Food       |
+
+~25–30 branches spread across: **Santa Cruz, Pagsanjan, Los Baños, Calamba, San Pablo, Bay, Nagcarlan, and Pila**.
+
+---
+
+## 🗄️ Database Schema (Core Tables)
+
+```
+users               — Roles, municipality, Google ID, avatar
+categories          — Food categories with weather tags
+restaurants         — Branches with lat/lng, status, opening hours
+menu_items          — Food items with price, availability, image
+cart_items          — Active user carts (one restaurant per user)
+orders              — Pickup/delivery orders with status pipeline
+order_items         — Frozen snapshot of items at checkout
+vouchers            — Discount codes (global or restaurant-scoped)
+voucher_usages      — One-use-per-customer enforcement
+claimed_vouchers    — Vouchers saved by customers
+favorites           — Pivot: users ↔ restaurants
+system_settings     — Key-value store (e.g., last backup time)
+notifications       — Laravel notification log
+```
+
+---
+
+## 🤖 AI Features
+
+Powered by **GROQ API (LLaMA 3)**:
+
+- **Food Recommender** — Customer describes a craving; AI picks 2–4 matching dishes from actual menu data
+- **Hapag Chatbot** — Conversational assistant with full restaurant/voucher context; responds in Taglish
+- **Menu Description Generator** — Owners can auto-generate appetizing item descriptions
+
+---
+
+## 📁 Project Structure (Highlights)
+
+```
+app/
+  Http/Controllers/     — All route controllers
+  Models/               — Eloquent models
+  Services/             — BackupService
+  Notifications/        — Order & restaurant status notifications
+  Events/               — NewOrderPlaced (real-time)
+resources/js/
+  Pages/                — Inertia React page components
+    Home/               — Guest & Customer dashboards
+    Owner/              — Owner dashboard, setup, rejected
+    Admin/              — Admin dashboard
+    Cart/, Checkout/    — Cart and checkout flows
+    Orders/, Restaurants/, Search/, Favorites/
+  Components/           — Shared UI components
+  Layouts/              — CustomerLayout, GuestLayout
+database/
+  migrations/           — All schema definitions
+  seeders/              — Full seeded dataset
+```
+
+---
+
+## 🎓 Academic Context
+
+> **Course:** ITEL 203 — Web Systems and Technologies  
+> **School:** Laguna State Polytechnic University (LSPU)  
+> **Program:** BS Information Technology  
+> **Supervisor:** Mr. Marlon Boyet Dungo
+
+---
+
+## 📄 License
+
+This project is built for academic purposes. All restaurant brands, menu items, and business data are fictional and created solely for this project.
