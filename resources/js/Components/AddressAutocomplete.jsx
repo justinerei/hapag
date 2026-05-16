@@ -41,7 +41,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  *   1. User types ≥ 3 characters → debounced (350ms) Nominatim search
  *   2. Results scoped to Laguna bounding box (viewbox + bounded=1)
  *   3. Suggestions appear in a dropdown below the input
- *   4. On selection → full display_name goes to input, municipality extracted
+ *   4. On selection → clean formatted address goes to input, municipality extracted
  *      from Nominatim's address breakdown (city / town / municipality field)
  *   5. User can also type freely — onType fires with (typedText) on each keystroke.
  *      onChange ONLY fires when a suggestion is selected or the input is cleared.
@@ -317,9 +317,17 @@ export default function AddressAutocomplete({
         searchNominatim(val);
     }
 
+    // ── FIX: Use clean formatted address instead of raw display_name ───────
+    // Previously, result.display_name was saved — a long ugly string like:
+    // "Brgy. Poblacion, Santa Cruz, Laguna, Calabarzon, 4500, Philippines"
+    // Now we use the same formatted address shown in the dropdown,
+    // which gives a clean result like: "Brgy. Poblacion, Santa Cruz, Laguna"
     function handleSelect(result) {
         const municipality = extractMunicipality(result.address || {});
-        const fullAddress  = result.display_name;
+        const formatted    = formatSuggestion(result);
+        const fullAddress  = [formatted.main, formatted.secondary]
+            .filter(Boolean)
+            .join(', ');
 
         setQuery(fullAddress);
         setSuggestions([]);
