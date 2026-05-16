@@ -472,7 +472,8 @@ export default function SignUpModal({ show, onClose, onSwitchToSignIn }) {
     }
 
     function handleSwitchToSignIn() {
-        handleClose();
+        setStep('role');
+        setSelectedRole(null);
         onSwitchToSignIn?.();
     }
 

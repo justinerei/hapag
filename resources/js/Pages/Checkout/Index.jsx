@@ -3,14 +3,27 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
+// Parses "10:00 AM" (12-hr) or "10:00" (24-hr) → [hours, minutes] in 24-hr format
+function parseTimeComponents(timeStr) {
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        if (match[3].toUpperCase() === 'AM') { if (h === 12) h = 0; }
+        else { if (h !== 12) h += 12; }
+        return [h, m];
+    }
+    const p = timeStr.split(':').map(Number);
+    return [p[0] || 10, p[1] || 0];
+}
+
 // Generate time slots for scheduling (next 3 days, 30-min intervals within restaurant hours)
 function generateTimeSlots(openingTime, closingTime) {
     const slots = [];
     const now = new Date();
 
-    // Parse opening and closing hours from "HH:MM" strings, with fallbacks
-    const [openH, openM] = (openingTime ?? '10:00').split(':').map(Number);
-    const [closeH, closeM] = (closingTime ?? '21:00').split(':').map(Number);
+    const [openH, openM] = parseTimeComponents(openingTime ?? '10:00');
+    const [closeH, closeM] = parseTimeComponents(closingTime ?? '21:00');
 
     for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
         const date = new Date(now);
@@ -578,8 +591,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                                                 ? 'border-green-200 bg-green-50/40 hover:border-green-400 hover:bg-green-50'
                                                                                 : 'border-green-100 bg-green-50/20 opacity-50 cursor-not-allowed'
                                                                             : meetsMin
-                                                                                ? 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
-                                                                                : 'border-gray-100 opacity-40 cursor-not-allowed'
+                                                                                ? 'border-gray-200 bg-gray-50 hover:border-green-300 hover:bg-green-50/30'
+                                                                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
                                                                     }`}
                                                                 >
                                                                     {/* Icon badge */}
@@ -587,7 +600,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                                         v.is_claimed
                                                                             ? 'bg-green-500 text-white'
                                                                             : v.is_global
-                                                                                ? 'bg-gray-100 text-gray-500'
+                                                                                ? 'bg-blue-100 text-blue-600'
                                                                                 : 'bg-orange-100 text-orange-600'
                                                                     }`}>
                                                                         {v.type === 'percentage' ? '%' : '₱'}

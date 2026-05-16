@@ -97,7 +97,6 @@ export default function SignInModal({ show, onClose, onSwitchToSignUp }) {
 
     function handleSwitch(e) {
         e.preventDefault();
-        onClose();
         onSwitchToSignUp?.();
     }
 

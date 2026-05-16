@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 
@@ -213,6 +213,16 @@ function AvatarUpload({ user: userProp }) {
 
 export default function ProfileEdit({ user, cartCount = 0 }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [toast, setToast] = useState(null);
+    const toastTimer = useRef(null);
+
+    function showToast(message) {
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        setToast(message);
+        toastTimer.current = setTimeout(() => setToast(null), 3000);
+    }
+
+    useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
     // ── Profile info form ────────────────────────────────────────────────────
     const profileForm = useForm({
@@ -255,6 +265,15 @@ export default function ProfileEdit({ user, cartCount = 0 }) {
         <CustomerLayout cartCount={cartCount}>
             <Head title="My Account — Hapag" />
 
+            {toast && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-gray-900 text-white text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap">
+                    <svg className="h-4 w-4 text-green-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                    </svg>
+                    {toast}
+                </div>
+            )}
+
             <div className="min-h-screen bg-gray-50/70 py-12">
                 <div className="max-w-2xl mx-auto px-4 space-y-4">
 
@@ -272,7 +291,10 @@ export default function ProfileEdit({ user, cartCount = 0 }) {
                             <form
                                 onSubmit={(e) => {
                                     e.preventDefault();
-                                    profileForm.patch(route('profile.update'), { preserveScroll: true });
+                                    profileForm.patch(route('profile.update'), {
+                                        preserveScroll: true,
+                                        onSuccess: () => showToast('Profile saved successfully!'),
+                                    });
                                 }}
                                 className="space-y-5"
                             >
@@ -329,7 +351,7 @@ export default function ProfileEdit({ user, cartCount = 0 }) {
                                 e.preventDefault();
                                 passwordForm.put(route('password.update'), {
                                     preserveScroll: true,
-                                    onSuccess: () => passwordForm.reset(),
+                                    onSuccess: () => { passwordForm.reset(); showToast('Password updated!'); },
                                 });
                             }}
                             className="space-y-5"

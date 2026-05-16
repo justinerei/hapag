@@ -31,14 +31,26 @@ function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 }
 
+function parseTimeTo24(timeStr) {
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        if (match[3].toUpperCase() === 'AM') { if (h === 12) h = 0; }
+        else { if (h !== 12) h += 12; }
+        return h * 60 + m;
+    }
+    const parts = timeStr.split(':').map(Number);
+    return parts[0] * 60 + (parts[1] || 0);
+}
+
 function isOpenNow(openingTime, closingTime) {
     if (!openingTime || !closingTime) return null;
     const now       = new Date();
-    const [oh, om]  = openingTime.split(':').map(Number);
-    const [ch, cm]  = closingTime.split(':').map(Number);
     const nowMins   = now.getHours() * 60 + now.getMinutes();
-    const openMins  = oh * 60 + om;
-    const closeMins = ch * 60 + cm;
+    const openMins  = parseTimeTo24(openingTime);
+    const closeMins = parseTimeTo24(closingTime);
+    if (isNaN(openMins) || isNaN(closeMins)) return null;
     if (openMins <= closeMins) return nowMins >= openMins && nowMins < closeMins;
     return nowMins >= openMins || nowMins < closeMins;
 }
