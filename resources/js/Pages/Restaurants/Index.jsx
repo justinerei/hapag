@@ -1,7 +1,8 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Skeleton, SkeletonCard, ShimmerStyles } from '@/Components/Skeleton';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -333,6 +334,45 @@ function EmptyState({ hasRestaurants, onClear }) {
     );
 }
 
+// ── Skeleton ───────────────────────────────────────────────────────────────────
+
+function RestaurantsIndexSkeleton({ cartCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount}>
+            <ShimmerStyles />
+
+            {/* Header with search */}
+            <div className="relative overflow-hidden bg-gradient-to-b from-green-50/60 via-green-50/20 to-gray-50 pt-10 pb-9 lg:pt-14 lg:pb-11">
+                <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-end justify-between mb-7">
+                        <div className="space-y-2">
+                            <Skeleton className="h-3 w-28 rounded-full" />
+                            <Skeleton className="h-9 w-64 rounded-xl" />
+                        </div>
+                        <Skeleton className="hidden sm:block h-9 w-24 rounded-2xl" />
+                    </div>
+                    <Skeleton className="h-14 w-full rounded-2xl" />
+                </div>
+            </div>
+
+            {/* Body */}
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {/* Filter bar */}
+                <div className="flex items-center gap-2 mb-5 overflow-hidden">
+                    {[80, 110, 110, 100, 80].map((w, i) => (
+                        <Skeleton key={i} className={`shrink-0 h-10 rounded-xl`} style={{ width: w }} />
+                    ))}
+                </div>
+
+                {/* Restaurant grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
+                    {[...Array(8)].map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function Index({ restaurants, categories, cartCount = 0, favoriteIds = [] }) {
@@ -341,9 +381,13 @@ export default function Index({ restaurants, categories, cartCount = 0, favorite
     const [sortBy, setSortBy]                     = useState('az');
     const [favorites, setFavorites]               = useState(() => new Set(favoriteIds));
     const [toast, setToast]                       = useState(null);
+    const [mounted, setMounted]                   = useState(false);
     const toastTimer = useRef(null);
-    const gridRef    = useRef(null);
-    const gridInView = useInView(gridRef, { once: true, margin: '-80px' });
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -399,6 +443,8 @@ export default function Index({ restaurants, categories, cartCount = 0, favorite
 
     const hasFilters  = search.trim() !== '' || selectedCategory !== null || sortBy !== 'az';
     const activeCount = (search.trim() ? 1 : 0) + (selectedCategory !== null ? 1 : 0) + (sortBy !== 'az' ? 1 : 0);
+
+    if (!mounted) return <RestaurantsIndexSkeleton cartCount={cartCount} />;
 
     return (
         <CustomerLayout cartCount={cartCount}>
@@ -539,10 +585,7 @@ export default function Index({ restaurants, categories, cartCount = 0, favorite
                 </motion.div>
 
                 {/* ── Restaurant grid ─────────────────────────────────────── */}
-                <div
-                    ref={gridRef}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12"
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
                     <AnimatePresence mode="popLayout">
                         {filteredRestaurants.length === 0 ? (
                             <motion.div
@@ -564,10 +607,7 @@ export default function Index({ restaurants, categories, cartCount = 0, favorite
                                     key={r.id}
                                     layout
                                     initial={{ opacity: 0, y: 22 }}
-                                    animate={{
-                                        opacity: gridInView ? 1 : 0,
-                                        y: gridInView ? 0 : 22,
-                                    }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.93, transition: { duration: 0.2 } }}
                                     transition={{
                                         opacity:  { duration: 0.45, delay: Math.min(i * 0.05, 0.35), ease },

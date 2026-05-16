@@ -3,6 +3,7 @@ import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import '@/bootstrap';
 import { formatOrderId } from '@/utils/formatOrderId';
+import { Skeleton, ShimmerStyles } from '@/Components/Skeleton';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -467,6 +468,52 @@ function filterByDate(orders, filter) {
     return orders;
 }
 
+// ── Orders page skeleton ──────────────────────────────────────────────────────
+
+function OrdersPageSkeleton({ cartCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount} orderNotifCount={0}>
+            <ShimmerStyles />
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Page header */}
+                <div className="mb-8 space-y-2">
+                    <Skeleton className="h-8 w-36 rounded-xl" />
+                    <Skeleton className="h-4 w-52 rounded" />
+                </div>
+
+                {/* Date filter tabs */}
+                <div className="flex gap-2 mb-6">
+                    {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-9 w-20 rounded-xl" />
+                    ))}
+                </div>
+
+                {/* Order rows */}
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5 flex items-center gap-4">
+                            <div className="flex-1 min-w-0 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Skeleton className="h-5 w-16 rounded-full" />
+                                    <Skeleton className="h-4 w-44 rounded" />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <Skeleton className="h-3 w-28 rounded" />
+                                    <Skeleton className="h-3 w-16 rounded" />
+                                </div>
+                            </div>
+                            <div className="shrink-0 space-y-2 text-right">
+                                <Skeleton className="h-5 w-20 rounded ml-auto" />
+                                <Skeleton className="h-3 w-16 rounded ml-auto" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
@@ -478,7 +525,13 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     const [dateFilter, setDateFilter] = useState('today');
     const [expanded, setExpanded]     = useState(() => new Set());
     const [toast, setToast]         = useState(null);
+    const [mounted, setMounted]     = useState(false);
     const toastTimer                = useRef(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false, isStatus = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -535,6 +588,8 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     }
 
     const filteredOrders = filterByDate(orders, dateFilter);
+
+    if (!mounted) return <OrdersPageSkeleton cartCount={cartCount} />;
 
     return (
         // ── NEW: orderNotifCount=0 because we're already on this page ─────────

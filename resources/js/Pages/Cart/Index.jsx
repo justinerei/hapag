@@ -1,6 +1,76 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import { Skeleton, ShimmerStyles } from '@/Components/Skeleton';
+
+// ── Cart page skeleton ────────────────────────────────────────────────────────
+
+function CartPageSkeleton({ cartCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount}>
+            <ShimmerStyles />
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Page header */}
+                <div className="mb-6 space-y-2">
+                    <Skeleton className="h-4 w-32 rounded" />
+                    <Skeleton className="h-8 w-28 rounded-xl" />
+                    <Skeleton className="h-4 w-48 rounded" />
+                </div>
+
+                <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+                    {/* Left: cart items */}
+                    <div className="lg:col-span-2 space-y-3 mb-8 lg:mb-0">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-4">
+                                <Skeleton className="w-16 h-16 shrink-0 rounded-xl" />
+                                <div className="flex-1 min-w-0 space-y-2">
+                                    <Skeleton className="h-4 w-3/4 rounded" />
+                                    <Skeleton className="h-3 w-1/2 rounded" />
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Skeleton className="w-8 h-8 rounded-lg" />
+                                    <Skeleton className="w-8 h-5 rounded" />
+                                    <Skeleton className="w-8 h-8 rounded-lg" />
+                                </div>
+                                <Skeleton className="w-16 h-5 rounded shrink-0" />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Right: order summary */}
+                    <div className="space-y-4">
+                        {/* Order type toggle */}
+                        <div className="bg-white border border-gray-100 rounded-2xl p-4">
+                            <Skeleton className="h-4 w-24 rounded mb-3" />
+                            <div className="flex gap-2">
+                                <Skeleton className="flex-1 h-11 rounded-xl" />
+                                <Skeleton className="flex-1 h-11 rounded-xl" />
+                            </div>
+                        </div>
+
+                        {/* Voucher input */}
+                        <div className="bg-white border border-gray-100 rounded-2xl p-4">
+                            <Skeleton className="h-4 w-20 rounded mb-3" />
+                            <Skeleton className="h-11 w-full rounded-xl" />
+                        </div>
+
+                        {/* Summary */}
+                        <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-3">
+                            <Skeleton className="h-5 w-32 rounded mb-1" />
+                            <Skeleton className="h-4 w-full rounded" />
+                            <Skeleton className="h-4 w-full rounded" />
+                            <Skeleton className="h-4 w-full rounded" />
+                            <div className="border-t border-gray-100 pt-3 space-y-3">
+                                <Skeleton className="h-5 w-full rounded" />
+                                <Skeleton className="h-12 w-full rounded-xl" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
 
 const DELIVERY_FEE = 49;
 
@@ -17,7 +87,13 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
     const [orderType, setOrderType] = useState(initialType || 'pickup');
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast]         = useState(null);
+    const [mounted, setMounted]     = useState(false);
     const toastTimer = useRef(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -89,6 +165,8 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
     }
 
     const isEmpty = items.length === 0;
+
+    if (!mounted) return <CartPageSkeleton cartCount={localCount} />;
 
     return (
         <CustomerLayout cartCount={localCount}>

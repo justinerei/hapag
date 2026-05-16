@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AIChatWidget from '@/Components/AIChatWidget';
 import SignInModal from '@/Components/SignInModal';
+import { Skeleton, ShimmerStyles } from '@/Components/Skeleton';
 
 const DELIVERY_FEE = 49;
 
@@ -236,6 +237,65 @@ function CartSidebar({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+// ── Restaurant detail skeleton ────────────────────────────────────────────────
+
+function RestaurantShowSkeleton({ cartCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount} hideSearch>
+            <ShimmerStyles />
+
+            {/* Hero image */}
+            <Skeleton className="w-full h-80 rounded-none" />
+
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="flex gap-8 items-start">
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0">
+                        {/* Restaurant name + badges */}
+                        <div className="mb-6 space-y-3">
+                            <Skeleton className="h-9 w-2/3 rounded-xl" />
+                            <div className="flex gap-2 flex-wrap">
+                                <Skeleton className="h-6 w-20 rounded-full" />
+                                <Skeleton className="h-6 w-24 rounded-full" />
+                                <Skeleton className="h-6 w-16 rounded-full" />
+                            </div>
+                        </div>
+
+                        {/* Menu category tabs */}
+                        <div className="flex gap-2 mb-6 overflow-hidden">
+                            {[...Array(4)].map((_, i) => (
+                                <Skeleton key={i} className="shrink-0 h-9 w-24 rounded-xl" />
+                            ))}
+                        </div>
+
+                        {/* Menu items */}
+                        <div className="space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100">
+                                    <Skeleton className="w-20 h-20 shrink-0 rounded-xl" />
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <Skeleton className="h-4 w-3/4 rounded" />
+                                        <Skeleton className="h-3 w-full rounded" />
+                                        <Skeleton className="h-3 w-1/2 rounded" />
+                                    </div>
+                                    <div className="shrink-0 text-right space-y-2">
+                                        <Skeleton className="h-5 w-16 rounded" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Desktop cart sidebar placeholder */}
+                    <div className="hidden lg:block w-80 shrink-0">
+                        <Skeleton className="h-[420px] w-full rounded-2xl" />
+                    </div>
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 export default function Show({
     restaurant,
     menuItems,
@@ -280,6 +340,7 @@ export default function Show({
 
     // Toast
     const [toast, setToast] = useState(null);
+    const [mounted, setMounted] = useState(false);
     const toastTimer = useRef(null);
     const cartRef = useRef(null);
 
@@ -377,6 +438,11 @@ export default function Show({
         if (cartExpanded) document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [cartExpanded]);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(msg, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -479,6 +545,8 @@ export default function Show({
         });
         return tabs;
     }, [featuredItems, categoryKeys, filteredKeys, menuSearch]);
+
+    if (!mounted) return <RestaurantShowSkeleton cartCount={cartCount} />;
 
     return (
         <CustomerLayout cartCount={localCartCount} hideSearch>

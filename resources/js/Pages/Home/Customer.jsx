@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AIChatWidget from '@/Components/AIChatWidget';
+import { Skeleton, SkeletonCard, ShimmerStyles } from '@/Components/Skeleton';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -350,6 +351,101 @@ function SectionHeading({ title, subtitle, badge }) {
     );
 }
 
+// ── Customer page skeleton ────────────────────────────────────────────────────
+
+function CustomerPageSkeleton({ cartCount = 0, orderNotifCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount} orderNotifCount={orderNotifCount}>
+            <ShimmerStyles />
+
+            {/* Weather hero strip */}
+            <div className="relative overflow-hidden bg-gray-800/80" style={{ minHeight: '440px' }}>
+                <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
+                        <div className="max-w-md w-full rounded-2xl p-6 sm:p-8" style={{ background: 'rgba(0,0,0,0.18)' }}>
+                            <Skeleton className="h-3 w-28 rounded-full mb-5" />
+                            <div className="flex items-start gap-4 mb-4">
+                                <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                                <div className="space-y-2 pt-1">
+                                    <Skeleton className="h-11 w-20 rounded-lg" />
+                                    <Skeleton className="h-4 w-16 rounded" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-4 w-full rounded mb-2" />
+                            <Skeleton className="h-4 w-4/5 rounded mb-6" />
+                            <div className="flex gap-2 mb-6">
+                                <Skeleton className="h-7 w-20 rounded-full" />
+                                <Skeleton className="h-7 w-20 rounded-full" />
+                            </div>
+                            <Skeleton className="h-10 w-36 rounded-xl" />
+                        </div>
+
+                        <div className="lg:max-w-[540px] w-full">
+                            <Skeleton className="h-3 w-44 rounded-full mb-3" />
+                            <div className="flex gap-3 overflow-hidden">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="shrink-0 w-52">
+                                        <Skeleton className="w-full aspect-[4/3] rounded-2xl" />
+                                        <div className="p-3 space-y-2">
+                                            <Skeleton className="h-3 w-3/4 rounded" />
+                                            <Skeleton className="h-3 w-1/2 rounded" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main content area */}
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+                <div className="flex gap-8 items-start">
+                    {/* Filter sidebar */}
+                    <div className="hidden lg:block w-[220px] shrink-0">
+                        <Skeleton className="h-64 w-full rounded-2xl" />
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-10 lg:space-y-12">
+                        {/* Cuisine circles */}
+                        <div>
+                            <div className="flex items-start justify-between mb-5">
+                                <Skeleton className="h-7 w-24 rounded-xl" />
+                            </div>
+                            <div className="flex gap-5 overflow-hidden">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="shrink-0 flex flex-col items-center gap-2.5">
+                                        <Skeleton className="w-24 h-24 rounded-2xl" />
+                                        <Skeleton className="h-3 w-14 rounded" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Daily deals */}
+                        <div>
+                            <Skeleton className="h-7 w-28 rounded-xl mb-5" />
+                            <div className="flex gap-4 overflow-hidden">
+                                {[...Array(3)].map((_, i) => (
+                                    <Skeleton key={i} className="shrink-0 w-[300px] h-[116px] rounded-2xl" />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* All restaurants grid */}
+                        <div>
+                            <Skeleton className="h-7 w-40 rounded-xl mb-5" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Customer({
@@ -375,12 +471,18 @@ export default function Customer({
     const [localCartCount, setLocalCartCount] = useState(cartCount);
     const [toast, setToast] = useState(null);
     const [conflict, setConflict] = useState(null);
+    const [mounted, setMounted] = useState(false);
 
     const pageProps = usePage().props;
     const [showWelcome, setShowWelcome] = useState(() => !!pageProps?.flash?.registered);
 
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -480,6 +582,10 @@ export default function Customer({
     const city = weather?.name ?? 'Laguna';
 
     const filterKey = `${search}|${selectedCuisines.join(',')}|${hasDealsFilter}|${sortBy}`;
+
+    if (!mounted) {
+        return <CustomerPageSkeleton cartCount={cartCount} orderNotifCount={activeOrderCount} />;
+    }
 
     return (
         <CustomerLayout cartCount={localCartCount} orderNotifCount={activeOrderCount}>
