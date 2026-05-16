@@ -263,10 +263,14 @@ database/
 
 ## 🎓 Academic Context
 
-> **Course:** ITEL 203 — Web Systems and Technologies  
-> **School:** Laguna State Polytechnic University (LSPU)  
-> **Program:** BS Information Technology  
-> **Supervisor:** Mr. Marlon Boyet Dungo
+> **School:** Laguna State Polytechnic University - San Pablo City Campus (LSPU - SPCC)
+> **Program:** BS Information Technology
+
+| Course   | Description                          | Instructor              |
+| -------- | ------------------------------------ | ----------------------- |
+| ITEL 203 | Web Systems and Technologies         | Mr. Marlon Boyet Dungo  |
+| ITEP 204 | Advance Database Systems             | Ma'am Sarah Escote      |
+| ITEP 206 | Integrative Programming Technologies | Ma'am Kristine Ompangco |
 
 ---
 
