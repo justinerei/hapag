@@ -138,7 +138,7 @@ const IcoRepeat  = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24"
 
 // ── CountUp ────────────────────────────────────────────────────────────────────
 
-function CountUp({ to, prefix = '', decimals = 0 }) {
+function CountUp({ to, prefix = '', suffix = '', decimals = 0 }) {
     const [val, setVal] = useState(0);
 
     useEffect(() => {
@@ -159,7 +159,7 @@ function CountUp({ to, prefix = '', decimals = 0 }) {
         ? val.toLocaleString('en-PH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
         : Math.round(val).toLocaleString('en-PH');
 
-    return <>{prefix}{display}</>;
+    return <>{prefix}{display}{suffix}</>;
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ const CARD_GRADIENTS = {
     'rose':        'from-rose-600 to-red-500',
 };
 
-function StatCard({ label, value, prefix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
+function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-40px' });
     const grad   = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
@@ -308,7 +308,7 @@ function StatCard({ label, value, prefix = '', decimals = 0, subtitle, gradient 
                 </div>
             </div>
             <p className="text-[26px] font-bold text-white tracking-tight leading-none tabular-nums mb-1.5">
-                {inView ? <CountUp to={value} prefix={prefix} decimals={decimals} /> : `${prefix}0`}
+                {inView ? <CountUp to={value} prefix={prefix} suffix={suffix} decimals={decimals} /> : `${prefix}0${suffix}`}
             </p>
             <p className="text-xs font-semibold text-gray-400">{label}</p>
             {subtitle && <p className="text-[10px] text-gray-600 mt-1">{subtitle}</p>}
@@ -499,6 +499,7 @@ function PeakHoursHeatmap({ data }) {
                 <span className="text-gray-500"><IcoFire c="w-4 h-4" /></span>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peak ordering hours</p>
             </div>
+            <div className="relative">
             <div className="overflow-x-auto">
                 <div className="flex gap-1 min-w-fit">
                     {/* Y-axis hour labels */}
@@ -530,7 +531,17 @@ function PeakHoursHeatmap({ data }) {
                                         transition={{ delay, duration: 0.15 }}
                                         className="relative w-7 h-5 rounded-sm cursor-default"
                                         style={{ backgroundColor: heatmapBg(ratio) }}
-                                        onMouseEnter={() => setHovered({ day: HEATMAP_DAY_LBLS[di], hour, count })}
+                                        onMouseEnter={e => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            const containerRect = ref.current.getBoundingClientRect();
+                                            setHovered({
+                                                day: HEATMAP_DAY_LBLS[di],
+                                                hour,
+                                                count,
+                                                x: rect.left - containerRect.left + rect.width / 2,
+                                                y: rect.top  - containerRect.top,
+                                            });
+                                        }}
                                         onMouseLeave={() => setHovered(null)}
                                     />
                                 );
@@ -539,15 +550,24 @@ function PeakHoursHeatmap({ data }) {
                     ))}
                 </div>
             </div>
-            {/* Tooltip */}
             {hovered && (
-                <p className="mt-3 text-[11px] text-gray-400">
-                    <span className="text-white font-semibold">{hovered.day}</span>{' '}
-                    {hovered.hour > 12 ? hovered.hour - 12 : hovered.hour}{hovered.hour >= 12 ? 'PM' : 'AM'}
+                <div
+                    className="absolute z-10 pointer-events-none px-2.5 py-1.5 rounded-lg bg-gray-950 border border-gray-700 text-[11px] text-gray-200 whitespace-nowrap shadow-xl"
+                    style={{
+                        left: hovered.x,
+                        top: hovered.y - 38,
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    <span className="text-white font-semibold">{hovered.day}</span>
+                    {' '}
+                    {hovered.hour > 12 ? hovered.hour - 12 : hovered.hour}
+                    {hovered.hour >= 12 ? 'PM' : 'AM'}
                     {' — '}
                     <span className="text-green-400 font-semibold">{hovered.count} orders</span>
-                </p>
+                </div>
             )}
+            </div>
             {/* Legend scale */}
             <div className="mt-3 flex items-center gap-2">
                 <span className="text-[9px] text-gray-600">Low</span>
@@ -800,6 +820,8 @@ function OverviewSection({
     const periodOrders  = filteredOrders.reduce((s, d) => s + d.count, 0);
     const periodRevenue = filteredRevenue.reduce((s, d) => s + d.revenue, 0);
 
+    const isFiltered = timePeriod !== 'all';
+
     const statusData = useMemo(() => (ordersByStatus ?? []).map(s => ({
         name:   cap(s.status),
         status: s.status,
@@ -825,10 +847,24 @@ function OverviewSection({
             <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
                 <StatCard label="Total restaurants" value={totalRestaurants} gradient="red-pink"  icon={<IcoStore c="w-5 h-5" />} subtitle={`${activeRestaurants} active`} />
                 <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
-                <StatCard label="Total orders"       value={totalOrders}       gradient="blue-cyan" icon={<IcoBag c="w-5 h-5" />}   subtitle={`${periodOrders.toLocaleString('en-PH')} this period`} />
-                <StatCard label="Total revenue"      value={totalRevenue}      gradient="green"     icon={<IcoCoin c="w-5 h-5" />}  prefix="₱" decimals={2} subtitle={`${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`} />
-                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
-                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
+                <StatCard
+                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
+                    value={isFiltered ? periodOrders : totalOrders}
+                    gradient="blue-cyan"
+                    icon={<IcoBag c="w-5 h-5" />}
+                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
+                />
+                <StatCard
+                    label={isFiltered ? `Revenue — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total revenue'}
+                    value={isFiltered ? periodRevenue : totalRevenue}
+                    gradient="green"
+                    icon={<IcoCoin c="w-5 h-5" />}
+                    prefix="₱"
+                    decimals={2}
+                    subtitle={isFiltered ? `${fmtCurrency(totalRevenue)} all-time` : `${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`}
+                />
+                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" suffix="%" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
+                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" suffix="%" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
             </motion.div>
 
             {/* Row 2 — Order trends + Status donut */}
@@ -1134,6 +1170,7 @@ function VoucherModal({ mode, voucher, onClose, onSaved }) {
 // ── Pending Section (dark) ─────────────────────────────────────────────────────
 
 function PendingSection({ pending, onAction }) {
+    const [reasons, setReasons] = useState({});
     return (
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
             <motion.div variants={FADE_UP} className="flex items-center gap-3 mb-5">
@@ -1179,13 +1216,22 @@ function PendingSection({ pending, onAction }) {
                                 {r.description && (
                                     <p className="text-xs text-gray-600 italic mt-2 line-clamp-2">{r.description}</p>
                                 )}
+                                <div className="mt-3">
+                                    <textarea
+                                        value={reasons[r.id] ?? ''}
+                                        onChange={e => setReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                        placeholder="Rejection reason (optional — sent to owner)"
+                                        rows={2}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700/50 text-white placeholder:text-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 resize-none transition-colors"
+                                    />
+                                </div>
                             </div>
                             <div className="shrink-0 flex flex-col gap-2">
-                                <button onClick={() => onAction(r, 'active')}
+                                <button onClick={() => onAction(r, 'active', '')}
                                     className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-[0.98] transition-all">
                                     Approve
                                 </button>
-                                <button onClick={() => onAction(r, 'rejected')}
+                                <button onClick={() => onAction(r, 'rejected', reasons[r.id] ?? '')}
                                     className="px-4 py-1.5 rounded-lg border border-red-700/50 text-red-400 text-xs font-bold hover:bg-red-500/10 active:scale-[0.98] transition-all">
                                     Reject
                                 </button>
@@ -1260,7 +1306,7 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
     return (
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
             <motion.div variants={FADE_UP} className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-bold text-white">Site-wide vouchers</h2>
+                <h2 className="text-base font-bold text-white">All vouchers</h2>
                 <button onClick={onAdd}
                     className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-[0.98] transition-all">
                     + Create voucher
@@ -1273,6 +1319,7 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
                         <thead>
                             <tr className="border-b border-gray-700/50">
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Code</th>
+                                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:table-cell">Scope</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Discount</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:table-cell">Expiry</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Uses</th>
@@ -1283,14 +1330,20 @@ function VouchersSection({ vouchers, onAdd, onEdit, onDelete }) {
                         <tbody className="divide-y divide-gray-700/30">
                             {vouchers.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-10 text-center text-gray-600 text-sm">
-                                        No site-wide vouchers yet.
+                                    <td colSpan={7} className="px-5 py-10 text-center text-gray-600 text-sm">
+                                        No vouchers yet.
                                     </td>
                                 </tr>
                             )}
                             {vouchers.map(v => (
                                 <tr key={v.id} className="hover:bg-gray-700/20 transition-colors">
                                     <td className="px-5 py-3 font-mono font-bold text-gray-200 text-xs tracking-wider">{v.code}</td>
+                                    <td className="px-5 py-3 hidden md:table-cell">
+                                        {v.restaurant_id
+                                            ? <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-400 border border-blue-700/40 font-bold">{v.restaurant?.name ?? 'Restaurant'}</span>
+                                            : <span className="text-[10px] px-2 py-0.5 rounded-md bg-gray-700/50 text-gray-400 border border-gray-600/40 font-bold">Site-wide</span>
+                                        }
+                                    </td>
                                     <td className="px-5 py-3">
                                         <span className="font-semibold text-gray-300">
                                             {v.type === 'percentage' ? `${v.value}% off` : `₱${Number(v.value).toFixed(2)} off`}
@@ -1474,9 +1527,20 @@ export default function AdminDashboard({
 
     // ── Restaurant actions ──────────────────────────────────────────────────────
 
-    async function handleRestaurantAction(restaurant, status) {
+    async function handleRestaurantAction(restaurant, status, reason = '') {
+        const confirmed = window.confirm(
+            status === 'rejected'
+                ? `Reject "${restaurant.name}"? The owner will be notified.`
+                : `Approve "${restaurant.name}" and make it live on Hapag?`
+        );
+        if (!confirmed) return;
+
         try {
-            await apiFetch(route('admin.restaurants.approve', restaurant.id), 'PATCH', { status });
+            await apiFetch(
+                route('admin.restaurants.approve', restaurant.id),
+                'PATCH',
+                { status, reason }
+            );
             setPending(prev => prev.filter(r => r.id !== restaurant.id));
             addToast(`Restaurant ${status === 'active' ? 'approved' : 'rejected'}.`);
         } catch {
@@ -1547,7 +1611,6 @@ export default function AdminDashboard({
             setLastBackup(data.last_backup_at);
             setBackupFile(data.last_backup_file);
             addToast('Database backup complete.');
-            window.open(route('admin.backups.download', { filename: data.filename }), '_blank');
             fetchBackups();
         } catch {
             addToast('Backup failed. Check server logs.', 'error');
@@ -1574,13 +1637,9 @@ export default function AdminDashboard({
 
     return (
         <>
-            <Head title="Admin — Hapag">
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-            </Head>
+            <Head title="Admin — Hapag" />
 
-            <div style={{ fontFamily: "'Outfit', system-ui, sans-serif" }} className="flex min-h-[100dvh] bg-gray-950">
+            <div className="flex min-h-[100dvh] bg-gray-950">
 
                 {/* Mobile sidebar overlay */}
                 <AnimatePresence>
@@ -1657,15 +1716,6 @@ export default function AdminDashboard({
                             </div>
                         )}
 
-                        {/* Backup DB button */}
-                        <button
-                            onClick={handleBackup}
-                            disabled={backupLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 text-xs font-semibold disabled:opacity-50 transition-all"
-                        >
-                            <IcoDB c="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">{backupLoading ? 'Backing up…' : 'Backup DB'}</span>
-                        </button>
                     </header>
 
                     {/* Page content */}

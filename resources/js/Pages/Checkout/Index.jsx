@@ -3,32 +3,53 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
+// Parses "10:00 AM" (12-hr) or "10:00" (24-hr) → [hours, minutes] in 24-hr format
+function parseTimeComponents(timeStr) {
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        if (match[3].toUpperCase() === 'AM') { if (h === 12) h = 0; }
+        else { if (h !== 12) h += 12; }
+        return [h, m];
+    }
+    const p = timeStr.split(':').map(Number);
+    return [p[0] || 10, p[1] || 0];
+}
+
 // Generate time slots for scheduling (next 3 days, 30-min intervals within restaurant hours)
-function generateTimeSlots() {
+function generateTimeSlots(openingTime, closingTime) {
     const slots = [];
     const now = new Date();
+
+    const [openH, openM] = parseTimeComponents(openingTime ?? '10:00');
+    const [closeH, closeM] = parseTimeComponents(closingTime ?? '21:00');
 
     for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
         const date = new Date(now);
         date.setDate(date.getDate() + dayOffset);
 
-        const dayLabel = dayOffset === 0 ? 'Today' : dayOffset === 1 ? 'Tomorrow' : date.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' });
+        const dayLabel = dayOffset === 0
+            ? 'Today'
+            : dayOffset === 1
+                ? 'Tomorrow'
+                : date.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' });
 
         const daySlots = [];
-        // Generate slots from 10:00 AM to 9:00 PM
-        for (let hour = 10; hour <= 20; hour++) {
+
+        for (let hour = openH; hour <= closeH; hour++) {
             for (let min = 0; min < 60; min += 30) {
+                // Don't generate slots past closing time
+                if (hour === closeH && min >= closeM) continue;
+
                 const slotDate = new Date(date);
                 slotDate.setHours(hour, min, 0, 0);
 
-                // Skip past times for today
+                // Skip past times for today (add 30min buffer)
                 if (dayOffset === 0 && slotDate <= new Date(now.getTime() + 30 * 60000)) continue;
 
                 const timeStr = slotDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
-                daySlots.push({
-                    label: timeStr,
-                    value: slotDate.toISOString(),
-                });
+                daySlots.push({ label: timeStr, value: slotDate.toISOString() });
             }
         }
 
@@ -105,7 +126,10 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
     const [toast, setToast]                     = useState(null);
     const toastTimer = useRef(null);
 
-    const timeSlots = useMemo(() => generateTimeSlots(), []);
+    const timeSlots = useMemo(
+        () => generateTimeSlots(restaurant.opening_time, restaurant.closing_time),
+        [restaurant.opening_time, restaurant.closing_time]
+    );
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -182,6 +206,11 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
     }
 
     // ── Render ─────────────────────────────────────────────────────────────
+
+    const isDisabled =
+        submitting ||
+        (orderType === 'delivery' && !deliveryAddress.trim()) ||
+        (orderType === 'pickup' && pickupMode === 'scheduled' && !scheduledAt);
 
     return (
         <CustomerLayout cartCount={cartCount}>
@@ -342,21 +371,26 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
 
                                                             {/* Time slots grid */}
                                                             {timeSlots[selectedDay] && (
-                                                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                                                                    {timeSlots[selectedDay].slots.map(slot => (
-                                                                        <button
-                                                                            key={slot.value}
-                                                                            type="button"
-                                                                            onClick={() => setScheduledAt(slot.value)}
-                                                                            className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-                                                                                scheduledAt === slot.value
-                                                                                    ? 'bg-green-500 text-white shadow-sm'
-                                                                                    : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-100'
-                                                                            }`}
-                                                                        >
-                                                                            {slot.label}
-                                                                        </button>
-                                                                    ))}
+                                                                <div className="relative">
+                                                                    <div
+                                                                        className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto pr-1"
+                                                                        style={{ scrollbarWidth: 'auto', scrollbarColor: '#d1d5db transparent' }}
+                                                                    >
+                                                                        {timeSlots[selectedDay].slots.map(slot => (
+                                                                            <button
+                                                                                key={slot.value}
+                                                                                type="button"
+                                                                                onClick={() => setScheduledAt(slot.value)}
+                                                                                className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                                                    scheduledAt === slot.value
+                                                                                        ? 'bg-green-500 text-white shadow-sm'
+                                                                                        : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-100'
+                                                                                }`}
+                                                                            >
+                                                                                {slot.label}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -510,6 +544,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                     type="text"
                                                     value={voucherCode}
                                                     onChange={e => { setVoucherCode(e.target.value.toUpperCase()); setVoucherStatus(null); }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyVoucher(); } }}
                                                     placeholder="Enter code"
                                                     maxLength={50}
                                                     className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
@@ -556,8 +591,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                                                 ? 'border-green-200 bg-green-50/40 hover:border-green-400 hover:bg-green-50'
                                                                                 : 'border-green-100 bg-green-50/20 opacity-50 cursor-not-allowed'
                                                                             : meetsMin
-                                                                                ? 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
-                                                                                : 'border-gray-100 opacity-40 cursor-not-allowed'
+                                                                                ? 'border-gray-200 bg-gray-50 hover:border-green-300 hover:bg-green-50/30'
+                                                                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
                                                                     }`}
                                                                 >
                                                                     {/* Icon badge */}
@@ -565,7 +600,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                                                                         v.is_claimed
                                                                             ? 'bg-green-500 text-white'
                                                                             : v.is_global
-                                                                                ? 'bg-gray-100 text-gray-500'
+                                                                                ? 'bg-blue-100 text-blue-600'
                                                                                 : 'bg-orange-100 text-orange-600'
                                                                     }`}>
                                                                         {v.type === 'percentage' ? '%' : '₱'}
@@ -631,8 +666,8 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
                             <button
                                 type="button"
                                 onClick={handleCheckout}
-                                disabled={submitting || (orderType === 'delivery' && !deliveryAddress.trim())}
-                                className="w-full mt-4 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
+                                disabled={isDisabled}
+                                className="w-full mt-4 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {submitting
                                     ? 'Placing order…'

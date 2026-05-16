@@ -3,6 +3,7 @@ import { Head, Link, usePage, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import '@/bootstrap';
 import { formatOrderId } from '@/utils/formatOrderId';
+import { Skeleton, ShimmerStyles } from '@/Components/Skeleton';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -95,11 +96,30 @@ const STATUS_STEP_INDEX = { pending: 0, accepted: 1, preparing: 2, ready: 3, com
 // ── Status Timeline ────────────────────────────────────────────────────────────
 
 function StatusTimeline({ status }) {
+    if (status === 'cancelled') {
+        return (
+            <div className="bg-red-50 border border-red-100 rounded-2xl px-6 py-6">
+                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2">Order Status</p>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-red-700">Order Cancelled</p>
+                        <p className="text-xs text-red-400 mt-0.5">This order was cancelled and will not be processed.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const currentIndex = STATUS_STEP_INDEX[status] ?? 0;
 
     return (
-        <div className="bg-gradient-to-br from-green-50 via-white to-green-50/30 border border-green-100 rounded-2xl px-5 py-5">
-            <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-5">Order Status</p>
+        <div className="bg-gradient-to-br from-green-50 via-white to-green-50/30 border border-green-100 rounded-2xl px-6 py-6">
+            <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-6">Order Status</p>
             <div className="flex items-start gap-0">
                 {TIMELINE_STEPS.map((step, i) => {
                     const isDone    = i < currentIndex;
@@ -221,7 +241,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
         : order.items.slice(0, 2).map(i => `${i.quantity}× ${i.menu_item.name}`).join(', ')
             + (order.items.length > 2 ? ` +${order.items.length - 2} more` : '');
 
-    const isActive = order.status === 'pending' || order.status === 'preparing';
+    const isActive = ['pending', 'accepted', 'preparing'].includes(order.status);
 
     return (
         <div className={`
@@ -237,11 +257,11 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
             <button
                 type="button"
                 onClick={onToggle}
-                className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-gray-50/70 transition-colors duration-150"
+                className="w-full text-left px-6 py-5 flex items-center gap-5 hover:bg-gray-50/70 transition-colors duration-150"
             >
                 {/* Order meta */}
                 <div className="flex-1 min-w-0">
-                    <p className="font-extrabold text-gray-900 text-[15px] truncate leading-snug mb-1.5">
+                    <p className="font-extrabold text-gray-900 text-[15px] truncate leading-snug mb-2">
                         {order.restaurant?.name ?? '—'}
                     </p>
 
@@ -273,15 +293,15 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
 
             {/* ── Expanded body ──────────────────────────────────────────── */}
             {isExpanded && (
-                <div className="border-t border-gray-100 px-5 py-4 space-y-4">
+                <div className="border-t border-gray-100 px-6 py-5 space-y-5">
                     <StatusTimeline status={order.status} />
 
                     {/* Items list */}
                     <div>
-                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Items</p>
-                        <div className="space-y-2.5">
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Items</p>
+                        <div className="space-y-3">
                             {order.items.map(item => (
-                                <div key={item.id} className="flex items-center gap-3">
+                                <div key={item.id} className="flex items-center gap-3.5">
                                     <div className="w-10 h-10 shrink-0 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
                                         {item.menu_item?.image_url ? (
                                             <img src={item.menu_item.image_url} alt={item.menu_item.name} className="w-full h-full object-cover" loading="lazy" />
@@ -303,7 +323,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
 
                     {/* Delivery address */}
                     {order.order_type === 'delivery' && order.delivery_address && (
-                        <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                        <div className="bg-orange-50 border border-orange-100 rounded-xl px-5 py-4">
                             <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wide mb-0.5">Delivery Address</p>
                             <p className="text-sm text-gray-800">{order.delivery_address}</p>
                         </div>
@@ -311,7 +331,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
 
                     {/* Pickup note */}
                     {order.order_type === 'pickup' && order.pickup_note && (
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4">
                             <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-0.5">Pickup Note</p>
                             <p className="text-sm text-gray-700">{order.pickup_note}</p>
                         </div>
@@ -319,7 +339,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
 
                     {/* Scheduled pickup */}
                     {order.order_type === 'pickup' && order.scheduled_at && (
-                        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -373,7 +393,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
                         </div>
                     )}
 
-                    <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-1.5 text-sm">
+                    <div className="bg-gray-50 rounded-xl px-5 py-4 space-y-2 text-sm">
                         <div className="flex justify-between text-gray-500">
                             <span>Subtotal</span>
                             <span className="tabular-nums font-medium">{fmt(order.total_amount)}</span>
@@ -390,7 +410,7 @@ function OrderCard({ order, isExpanded, onToggle, onConfirm }) {
                                 <span className="tabular-nums font-medium">{fmt(order.delivery_fee)}</span>
                             </div>
                         )}
-                        <div className="flex justify-between font-extrabold text-gray-900 pt-1.5 border-t border-gray-200">
+                        <div className="flex justify-between font-extrabold text-gray-900 pt-2.5 border-t border-gray-200">
                             <span>Total</span>
                             <span className="tabular-nums">{fmt(order.final_amount)}</span>
                         </div>
@@ -448,6 +468,52 @@ function filterByDate(orders, filter) {
     return orders;
 }
 
+// ── Orders page skeleton ──────────────────────────────────────────────────────
+
+function OrdersPageSkeleton({ cartCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount} orderNotifCount={0}>
+            <ShimmerStyles />
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Page header */}
+                <div className="mb-8 space-y-2">
+                    <Skeleton className="h-8 w-36 rounded-xl" />
+                    <Skeleton className="h-4 w-52 rounded" />
+                </div>
+
+                {/* Date filter tabs */}
+                <div className="flex gap-2 mb-6">
+                    {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-9 w-20 rounded-xl" />
+                    ))}
+                </div>
+
+                {/* Order rows */}
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5 flex items-center gap-4">
+                            <div className="flex-1 min-w-0 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Skeleton className="h-5 w-16 rounded-full" />
+                                    <Skeleton className="h-4 w-44 rounded" />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <Skeleton className="h-3 w-28 rounded" />
+                                    <Skeleton className="h-3 w-16 rounded" />
+                                </div>
+                            </div>
+                            <div className="shrink-0 space-y-2 text-right">
+                                <Skeleton className="h-5 w-20 rounded ml-auto" />
+                                <Skeleton className="h-3 w-16 rounded ml-auto" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
@@ -459,7 +525,13 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
     const [dateFilter, setDateFilter] = useState('today');
     const [expanded, setExpanded]     = useState(() => new Set());
     const [toast, setToast]         = useState(null);
+    const [mounted, setMounted]     = useState(false);
     const toastTimer                = useRef(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false, isStatus = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -517,6 +589,8 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
 
     const filteredOrders = filterByDate(orders, dateFilter);
 
+    if (!mounted) return <OrdersPageSkeleton cartCount={cartCount} />;
+
     return (
         // ── NEW: orderNotifCount=0 because we're already on this page ─────────
         <CustomerLayout cartCount={cartCount} orderNotifCount={0}>
@@ -549,7 +623,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                 </div>
             )}
 
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
 
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <div className="mb-6">
@@ -561,7 +635,7 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 mb-5 flex-wrap">
+                <div className="flex items-center gap-2 mb-6 flex-wrap">
                     {DATE_FILTERS.map(f => (
                         <button
                             key={f.key}
@@ -600,9 +674,9 @@ export default function OrdersIndex({ orders: initialOrders, cartCount = 0 }) {
                 ) : (
                     /* This is the section updated for responsive multi-column layout */
                     <div className="columns-1 md:columns-2 gap-4 space-y-4">
-                        {filteredOrders.map(order => (
-                            <div key={order.id} className="break-inside-avoid mb-4">
-                                <OrderCard
+                    {filteredOrders.map(order => (
+                        <div key={order.id} className="break-inside-avoid">
+                            <OrderCard
                                     order={order}
                                     isExpanded={expanded.has(order.id)}
                                     onToggle={() => toggle(order.id)}

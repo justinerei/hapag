@@ -72,6 +72,59 @@ class OwnerController extends Controller
             ->with('success', 'Your restaurant has been submitted for review. We\'ll notify you once it\'s approved.');
     }
 
+    public function rejectedPage(Restaurant $restaurant)
+    {
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+        abort_if($restaurant->status !== 'rejected', 404);
+
+        return Inertia::render('Owner/Rejected', [
+            'restaurant' => $restaurant,
+            'categories' => Category::orderBy('name')->get(),
+        ]);
+    }
+
+    public function reapply(Request $request, Restaurant $restaurant)
+    {
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+        abort_if($restaurant->status !== 'rejected', 422, 'Only rejected restaurants can be resubmitted.');
+
+        $data = $request->validate([
+            'name'        => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'municipality'=> ['required', 'string', 'max:255'],
+            'image'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ]);
+
+        $coords = [
+            'Santa Cruz'  => [14.2794, 121.4117],
+            'Pagsanjan'   => [14.2713, 121.4559],
+            'Los Baños'   => [14.1692, 121.2436],
+            'Calamba'     => [14.2116, 121.1653],
+            'San Pablo'   => [14.0688, 121.3224],
+            'Bay'         => [14.1791, 121.2840],
+            'Nagcarlan'   => [14.1390, 121.4180],
+            'Pila'        => [14.2300, 121.3670],
+        ];
+
+        if ($request->hasFile('image')) {
+            $data['image_url'] = Storage::disk('public')->url(
+                $request->file('image')->store('restaurants', 'public')
+            );
+        }
+        unset($data['image']);
+
+        [$data['lat'], $data['lng']] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+        $data['address']          = $data['municipality'];
+        $data['status']           = 'pending';
+        $data['rejection_reason'] = null;
+
+        $restaurant->update($data);
+
+        return redirect()->route('owner.dashboard')
+            ->with('success', 'Your application has been resubmitted. We\'ll notify you once it\'s reviewed.');
+    }
+
     public function dashboard()
     {
         $restaurants = auth()->user()
@@ -88,10 +141,18 @@ class OwnerController extends Controller
             return redirect()->route('owner.setup');
         }
 
-        // If the owner has restaurants but ALL are pending, show the waiting page
+        // If ALL restaurants are pending, show the waiting page
         if ($restaurants->every(fn ($r) => $r->status === 'pending')) {
             return Inertia::render('Owner/PendingApproval', [
                 'restaurant' => $restaurants->first(),
+            ]);
+        }
+
+        // If ALL restaurants are rejected, show the rejection page
+        if ($restaurants->every(fn ($r) => $r->status === 'rejected')) {
+            return Inertia::render('Owner/Rejected', [
+                'restaurant' => $restaurants->first(),
+                'categories' => Category::orderBy('name')->get(),
             ]);
         }
 
@@ -113,7 +174,16 @@ class OwnerController extends Controller
             ]);
         $unreadCount = auth()->user()->unreadNotifications()->count();
 
-        return Inertia::render('Owner/Dashboard', compact('restaurants', 'categories', 'notifications', 'unreadCount'));
+        $rejectedRestaurants = $restaurants->filter(fn ($r) => $r->status === 'rejected')->values();
+        $activeRestaurants   = $restaurants->filter(fn ($r) => $r->status !== 'rejected')->values();
+
+        return Inertia::render('Owner/Dashboard', [
+            'restaurants'         => $activeRestaurants,
+            'rejectedRestaurants' => $rejectedRestaurants,
+            'categories'          => $categories,
+            'notifications'       => $notifications,
+            'unreadCount'         => $unreadCount,
+        ]);
     }
 
     public function storeItem(Request $request)

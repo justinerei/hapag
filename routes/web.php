@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\HomeController;
@@ -42,6 +43,14 @@ Route::get('/api/weather', [WeatherController::class, 'index'])->name('weather')
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/api/search', [SearchController::class, 'query'])->name('search.query');
 
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])
+    ->name('auth.google');
+
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->name('auth.google.callback');
+
 // ── Role-based redirect after Breeze login ────────────────────────────────────
 
 Route::get('/dashboard', function () {
@@ -62,6 +71,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
+    Route::post('/profile/avatar/google-sync', function (\Illuminate\Http\Request $request) {
+        $user = auth()->user();
+        if (!$user->google_id) {
+            return response()->json(['error' => 'Not a Google account.'], 422);
+        }
+        $googleAvatarUrl = 'https://lh3.googleusercontent.com/a/' . $user->google_id;
+        $user->update(['avatar_url' => $googleAvatarUrl]);
+        return response()->json(['ok' => true]);
+    })->name('profile.avatar.google-sync');
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -73,8 +91,14 @@ Route::middleware('auth')->group(function () {
 
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
-        $request->validate(['municipality' => ['required', 'string', 'max:255']]);
-        auth()->user()->update(['municipality' => $request->municipality]);
+        $request->validate([
+            'municipality' => ['required', 'string', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
+        ]);
+        auth()->user()->update([
+            'municipality' => $request->municipality,
+            'address'      => $request->address ?? null,
+        ]);
         return response()->json(['ok' => true]);
     })->name('profile.municipality');
 
@@ -133,6 +157,7 @@ Route::middleware('auth')->group(function () {
         return back();
     })->name('notifications.read.one');
     Route::post('/ai/chat', [AIController::class, 'chat'])->name('ai.chat');
+    Route::post('/ai/recommend', [AIController::class, 'recommend'])->name('ai.recommend'); 
 
     // Order status polling for customer notifications
     Route::get('/api/orders/statuses', function (\Illuminate\Http\Request $request) {
@@ -193,6 +218,8 @@ Route::middleware(['auth', 'role:owner'])
         Route::get('/', [OwnerController::class, 'dashboard'])->name('dashboard');
         Route::get('/setup', [OwnerController::class, 'setup'])->name('setup');
         Route::post('/setup', [OwnerController::class, 'storeSetup'])->name('setup.store');
+        Route::get('/restaurants/{restaurant}/rejected', [OwnerController::class, 'rejectedPage'])->name('rejected');
+        Route::post('/restaurants/{restaurant}/reapply', [OwnerController::class, 'reapply'])->name('reapply');
 
         // Menu items
         Route::post('/items', [OwnerController::class, 'storeItem'])->name('items.store');

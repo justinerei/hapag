@@ -28,7 +28,7 @@ class AdminController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
-        $vouchers = Voucher::whereNull('restaurant_id')
+        $vouchers = Voucher::with('restaurant:id,name')
             ->orderByDesc('created_at')
             ->get();
 
@@ -163,9 +163,20 @@ class AdminController extends Controller
 
     public function approveRestaurant(Request $request, Restaurant $restaurant)
     {
-        $request->validate(['status' => 'required|in:active,rejected']);
-        $restaurant->update(['status' => $request->status]);
-        $restaurant->owner->notify(new RestaurantStatusUpdated($restaurant));
+        $request->validate([
+            'status' => 'required|in:active,rejected',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant->update([
+            'status'           => $request->status,
+            'rejection_reason' => $request->status === 'rejected' ? ($request->reason ?? null) : null,
+        ]);
+
+        $restaurant->owner->notify(
+            new RestaurantStatusUpdated($restaurant, $request->reason ?? '')
+        );
+
         return response()->json(['status' => $restaurant->status]);
     }
 

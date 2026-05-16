@@ -1,7 +1,10 @@
 // resources/js/app.jsx
+import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
+import { AnimatePresence } from 'framer-motion';
 import { route } from 'ziggy-js';
+import PageLoader from '@/Components/PageLoader';
 
 window.route = route;
 
@@ -12,10 +15,32 @@ createInertiaApp({
         return pages[`./Pages/${name}.jsx`];
     },
     setup({ el, App, props }) {
-        createRoot(el).render(<App {...props} />);
+        function Root() {
+            const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+                const stopStart  = router.on('start',  () => setLoading(true));
+                const stopFinish = router.on('finish', () => setLoading(false));
+                return () => {
+                    stopStart();
+                    stopFinish();
+                };
+            }, []);
+
+            return (
+                <>
+                    <AnimatePresence>
+                        {loading && <PageLoader key="page-loader" />}
+                    </AnimatePresence>
+                    <App {...props} />
+                </>
+            );
+        }
+
+        createRoot(el).render(<Root />);
     },
-    // Optional: show progress bar during navigation
+    // Subtle green progress bar alongside the loader
     progress: {
-        color: '#22C55E', // hapag green-500
+        color: '#22C55E',
     },
 });

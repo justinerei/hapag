@@ -38,8 +38,13 @@ class HomeController extends Controller
             ->unique()
             ->toArray();
 
+        $usedVoucherIds = \App\Models\VoucherUsage::where('user_id', auth()->id())
+            ->pluck('voucher_id')
+            ->toArray();
+
         $deals = Voucher::where('is_active', true)
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->whereNotIn('id', $usedVoucherIds)
             ->with('restaurant')
             ->get();
 
@@ -51,14 +56,6 @@ class HomeController extends Controller
         if ($popular->count() < 3) {
             $popular = $restaurants->take(5);
         }
-
-        // First available menu item per restaurant for quick-add cart button
-        $featuredItemMap = MenuItem::where('is_available', true)
-            ->whereIn('restaurant_id', $restaurants->pluck('id'))
-            ->orderBy('id')
-            ->get(['id', 'restaurant_id'])
-            ->groupBy('restaurant_id')
-            ->map(fn ($items) => $items->first()->id);
 
         $cartCount = auth()->user()->cartItems()->count();
 
@@ -86,6 +83,11 @@ class HomeController extends Controller
                 ->toArray();
         }
 
+        $activeOrderCount = auth()->user()
+            ->orders()
+            ->whereIn('status', ['pending', 'accepted', 'preparing', 'ready'])
+            ->count();
+
         return Inertia::render('Home/Customer', [
             'restaurants'       => $restaurants,
             'categories'        => $categories,
@@ -97,9 +99,9 @@ class HomeController extends Controller
             'cartCount'         => $cartCount,
             'promoRestaurantIds'=> $promoRestaurantIds,
             'popular'           => $popular,
-            'featuredItemMap'   => $featuredItemMap,
             'favoriteIds'       => $favoriteIds,
             'claimedCodes'      => $claimedCodes,
+            'activeOrderCount'  => $activeOrderCount,
         ]);
     }
 

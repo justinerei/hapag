@@ -720,8 +720,8 @@ export default function GuestHome() {
                 <Footer />
             </div>
 
-            <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => setSignInOpen(true)} />
-            <SignInModal show={signInOpen} onClose={() => setSignInOpen(false)} onSwitchToSignUp={() => setSignUpOpen(true)} />
+            <SignUpModal show={signUpOpen} onClose={() => setSignUpOpen(false)} onSwitchToSignIn={() => { setSignUpOpen(false); setSignInOpen(true); }} />
+            <SignInModal show={signInOpen} onClose={() => setSignInOpen(false)} onSwitchToSignUp={() => { setSignInOpen(false); setSignUpOpen(true); }} />
         </>
     );
 }

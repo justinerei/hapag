@@ -27,6 +27,7 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'municipality' => ['nullable', 'string', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
         ];
     }
 }

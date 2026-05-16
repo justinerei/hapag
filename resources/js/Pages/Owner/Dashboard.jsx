@@ -1370,6 +1370,7 @@ function HistoryTab({ restaurant }) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [search, setSearch] = useState('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const visible = orders.filter(o => {
         if (dateFilter === 'today' && new Date(o.created_at).toDateString() !== new Date().toDateString()) return false;
         if (dateFilter === 'week' && (Date.now() - new Date(o.created_at)) >= 7 * 86400000) return false;
@@ -1379,47 +1380,97 @@ function HistoryTab({ restaurant }) {
         if (search && !`${o.id} ${o.user?.name ?? ''}`.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
     });
+    const chip = (active) =>
+        `px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border active:scale-[0.98] [transition:all_200ms_cubic-bezier(0.16,1,0.3,1)] ${
+            active
+                ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200'
+                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'
+        }`;
+
     return (
-        <div className="space-y-4">
-            <div className="flex gap-1.5 flex-wrap items-center">
+        <div className="space-y-3">
+            {/* Row 1 — date pills · mobile toggle · desktop search + results */}
+            <div className="flex flex-wrap items-center gap-2">
                 {[{ k: 'all', label: 'All' }, { k: 'today', label: 'Today' }, { k: 'week', label: 'This Week' }, { k: 'month', label: 'This Month' }].map(({ k, label }) => (
-                    <button key={k} onClick={() => setDateFilter(k)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${dateFilter === k ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                    <button key={k} onClick={() => setDateFilter(k)} className={chip(dateFilter === k)}>
                         {label}
                     </button>
                 ))}
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or order #…"
-                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/10 w-48 transition-all" />
-                <details className="group">
-                    <summary className="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 cursor-pointer list-none select-none">
-                        Filters ▾
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                        <div className="flex gap-1.5 flex-wrap">
-                            {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
-                                <button key={s} onClick={() => setStatusFilter(s)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${statusFilter === s ? 'bg-green-500 text-white shadow-sm shadow-green-200' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    {s === 'all' ? 'All Status' : cap(s)}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex gap-1.5 flex-wrap">
-                            {['all', 'pickup', 'delivery'].map(t => (
-                                <button key={t} onClick={() => setTypeFilter(t)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${typeFilter === t ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    {t === 'all' ? 'All Types' : cap(t)}
-                                </button>
-                            ))}
-                        </div>
+
+                {/* Mobile-only: Filters toggle */}
+                <button
+                    onClick={() => setFiltersOpen(v => !v)}
+                    className={`lg:hidden ml-auto flex items-center gap-1.5 ${chip(false)}`}
+                >
+                    Filters
+                    <svg className={`w-3 h-3 [transition:transform_200ms_cubic-bezier(0.16,1,0.3,1)] ${filtersOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                {/* Desktop-only: search input + results badge */}
+                <div className="hidden lg:flex items-center gap-3 ml-auto">
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                        </svg>
+                        <input
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search name or order #…"
+                            className="h-9 pl-9 pr-3 text-sm rounded-full border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-500/10 outline-none transition-all w-52"
+                        />
                     </div>
-                </details>
+                    <span className="text-xs text-gray-400 font-medium shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold tabular-nums">{visible.length}</span>
+                        <span className="ml-1.5">results</span>
+                    </span>
+                </div>
             </div>
-            <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Results</span>
+
+            {/* Mobile-only: search (full width, below date row) */}
+            <div className="lg:hidden relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+                <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search name or order #…"
+                    className="h-9 pl-9 pr-3 text-sm rounded-full border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-500/10 outline-none transition-all w-full"
+                />
+            </div>
+
+            {/* Status + type filters — mobile collapses, lg+ always visible */}
+            <div className={`flex-col gap-y-3 ${filtersOpen ? 'flex' : 'hidden'} lg:flex`}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest self-center shrink-0">Status</span>
+                    <div className="flex flex-wrap gap-2">
+                        {['all', 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'].map(s => (
+                            <button key={s} onClick={() => setStatusFilter(s)} className={chip(statusFilter === s)}>
+                                {s === 'all' ? 'All Status' : cap(s)}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest self-center shrink-0">Type</span>
+                    <div className="flex flex-wrap gap-2">
+                        {['all', 'pickup', 'delivery'].map(t => (
+                            <button key={t} onClick={() => setTypeFilter(t)} className={chip(typeFilter === t)}>
+                                {t === 'all' ? 'All Types' : cap(t)}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile-only: results count */}
+            <div className="lg:hidden flex items-center gap-2">
+                <span className="text-xs text-gray-400 font-medium">Results</span>
                 <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">{visible.length}</span>
             </div>
+
             {visible.length === 0
                 ? <div className="bg-white border border-gray-200 rounded-2xl flex items-center justify-center py-16"><p className="text-gray-400 text-sm">No orders match.</p></div>
                 : <div className="space-y-3">{visible.map(o => <OrderCard key={o.id} order={o} onAdvance={null} />)}</div>
@@ -1672,7 +1723,7 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0 }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0, rejectedRestaurants = [] }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
@@ -1742,8 +1793,20 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                 ),
             })));
         });
+        const notifChannel = window.Echo.private(`App.Models.User.${auth.user.id}`);
+        notifChannel.notification((notification) => {
+            if (notification.type === 'restaurant.status.updated') {
+                router.reload({
+                    only: ['restaurants', 'rejectedRestaurants'],
+                    preserveScroll: true,
+                    preserveState: true,
+                });
+            }
+        });
+
         return () => {
             window.Echo.leave('owner.' + auth.user.id);
+            window.Echo.leave(`App.Models.User.${auth.user.id}`);
             if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
         };
     }, [auth?.user?.id]);
@@ -2018,6 +2081,35 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                     </header>
 
                     <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto">
+                        {rejectedRestaurants.length > 0 && (
+                            <div className="mb-5 space-y-3">
+                                {rejectedRestaurants.map(r => (
+                                    <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                                                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008z" />
+                                                </svg>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-red-700 leading-tight">{r.name} — Application Rejected</p>
+                                                {r.rejection_reason ? (
+                                                    <p className="text-xs text-red-600 mt-0.5 line-clamp-2">{r.rejection_reason}</p>
+                                                ) : (
+                                                    <p className="text-xs text-red-400 mt-0.5">No reason provided.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={route('owner.rejected', r.id)}
+                                            className="flex-shrink-0 px-4 py-2 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors text-center"
+                                        >
+                                            Fix &amp; Resubmit
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}

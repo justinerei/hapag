@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
+import AIChatWidget from '@/Components/AIChatWidget';
+import { Skeleton, SkeletonCard, ShimmerStyles } from '@/Components/Skeleton';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -215,7 +217,7 @@ function WeatherItemCard({ item, onAdd }) {
                     <span className="text-white font-extrabold text-sm">{fmt(item.price)}</span>
                     <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onAdd(item.id, item.restaurant?.name ?? ''); }}
+                        onClick={(e) => { e.stopPropagation(); onAdd(item.id, item.restaurant?.name ?? 'this restaurant'); }}
                         className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-95"
                         style={{ background: 'rgba(255,255,255,0.2)' }}
                         title="Add to cart"
@@ -232,7 +234,7 @@ function WeatherItemCard({ item, onAdd }) {
 
 // ── Voucher Ticket Card ───────────────────────────────────────────────────────
 
-function VoucherCard({ deal }) {
+function VoucherCard({ deal, isClaimed = false }) {
     const dr = deal.restaurant;
     const isGlobal = !dr;
     const discLabel = deal.type === 'percentage'
@@ -246,7 +248,7 @@ function VoucherCard({ deal }) {
                 <div className={`h-2 w-full ${isGlobal ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-orange-400 to-orange-600'}`} />
 
                 <div className="flex">
-                    <div className="flex-1 p-5 pr-3">
+                    <div className={`flex-1 p-5 pr-3 ${isClaimed ? 'opacity-40' : ''}`}>
                         <div className="flex items-center gap-1.5 mb-2.5">
                             {isGlobal ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-600 border border-green-100">
@@ -288,12 +290,17 @@ function VoucherCard({ deal }) {
                         <div className="absolute left-[-6px] bottom-[-1px] w-3 h-3 rounded-full bg-gray-50 border border-gray-100" />
 
                         <div className="text-center">
-                            <span className={`block text-3xl font-extrabold leading-none ${isGlobal ? 'text-green-500' : 'text-orange-500'}`}>
+                            <span className={`block text-3xl font-extrabold leading-none ${isGlobal ? 'text-green-500' : 'text-orange-500'} ${isClaimed ? 'opacity-40' : ''}`}>
                                 {discLabel}
                             </span>
-                            <span className={`block text-[10px] font-bold uppercase tracking-widest mt-1 ${isGlobal ? 'text-green-400' : 'text-orange-400'}`}>
+                            <span className={`block text-[10px] font-bold uppercase tracking-widest mt-1 ${isGlobal ? 'text-green-400' : 'text-orange-400'} ${isClaimed ? 'opacity-40' : ''}`}>
                                 OFF
                             </span>
+                            {isClaimed && (
+                                <span className="block mt-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-400">
+                                    Used
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -302,256 +309,7 @@ function VoucherCard({ deal }) {
     );
 }
 
-// ── AI Chat Widget ────────────────────────────────────────────────────────────
-
-function AIChatWidget() {
-    const [open, setOpen] = useState(false);
-    const [prompt, setPrompt] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState('');
-    const [addingId, setAddingId] = useState(null);
-    const inputRef = useRef(null);
-    const bodyRef = useRef(null);
-
-    useEffect(() => {
-        if (open && inputRef.current) inputRef.current.focus();
-    }, [open]);
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        if (!prompt.trim() || loading) return;
-        setLoading(true);
-        setResult(null);
-        setError('');
-        try {
-            const res = await fetch(route('ai.recommend'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-                body: JSON.stringify({ prompt: prompt.trim() }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                if (data.dishes && data.dishes.length > 0) {
-                    setResult({ intro: data.intro || '', dishes: data.dishes });
-                } else if (data.intro) {
-                    setResult({ intro: data.intro, dishes: [] });
-                } else if (data.recommendation) {
-                    setResult({ intro: data.recommendation, dishes: [] });
-                } else {
-                    setError('No recommendations found. Try a different craving.');
-                }
-            } else {
-                setError(data.error || 'Something went wrong.');
-            }
-        } catch {
-            setError('Could not connect. Try again.');
-        }
-        setLoading(false);
-        setTimeout(() => bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-    }
-
-    async function quickAdd(dishId) {
-        setAddingId(dishId);
-        try {
-            const res = await fetch(route('cart.add'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-                body: JSON.stringify({ menu_item_id: dishId, quantity: 1 }),
-            });
-            if (res.ok) {
-                setAddingId('done-' + dishId);
-                setTimeout(() => setAddingId(null), 1500);
-            } else if (res.status === 409) {
-                setAddingId(null);
-                setError('Your cart has items from another restaurant. Clear it first.');
-                setTimeout(() => setError(''), 3000);
-            }
-        } catch {
-            setAddingId(null);
-        }
-    }
-
-    function reset() {
-        setResult(null);
-        setError('');
-        setPrompt('');
-    }
-
-    const suggestions = ['Masarap na sabaw', 'Something sweet', 'Budget meal under ₱100', 'Best for rainy day'];
-
-    return (
-        <>
-            {/* FAB */}
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 group/fab">
-                {/* Tooltip — appears on FAB hover */}
-                {!open && (
-                    <div className="relative mb-1 px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl shadow-lg pointer-events-none select-none whitespace-nowrap opacity-0 translate-y-1 group-hover/fab:opacity-100 group-hover/fab:translate-y-0 transition-all duration-200">
-                        Ask about dishes
-                        <div className="absolute -bottom-1 right-5 w-2.5 h-2.5 bg-gray-900 rotate-45" />
-                    </div>
-                )}
-                <div className="relative">
-                    {!open && <div className="fab-ring absolute inset-0 rounded-full" />}
-                    <button
-                        onClick={() => setOpen(v => !v)}
-                        className={`relative w-14 h-14 rounded-full shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center active:scale-95 ${open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-green-500 hover:bg-green-600'} text-white`}
-                        aria-label="AI Food Recommender"
-                    >
-                        {open ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
-                        )}
-                    </button>
-                </div>
-            </div>
-
-            {/* Chat panel */}
-            <AnimatePresence>
-                {open && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="fixed bottom-24 right-6 z-50 w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
-                        style={{ maxHeight: '580px' }}
-                    >
-                        {/* Header */}
-                        <div className="shrink-0 px-5 py-4" style={{ background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)' }}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-white font-bold text-sm leading-tight">Hapag AI</h3>
-                                        <p className="text-white/65 text-[11px]">Tell me what you're craving</p>
-                                    </div>
-                                </div>
-                                {result && (
-                                    <button onClick={reset} className="text-white/70 hover:text-white text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/25 hover:border-white/50 transition-colors">
-                                        New search
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Body */}
-                        <div ref={bodyRef} className="flex-1 overflow-y-auto p-4 space-y-3" style={{ minHeight: '220px' }}>
-                            {/* Empty state */}
-                            {!result && !loading && !error && (
-                                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                                    <p className="text-gray-400 text-xs font-medium mb-3">Try asking:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {suggestions.map(s => (
-                                            <button key={s} onClick={() => setPrompt(s)}
-                                                className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-50 hover:text-green-600 hover:border-green-100 transition-colors">
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* Skeleton loading */}
-                            {loading && (
-                                <div className="space-y-3">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="flex gap-3 p-3 rounded-xl bg-gray-50">
-                                            <div className="w-16 h-16 rounded-xl bg-gray-200 shrink-0 animate-pulse" />
-                                            <div className="flex-1 space-y-2 py-1">
-                                                <div className="h-3 bg-gray-200 rounded-full animate-pulse" style={{ width: `${55 + i * 12}%` }} />
-                                                <div className="h-2.5 bg-gray-200 rounded-full animate-pulse" style={{ width: `${40 + i * 8}%` }} />
-                                                <div className="h-2.5 bg-gray-200 rounded-full animate-pulse w-1/4" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <p className="text-center text-xs text-gray-400 pt-1">Finding the best dishes for you…</p>
-                                </div>
-                            )}
-
-                            {/* Error */}
-                            {error && (
-                                <div className="bg-red-50 rounded-xl p-3.5 border border-red-100 flex items-start gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                    <p className="text-red-600 text-xs leading-relaxed">{error}</p>
-                                </div>
-                            )}
-
-                            {/* Results */}
-                            {result && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-3">
-                                    {result.intro && (
-                                        <div className="bg-green-50 rounded-xl px-4 py-3 border border-green-100">
-                                            <p className="text-gray-700 text-xs leading-relaxed">{result.intro}</p>
-                                        </div>
-                                    )}
-
-                                    {result.dishes.length > 0 && (
-                                        <div className="space-y-2">
-                                            {result.dishes.map((dish, idx) => {
-                                                const isAdding = addingId === dish.id;
-                                                const isDone = addingId === 'done-' + dish.id;
-                                                return (
-                                                    <motion.div key={dish.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ duration: 0.3, delay: idx * 0.06 }}
-                                                        className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-                                                        <Link href={route('restaurants.show', dish.restaurant_id)} className="flex">
-                                                            <div className="w-20 h-20 shrink-0 bg-gray-100 overflow-hidden">
-                                                                {dish.image_url ? <img src={dish.image_url} alt={dish.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>}
-                                                            </div>
-                                                            <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
-                                                                <div>
-                                                                    <h4 className="text-xs font-bold text-gray-800 leading-tight truncate">{dish.name}</h4>
-                                                                    <p className="text-[10px] text-gray-400 truncate mt-0.5">{dish.restaurant_name} · {dish.municipality}</p>
-                                                                </div>
-                                                                <div className="flex items-center justify-between mt-1.5">
-                                                                    <span className="text-xs font-extrabold text-green-600">₱{Number(dish.price).toFixed(0)}</span>
-                                                                    {dish.category && <span className="text-[9px] text-gray-300 font-medium">{dish.category}</span>}
-                                                                </div>
-                                                            </div>
-                                                        </Link>
-                                                        <div className="border-t border-gray-50 px-3 py-2">
-                                                            <button type="button" disabled={isAdding || isDone} onClick={(e) => { e.preventDefault(); quickAdd(dish.id); }}
-                                                                className={`w-full py-2 rounded-lg text-[11px] font-bold transition-all active:scale-98 ${isDone ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-green-500 hover:text-white hover:border-green-500'} ${isAdding ? 'opacity-60' : ''}`}>
-                                                                {isDone ? <span className="flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Added to cart</span>
-                                                                : isAdding ? 'Adding…'
-                                                                : <span className="flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>Add to cart</span>}
-                                                            </button>
-                                                        </div>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {result.dishes.length === 0 && result.intro && (
-                                        <p className="text-gray-400 text-[11px] text-center mt-1 leading-relaxed">No specific dishes matched. Try rephrasing your craving.</p>
-                                    )}
-                                </motion.div>
-                            )}
-                        </div>
-
-                        {/* Input */}
-                        <form onSubmit={handleSubmit} className="border-t border-gray-100 p-3.5 flex gap-2 shrink-0">
-                            <input ref={inputRef} type="text" value={prompt} onChange={e => setPrompt(e.target.value)}
-                                placeholder="I'm craving…"
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                maxLength={300} disabled={loading} />
-                            <button type="submit" disabled={loading || !prompt.trim()}
-                                className="w-11 h-11 rounded-xl bg-green-500 text-white flex items-center justify-center hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shrink-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                            </button>
-                        </form>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </>
-    );
-}
-
+ 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 function PageStyles() {
@@ -593,6 +351,101 @@ function SectionHeading({ title, subtitle, badge }) {
     );
 }
 
+// ── Customer page skeleton ────────────────────────────────────────────────────
+
+function CustomerPageSkeleton({ cartCount = 0, orderNotifCount = 0 }) {
+    return (
+        <CustomerLayout cartCount={cartCount} orderNotifCount={orderNotifCount}>
+            <ShimmerStyles />
+
+            {/* Weather hero strip */}
+            <div className="relative overflow-hidden bg-gray-800/80" style={{ minHeight: '440px' }}>
+                <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
+                        <div className="max-w-md w-full rounded-2xl p-6 sm:p-8" style={{ background: 'rgba(0,0,0,0.18)' }}>
+                            <Skeleton className="h-3 w-28 rounded-full mb-5" />
+                            <div className="flex items-start gap-4 mb-4">
+                                <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                                <div className="space-y-2 pt-1">
+                                    <Skeleton className="h-11 w-20 rounded-lg" />
+                                    <Skeleton className="h-4 w-16 rounded" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-4 w-full rounded mb-2" />
+                            <Skeleton className="h-4 w-4/5 rounded mb-6" />
+                            <div className="flex gap-2 mb-6">
+                                <Skeleton className="h-7 w-20 rounded-full" />
+                                <Skeleton className="h-7 w-20 rounded-full" />
+                            </div>
+                            <Skeleton className="h-10 w-36 rounded-xl" />
+                        </div>
+
+                        <div className="lg:max-w-[540px] w-full">
+                            <Skeleton className="h-3 w-44 rounded-full mb-3" />
+                            <div className="flex gap-3 overflow-hidden">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="shrink-0 w-52">
+                                        <Skeleton className="w-full aspect-[4/3] rounded-2xl" />
+                                        <div className="p-3 space-y-2">
+                                            <Skeleton className="h-3 w-3/4 rounded" />
+                                            <Skeleton className="h-3 w-1/2 rounded" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main content area */}
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+                <div className="flex gap-8 items-start">
+                    {/* Filter sidebar */}
+                    <div className="hidden lg:block w-[220px] shrink-0">
+                        <Skeleton className="h-64 w-full rounded-2xl" />
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-10 lg:space-y-12">
+                        {/* Cuisine circles */}
+                        <div>
+                            <div className="flex items-start justify-between mb-5">
+                                <Skeleton className="h-7 w-24 rounded-xl" />
+                            </div>
+                            <div className="flex gap-5 overflow-hidden">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="shrink-0 flex flex-col items-center gap-2.5">
+                                        <Skeleton className="w-24 h-24 rounded-2xl" />
+                                        <Skeleton className="h-3 w-14 rounded" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Daily deals */}
+                        <div>
+                            <Skeleton className="h-7 w-28 rounded-xl mb-5" />
+                            <div className="flex gap-4 overflow-hidden">
+                                {[...Array(3)].map((_, i) => (
+                                    <Skeleton key={i} className="shrink-0 w-[300px] h-[116px] rounded-2xl" />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* All restaurants grid */}
+                        <div>
+                            <Skeleton className="h-7 w-40 rounded-xl mb-5" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </CustomerLayout>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Customer({
@@ -606,8 +459,9 @@ export default function Customer({
     cartCount,
     promoRestaurantIds,
     popular,
-    featuredItemMap,
     favoriteIds,
+    claimedCodes = [],
+    activeOrderCount = 0,
 }) {
     const [search, setSearch] = useState('');
     const [selectedCuisines, setSelectedCuisines] = useState([]);
@@ -617,12 +471,18 @@ export default function Customer({
     const [localCartCount, setLocalCartCount] = useState(cartCount);
     const [toast, setToast] = useState(null);
     const [conflict, setConflict] = useState(null);
+    const [mounted, setMounted] = useState(false);
 
     const pageProps = usePage().props;
     const [showWelcome, setShowWelcome] = useState(() => !!pageProps?.flash?.registered);
 
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 380);
+        return () => clearTimeout(t);
+    }, []);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -686,7 +546,12 @@ export default function Customer({
     }
 
     function handleCuisineCircleClick(catId) {
-        setSelectedCuisines([catId]);
+        setSelectedCuisines(prev => {
+            // If already selected, deselect it (toggle off)
+            if (prev.includes(catId)) return prev.filter(id => id !== catId);
+            // Otherwise add it to existing selections instead of replacing
+            return [...prev, catId];
+        });
         setSearch('');
         setHasDealsFilter(false);
         setTimeout(() => gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -718,8 +583,12 @@ export default function Customer({
 
     const filterKey = `${search}|${selectedCuisines.join(',')}|${hasDealsFilter}|${sortBy}`;
 
+    if (!mounted) {
+        return <CustomerPageSkeleton cartCount={cartCount} orderNotifCount={activeOrderCount} />;
+    }
+
     return (
-        <CustomerLayout cartCount={localCartCount} orderNotifCount={0}>
+        <CustomerLayout cartCount={localCartCount} orderNotifCount={activeOrderCount}>
             <Head title="Home — Hapag" />
             <PageStyles />
 
@@ -918,7 +787,9 @@ export default function Customer({
                             <section>
                                 <SectionHeading title="Daily deals" subtitle="Exclusive vouchers for your next order" badge="Save up to 50%" />
                                 <ScrollableRow gap="gap-4">
-                                    {deals.map(deal => <VoucherCard key={deal.id} deal={deal} />)}
+                                    {deals.map(deal => (
+                                        <VoucherCard key={deal.id} deal={deal} isClaimed={claimedCodes.includes(deal.code)} />
+                                    ))}
                                 </ScrollableRow>
                             </section>
                         )}
