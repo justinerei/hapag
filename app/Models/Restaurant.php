@@ -21,6 +21,7 @@ class Restaurant extends Model
         'opening_time',
         'closing_time',
         'status',
+        'rejection_reason',
     ];
 
     protected function casts(): array

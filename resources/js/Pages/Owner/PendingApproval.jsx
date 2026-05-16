@@ -1,6 +1,21 @@
-import { Head } from '@inertiajs/react';
+import { useEffect } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import '@/bootstrap';
 
 export default function PendingApproval({ restaurant }) {
+    const { auth } = usePage().props;
+
+    useEffect(() => {
+        if (!auth?.user?.id) return;
+        const channel = window.Echo.private(`App.Models.User.${auth.user.id}`);
+        channel.notification((notification) => {
+            if (notification.type === 'restaurant.status.updated') {
+                router.visit(route('owner.dashboard'));
+            }
+        });
+        return () => window.Echo.leave(`App.Models.User.${auth.user.id}`);
+    }, [auth?.user?.id]);
+
     return (
         <>
             <Head title="Pending Approval — Hapag" />

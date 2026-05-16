@@ -15,7 +15,12 @@ class RestaurantStatusUpdated extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'broadcast'];
+    }
+
+    public function broadcastType(): string
+    {
+        return 'restaurant.status.updated';
     }
 
     public function toArray(object $notifiable): array

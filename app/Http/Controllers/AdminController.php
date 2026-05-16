@@ -167,7 +167,11 @@ class AdminController extends Controller
             'status' => 'required|in:active,rejected',
             'reason' => 'nullable|string|max:500',
         ]);
-        $restaurant->update(['status' => $request->status]);
+
+        $restaurant->update([
+            'status'           => $request->status,
+            'rejection_reason' => $request->status === 'rejected' ? ($request->reason ?? null) : null,
+        ]);
 
         $restaurant->owner->notify(
             new RestaurantStatusUpdated($restaurant, $request->reason ?? '')

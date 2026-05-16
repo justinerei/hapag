@@ -218,6 +218,8 @@ Route::middleware(['auth', 'role:owner'])
         Route::get('/', [OwnerController::class, 'dashboard'])->name('dashboard');
         Route::get('/setup', [OwnerController::class, 'setup'])->name('setup');
         Route::post('/setup', [OwnerController::class, 'storeSetup'])->name('setup.store');
+        Route::get('/restaurants/{restaurant}/rejected', [OwnerController::class, 'rejectedPage'])->name('rejected');
+        Route::post('/restaurants/{restaurant}/reapply', [OwnerController::class, 'reapply'])->name('reapply');
 
         // Menu items
         Route::post('/items', [OwnerController::class, 'storeItem'])->name('items.store');

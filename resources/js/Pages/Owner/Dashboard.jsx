@@ -1723,7 +1723,7 @@ function SettingsTab({ restaurant, categories, onDirtyChange }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0 }) {
+export default function OwnerDashboard({ restaurants: initialRestaurants, categories, auth, notifications = [], unreadCount = 0, rejectedRestaurants = [] }) {
     const [restaurants, setRestaurants]   = useState(initialRestaurants);
     const [selectedId, setSelectedId]     = useState(initialRestaurants[0]?.id ?? null);
     const [activeTab, setActiveTab]       = useState('overview');
@@ -1793,8 +1793,20 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                 ),
             })));
         });
+        const notifChannel = window.Echo.private(`App.Models.User.${auth.user.id}`);
+        notifChannel.notification((notification) => {
+            if (notification.type === 'restaurant.status.updated') {
+                router.reload({
+                    only: ['restaurants', 'rejectedRestaurants'],
+                    preserveScroll: true,
+                    preserveState: true,
+                });
+            }
+        });
+
         return () => {
             window.Echo.leave('owner.' + auth.user.id);
+            window.Echo.leave(`App.Models.User.${auth.user.id}`);
             if (orderToastTimer.current) clearTimeout(orderToastTimer.current);
         };
     }, [auth?.user?.id]);
@@ -2069,6 +2081,35 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                     </header>
 
                     <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto">
+                        {rejectedRestaurants.length > 0 && (
+                            <div className="mb-5 space-y-3">
+                                {rejectedRestaurants.map(r => (
+                                    <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                                                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008z" />
+                                                </svg>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-red-700 leading-tight">{r.name} — Application Rejected</p>
+                                                {r.rejection_reason ? (
+                                                    <p className="text-xs text-red-600 mt-0.5 line-clamp-2">{r.rejection_reason}</p>
+                                                ) : (
+                                                    <p className="text-xs text-red-400 mt-0.5">No reason provided.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={route('owner.rejected', r.id)}
+                                            className="flex-shrink-0 px-4 py-2 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors text-center"
+                                        >
+                                            Fix &amp; Resubmit
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
