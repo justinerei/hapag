@@ -25,10 +25,11 @@ function CloseBtn({ onClick }) {
     );
 }
 
-function GoogleButton({ label = 'Continue with Google' }) {
+function GoogleButton({ label = 'Continue with Google', role = null }) {
+    const href = role ? `${route('auth.google')}?role=${role}` : route('auth.google');
     return (
         <a
-            href={route('auth.google')}
+            href={href}
             className={[
                 'flex items-center justify-center gap-3 w-full',
                 'px-4 py-3 rounded-xl border border-gray-200 bg-white',
@@ -472,7 +473,7 @@ function RegistrationForm({ role, onBack, onClose, onSwitchToSignIn, reduce }) {
                             </motion.div>
 
                             <motion.div variants={field}>
-                                <GoogleButton label="Sign up with Google" />
+                                <GoogleButton label="Sign up with Google" role={role} />
                             </motion.div>
 
                             {/* Switch to sign in */}

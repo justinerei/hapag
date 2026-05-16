@@ -11,6 +11,12 @@ class GoogleAuthController extends Controller
 {
     public function redirect()
     {
+        $role = request()->get('role', 'customer');
+        if (!in_array($role, ['customer', 'owner'])) {
+            $role = 'customer';
+        }
+        session(['google_intended_role' => $role]);
+
         return Socialite::driver('google')->redirect();
     }
 
@@ -27,18 +33,18 @@ class GoogleAuthController extends Controller
             ->first();
 
         if ($user) {
-            // ✅ Don't overwrite avatar_url with Google URL —
-            //    it's already a full URL, not a storage path
             $user->update([
                 'google_id' => $googleUser->getId(),
             ]);
         } else {
+            $intendedRole = session()->pull('google_intended_role', 'customer');
+
             $user = User::create([
                 'name'       => $googleUser->getName(),
                 'email'      => $googleUser->getEmail(),
                 'google_id'  => $googleUser->getId(),
-                'avatar_url' => null, // avoid double-wrapping
-                'role'       => 'customer',
+                'avatar_url' => null,
+                'role'       => $intendedRole,
                 'password'   => null,
             ]);
         }
