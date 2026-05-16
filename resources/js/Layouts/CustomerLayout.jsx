@@ -6,6 +6,7 @@ import SignInModal from '@/Components/SignInModal';
 import Footer from '@/Components/Footer';
 import AddressAutocomplete from '@/Components/AddressAutocomplete';
 import { useNotification } from '@/hooks/useNotification';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const MUNICIPALITIES = [
     'Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba',
@@ -238,6 +239,9 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     // Location selector
     const [locationOpen, setLocationOpen] = useState(false);
     const [updatingLocation, setUpdatingLocation] = useState(false);
+    const locationPillRef = useRef(null);
+    const [gpsLoading, setGpsLoading] = useState(false);
+    const [gpsError, setGpsError] = useState(null);
     const profileRef = useRef(null);
 
     // Close dropdowns on outside click
@@ -281,6 +285,10 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
         };
     }, [user?.id]);
 
+    useEffect(() => {
+        if (!locationOpen) setGpsError(null);
+    }, [locationOpen]);
+
     const logout = () => router.post(route('logout'));
     const firstName = user ? user.name.split(' ')[0] : null;
     const initial = user ? user.name.charAt(0).toUpperCase() : '?';
@@ -299,6 +307,39 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
             router.reload();
         } catch { /* ignore */ }
         setUpdatingLocation(false);
+    }
+
+    async function handleGpsDetect() {
+        setGpsLoading(true);
+        setGpsError(null);
+        if (!navigator.geolocation) {
+            setGpsError("Couldn't detect location. Pick one below.");
+            setGpsLoading(false);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+                    );
+                    const data = await res.json();
+                    const detected = data.address?.city || data.address?.town || data.address?.municipality || data.address?.county;
+                    const match = MUNICIPALITIES.find(m => detected && detected.toLowerCase().includes(m.toLowerCase()));
+                    await changeMunicipality(match || 'Santa Cruz');
+                    setGpsLoading(false);
+                } catch {
+                    setGpsError("Couldn't detect location. Pick one below.");
+                    setGpsLoading(false);
+                }
+            },
+            () => {
+                setGpsError("Couldn't detect location. Pick one below.");
+                setGpsLoading(false);
+            },
+            { timeout: 10000 }
+        );
     }
 
     /* ====================================================================
@@ -362,111 +403,199 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
-            <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 h-14">
-                <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 h-full flex items-center gap-3 sm:gap-4">
+            <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 transition-all duration-300 h-16">
+                <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 h-full flex items-center gap-3">
 
-                    {/* Logo */}
-                    <Link href={route('home')} className="shrink-0 text-xl font-extrabold tracking-tight text-green-600 hover:text-green-700 transition-colors">
-                        Hapag
-                    </Link>
+                    {/* LEFT — Logo + Location */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <Link href={route('home')} className="flex items-center gap-2 shrink-0">
+                            <span className="hidden sm:block text-base font-extrabold tracking-tight text-green-600 text-xl">Hapag</span>
+                        </Link>
 
-                    {/* Location pill */}
-                    <div className="hidden sm:block shrink-0">
-                        <button
-                            onClick={() => setLocationOpen(true)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-gray-50 transition-colors text-sm"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span className="font-semibold text-gray-800 max-w-[160px] truncate">
-                                {user.address || municipality}
-                            </span>
-                            <span className="text-gray-300">·</span>
-                            <span className="text-gray-400 shrink-0">Now</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
+                        <span className="hidden sm:block w-px h-5 bg-gray-200 mx-1 shrink-0" />
+
+                        {/* Location pill + popover wrapper */}
+                        <div className="relative" ref={locationPillRef}>
+                            {/* Location pill — desktop */}
+                            <button
+                                onClick={() => setLocationOpen(v => !v)}
+                                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200 text-xs group max-w-[230px]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <span className="font-semibold text-gray-800 truncate">{user.address || municipality}</span>
+                                <span className="text-gray-400 shrink-0">· Now</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400 shrink-0 group-hover:translate-y-0.5 transition-transform duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+
+                            {/* Location — mobile: pin icon only */}
+                            <button
+                                onClick={() => setLocationOpen(v => !v)}
+                                className="sm:hidden p-2 rounded-full text-green-500 hover:bg-gray-100 transition-colors"
+                                title={user.address || municipality}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </button>
+
+                            {/* Location popover */}
+                            <AnimatePresence>
+                                {locationOpen && (
+                                    <>
+                                        {/* Backdrop — transparent, captures outside clicks */}
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="fixed inset-0 z-[60]"
+                                            onClick={() => setLocationOpen(false)}
+                                        />
+
+                                        {/* Popover panel */}
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[70] overflow-hidden"
+                                        >
+                                            {/* Caret arrow */}
+                                            <div className="absolute -top-1.5 left-5 w-3 h-3 bg-white border-l border-t border-gray-100 rotate-45 z-10" />
+
+                                            <div className="p-4">
+                                                {/* Header */}
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-xs font-bold text-gray-800">Deliver to</span>
+                                                    <button
+                                                        onClick={() => setLocationOpen(false)}
+                                                        className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                {/* Section 1 — Current location (read-only) */}
+                                                <div className="bg-green-50 rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                    </svg>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-gray-800 truncate">{user.address || municipality}</p>
+                                                        <p className="text-[10px] text-gray-400">Your current delivery area</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Section 2 — GPS detect button */}
+                                                <button
+                                                    onClick={handleGpsDetect}
+                                                    disabled={gpsLoading || updatingLocation}
+                                                    className="w-full flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 text-left hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {gpsLoading ? (
+                                                        <svg className="h-4 w-4 text-green-500 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                                        </svg>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <circle cx="12" cy="12" r="3" />
+                                                            <circle cx="12" cy="12" r="8" />
+                                                            <path strokeLinecap="round" d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                                                        </svg>
+                                                    )}
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-800">{gpsLoading ? 'Detecting...' : 'Use my location'}</p>
+                                                        <p className="text-[10px] text-gray-400">Detect location automatically</p>
+                                                    </div>
+                                                </button>
+
+                                                {gpsError && (
+                                                    <p className="text-[10px] text-red-500 mt-1.5 px-1">{gpsError}</p>
+                                                )}
+
+                                                {/* Section 3 — Divider */}
+                                                <div className="relative my-3">
+                                                    <div className="border-t border-gray-100" />
+                                                    <span className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white px-2">Or pick a location</span>
+                                                    </span>
+                                                </div>
+
+                                                {/* AddressAutocomplete */}
+                                                <div className="mb-3">
+                                                    <AddressAutocomplete
+                                                        value=""
+                                                        onChange={async (fullAddress, extractedMunicipality) => {
+                                                            if (!fullAddress || !extractedMunicipality) return;
+                                                            setUpdatingLocation(true);
+                                                            try {
+                                                                await fetch(route('profile.municipality'), {
+                                                                    method: 'PATCH',
+                                                                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                                                                    body: JSON.stringify({ municipality: extractedMunicipality, address: fullAddress }),
+                                                                });
+                                                                setLocationOpen(false);
+                                                                router.reload();
+                                                            } catch { /* ignore */ }
+                                                            setUpdatingLocation(false);
+                                                        }}
+                                                        placeholder="Search street, barangay, or landmark..."
+                                                    />
+                                                </div>
+
+                                                {/* Section 4 — Municipality pills */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {MUNICIPALITIES.map(m => (
+                                                        <button
+                                                            key={m}
+                                                            onClick={() => changeMunicipality(m)}
+                                                            disabled={updatingLocation}
+                                                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                                                                m === municipality
+                                                                    ? 'bg-green-500 text-white shadow-sm'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                            } ${updatingLocation ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            {m === municipality && (
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-300 shrink-0" />
+                                                            )}
+                                                            {m}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </div>
 
-                    {/* Location overlay */}
-                    {locationOpen && (
-                        <>
-                            <div className="fixed inset-0 top-14 bg-black/40 z-[60]" onClick={() => setLocationOpen(false)} />
-                            <div className="fixed top-14 left-0 right-0 z-[70] flex justify-center">
-                                <div className="w-full max-w-xl bg-white shadow-2xl border-t border-gray-100 rounded-b-2xl">
-                                    {/* Header */}
-                                    <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                                        <h2 className="text-sm font-extrabold text-gray-800">Enter your address</h2>
-                                        <button onClick={() => setLocationOpen(false)} className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    {/* Autocomplete input */}
-                                    <div className="px-5 pb-3">
-                                        <AddressAutocomplete
-                                            value=""
-                                            onChange={async (fullAddress, extractedMunicipality) => {
-                                                // Only save when user actually selected a suggestion
-                                                if (!fullAddress || !extractedMunicipality) return;
-                                                setUpdatingLocation(true);
-                                                try {
-                                                    await fetch(route('profile.municipality'), {
-                                                        method: 'PATCH',
-                                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-                                                        body: JSON.stringify({ municipality: extractedMunicipality, address: fullAddress }),
-                                                    });
-                                                    setLocationOpen(false);
-                                                    router.reload();
-                                                } catch { /* ignore */ }
-                                                setUpdatingLocation(false);
-                                            }}
-                                            placeholder="Search street, barangay, or landmark..."
-                                            autoFocus
-                                        />
-                                    </div>
-
-                                    {/* Quick municipality picks */}
-                                    <div className="border-t border-gray-100 px-5 pt-3 pb-4">
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Popular locations</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {MUNICIPALITIES.map(m => (
-                                                <button
-                                                    key={m}
-                                                    onClick={() => changeMunicipality(m)}
-                                                    disabled={updatingLocation}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${m === municipality ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${updatingLocation ? 'opacity-50' : ''}`}
-                                                >
-                                                    {m}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Desktop search */}
+                    {/* CENTER — Desktop search */}
                     {!hideSearch && (
-                        <div className="flex-1 max-w-lg mx-auto hidden md:block">
+                        <div className="flex-1 max-w-2xl mx-auto hidden md:block">
                             <SearchBar initialValue={initialSearch} onSearchPage={onSearch} onSearchSubmit={onSearchSubmit} />
                         </div>
                     )}
 
-                    {/* Right: icon buttons + profile */}
-                    <div className="flex items-center gap-0.5 ml-auto">
+                    {/* RIGHT — Actions */}
+                    <div className="flex items-center gap-1 ml-auto">
 
                         {/* Mobile search toggle */}
                         {!hideSearch && (
                             <button
                                 onClick={() => setMobileSearchOpen(v => !v)}
-                                className="md:hidden p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                                className="md:hidden p-2.5 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                                 title="Search"
                             >
                                 {mobileSearchOpen ? (
@@ -484,7 +613,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                         {/* Favorites */}
                         <Link
                             href={route('favorites')}
-                            className={`p-2 rounded-full transition-colors ${isActive('/favorites') ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                            className={`p-2.5 rounded-full transition-colors ${isActive('/favorites') ? 'text-red-500 bg-red-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                             title="Favorites"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={isActive('/favorites') ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -492,7 +621,6 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                             </svg>
                         </Link>
 
-                        {/* Cart — unchanged */}
                         {/* Notifications Bell */}
                         {user && user.role === 'customer' && (
                             <div className="relative" ref={bellRef}>
@@ -513,7 +641,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                             }
                                         }
                                     }}
-                                    className="relative p-2 rounded-full transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                    className="relative p-2.5 rounded-full transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                     title="Notifications"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -532,7 +660,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                             <p className="text-sm font-bold text-gray-800">Notifications</p>
                                         </div>
                                         {notifications.length === 0 ? (
-                                            <div className="px-4 py-6 text-center text-sm text-gray-400">You're all caught up!</div>
+                                            <div className="px-4 py-6 text-center text-sm text-gray-400">You're all caught up</div>
                                         ) : (
                                             <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
                                                 {notifications.map(n => (
@@ -557,7 +685,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                         {/* Cart */}
                         <Link
                             href={route('cart.index')}
-                            className={`relative p-2 rounded-full transition-colors ${isActive('/cart') ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                            className={`relative p-2.5 rounded-full transition-colors ${isActive('/cart') ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                             title="Cart"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -570,14 +698,13 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                             )}
                         </Link>
 
-
                         {/* Profile dropdown */}
-                        <div className="relative ml-1" ref={profileRef}>
+                        <div className="relative ml-1.5" ref={profileRef}>
                             <button
                                 onClick={() => setProfileOpen(v => !v)}
-                                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full hover:bg-gray-50 transition-colors"
+                                className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-all duration-200"
                             >
-                                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                                <div className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
                                     {user.avatar_url ? (
                                         <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                                     ) : (
@@ -587,7 +714,6 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                 <span className="hidden sm:block text-sm font-semibold text-gray-800 max-w-[80px] truncate">
                                     {firstName}
                                 </span>
-                                {/* ── CHANGE 3 of 4: red dot on chevron when there are unseen notifs ── */}
                                 <div className="relative">
                                     <svg xmlns="http://www.w3.org/2000/svg"
                                         className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
@@ -615,7 +741,6 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                         My Account
                                     </Link>
 
-                                    {/* ── CHANGE 4 of 4: red badge next to "My Orders" in dropdown ── */}
                                     <Link
                                         href={route('orders.index')}
                                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
