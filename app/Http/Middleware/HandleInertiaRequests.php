@@ -42,13 +42,15 @@ class HandleInertiaRequests extends Middleware
 
             'auth' => [
                 'user' => $user ? [
-                    'id'           => $user->id,
-                    'name'         => $user->name,
-                    'email'        => $user->email,
-                    'role'         => $user->role,
-                    'municipality' => $user->municipality,
-                    'address'      => $user->address,
-                    'avatar_url'   => $user->avatar_url,
+                    'id'                         => $user->id,
+                    'name'                       => $user->name,
+                    'email'                      => $user->email,
+                    'role'                       => $user->role,
+                    'municipality'               => $user->municipality,
+                    'address'                    => $user->address,
+                    'avatar_url'                 => $user->avatar_url,
+                    'has_seen_tour'              => (bool) $user->has_seen_tour,
+                    'has_dismissed_progress_bar' => (bool) $user->has_dismissed_progress_bar,
                 ] : null,
             ],
 

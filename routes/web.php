@@ -89,6 +89,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/favorites', [\App\Http\Controllers\FavoriteController::class, 'index'])->name('favorites');
     Route::post('/favorites/toggle', [\App\Http\Controllers\FavoriteController::class, 'toggle'])->name('favorites.toggle');
 
+    // Onboarding tour completion
+    Route::post('/profile/tour-complete', function () {
+        auth()->user()->update(['has_seen_tour' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.tour.complete');
+
+    // Progress bar dismissal
+    Route::post('/profile/dismiss-progress', function () {
+        auth()->user()->update(['has_dismissed_progress_bar' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.dismiss.progress');
+
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
         $request->validate([

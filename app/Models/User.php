@@ -22,6 +22,8 @@ class User extends Authenticatable
         'address',
         'avatar_url',
         'google_id',
+        'has_seen_tour',
+        'has_dismissed_progress_bar',
     ];
 
     protected $hidden = [
