@@ -385,7 +385,7 @@ function EmptyChart() {
 
 // ── Donut Card ─────────────────────────────────────────────────────────────────
 
-function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, height = 'h-52' }) {
+function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, height = 'h-52', className = 'p-5' }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
 
@@ -395,7 +395,7 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl ${className}`}
         >
             <div className="flex items-center gap-2 mb-3">
                 {icon && <span className="text-gray-500">{icon}</span>}
@@ -493,7 +493,7 @@ function PeakHoursHeatmap({ data }) {
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 w-fit"
         >
             <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-500"><IcoFire c="w-4 h-4" /></span>
@@ -724,7 +724,7 @@ function MunicipalityChart({ data }) {
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Orders by municipality</p>
             </div>
             {!chartData.length ? <EmptyChart /> : (
-                <div className="h-52">
+                <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                             <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(55,65,81,0.4)" />
@@ -797,6 +797,44 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
     );
 }
 
+// ── New Customers Card ─────────────────────────────────────────────────────────
+
+function NewCustomersCard({ data, timePeriod }) {
+    const filtered = useMemo(() =>
+        filterByPeriod(data ?? [], timePeriod).map(d => ({ ...d, count: Number(d.count) })),
+        [data, timePeriod]
+    );
+    const total = filtered.reduce((s, d) => s + d.count, 0);
+
+    return (
+        <DarkChartCard
+            title="New customers"
+            icon={<IcoUsers c="w-3.5 h-3.5" />}
+            stat={total.toLocaleString('en-PH')}
+            statLabel="this period"
+            height="h-36"
+        >
+            {filtered.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={filtered} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="gradNewCust" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%"  stopColor="#3B82F6" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(55,65,81,0.4)" vertical={false} />
+                        <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} width={24} />
+                        <Tooltip content={<DarkTooltip />} />
+                        <Area type="monotone" dataKey="count" name="New customers" stroke="#3B82F6" fill="url(#gradNewCust)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3B82F6' }} />
+                    </AreaChart>
+                </ResponsiveContainer>
+            )}
+        </DarkChartCard>
+    );
+}
+
 // ── Overview Section ───────────────────────────────────────────────────────────
 
 function OverviewSection({
@@ -844,7 +882,7 @@ function OverviewSection({
         <motion.div initial="hidden" animate="show" variants={STAGGER}>
 
             {/* Row 1 — Stat cards */}
-            <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 <StatCard label="Total restaurants" value={totalRestaurants} gradient="red-pink"  icon={<IcoStore c="w-5 h-5" />} subtitle={`${activeRestaurants} active`} />
                 <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
                 <StatCard
@@ -944,9 +982,22 @@ function OverviewSection({
                 </div>
             </motion.div>
 
-            {/* Row 4 — Peak hours heatmap */}
-            <motion.div variants={FADE_UP} className="mb-5">
+            {/* Row 4 — Peak hours heatmap + Customer retention + New customers */}
+            <motion.div variants={FADE_UP} className="flex flex-col lg:flex-row gap-5 mb-5 items-start">
                 <PeakHoursHeatmap data={peakHoursData} />
+                <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                    <DonutCard
+                        title="Customer retention"
+                        icon={<IcoRepeat c="w-3.5 h-3.5" />}
+                        data={retentionData}
+                        colorMap={retentionColorMap}
+                        centerValue={`${retentionRate}%`}
+                        centerLabel="retention"
+                        height="h-36"
+                        className="p-4"
+                    />
+                    <NewCustomersCard data={customerGrowth} timePeriod={timePeriod} />
+                </div>
             </motion.div>
 
             {/* Row 5 — Top tables */}
@@ -955,22 +1006,9 @@ function OverviewSection({
                 <TopMenuItemsTable   data={topMenuItems} />
             </motion.div>
 
-            {/* Row 6 — Municipality + Customer retention */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-                <div className="lg:col-span-3">
-                    <MunicipalityChart data={ordersByMunicipality} />
-                </div>
-
-                <DonutCard
-                    className="lg:col-span-2"
-                    title="Customer retention"
-                    icon={<IcoRepeat c="w-3.5 h-3.5" />}
-                    data={retentionData}
-                    colorMap={retentionColorMap}
-                    centerValue={`${retentionRate}%`}
-                    centerLabel="retention"
-                    height="h-44"
-                />
+            {/* Row 6 — Municipality (full-width) */}
+            <motion.div variants={FADE_UP}>
+                <MunicipalityChart data={ordersByMunicipality} />
             </motion.div>
 
         </motion.div>
@@ -1608,12 +1646,16 @@ export default function AdminDashboard({
         setBackupLoading(true);
         try {
             const data = await apiFetch(route('admin.backup'), 'POST');
+            if (!data.success) {
+                addToast(data.message ?? 'Backup failed. Check server logs.', 'error');
+                return;
+            }
             setLastBackup(data.last_backup_at);
             setBackupFile(data.last_backup_file);
             addToast('Database backup complete.');
-            fetchBackups();
-        } catch {
-            addToast('Backup failed. Check server logs.', 'error');
+            try { await fetchBackups(); } catch { /* list refresh failed — ignore */ }
+        } catch (e) {
+            addToast(e?.data?.message || 'Backup failed. Check server logs.', 'error');
         } finally {
             setBackupLoading(false);
         }
