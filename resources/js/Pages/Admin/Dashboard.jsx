@@ -292,24 +292,31 @@ const CARD_GRADIENTS = {
     'rose':        'from-rose-600 to-red-500',
 };
 
-function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
-    const ref    = useRef(null);
-    const inView = useInView(ref, { once: true, margin: '-40px' });
-    const grad   = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
+function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon, size = 'secondary' }) {
+    const ref       = useRef(null);
+    const inView    = useInView(ref, { once: true, margin: '-40px' });
+    const grad      = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
+    const isPrimary = size === 'primary';
 
     return (
         <motion.div
             ref={ref}
             variants={FADE_UP}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 hover:border-gray-600/60 transition-colors"
+            className={[
+                'bg-gray-800/80 border border-gray-700/50 rounded-2xl hover:border-gray-600/60 transition-colors',
+                isPrimary ? 'p-6' : 'p-5',
+            ].join(' ')}
         >
             <div className="flex items-start justify-between mb-4">
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shadow-lg shrink-0`}>
                     {icon}
                 </div>
             </div>
-            <p className="text-[26px] font-bold text-white tracking-tight leading-none tabular-nums mb-1.5">
+            <p className={[
+                'text-white tracking-tight leading-none tabular-nums mb-1.5',
+                isPrimary ? 'text-3xl font-bold' : 'text-2xl font-semibold',
+            ].join(' ')}>
                 {inView ? <CountUp to={value} prefix={prefix} suffix={suffix} decimals={decimals} /> : `${prefix}0${suffix}`}
             </p>
             <p className="text-xs font-semibold text-gray-400">{label}</p>
@@ -397,7 +404,7 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl ${className}`}
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl flex flex-col ${className}`}
         >
             <div className="flex items-center gap-2 mb-3">
                 {icon && <span className="text-gray-500">{icon}</span>}
@@ -405,8 +412,8 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
             </div>
 
             {!data?.length ? <div className={`${height} flex items-center justify-center text-gray-600 text-sm`}>No data</div> : (
-                <>
-                    <div className={`relative ${height}`}>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="relative flex-1 w-full min-h-[144px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -439,7 +446,7 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
                         </div>
                     </div>
                     {/* Legend */}
-                    <div className={`mt-3 grid gap-x-2 gap-y-1.5 ${legendCols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    <div className={`mt-3 grid w-full gap-x-2 gap-y-1.5 ${legendCols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         {data.map((entry, i) => (
                             <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorMap?.[entry.status ?? entry.name] ?? '#6B7280' }} />
@@ -447,7 +454,7 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
                             </div>
                         ))}
                     </div>
-                </>
+                </div>
             )}
         </motion.div>
     );
@@ -502,21 +509,21 @@ function PeakHoursHeatmap({ data, className = '' }) {
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peak ordering hours</p>
             </div>
             <div className="relative">
-            <div className="overflow-x-auto">
-                <div className="flex gap-1 min-w-fit">
+            <div className="overflow-hidden">
+                <div className="flex gap-1 w-full">
                     {/* Y-axis hour labels */}
-                    <div className="flex flex-col gap-[3px] pr-2">
+                    <div className="flex flex-col gap-[2px] pr-1 shrink-0">
                         <div className="h-5" />
                         {HEATMAP_HOURS.map(h => (
-                            <div key={h} className="h-5 flex items-center text-[9px] text-gray-600 font-mono w-6">
+                            <div key={h} className="h-4 flex items-center text-[9px] text-gray-600 font-mono w-5">
                                 {fmtHour(h)}
                             </div>
                         ))}
                     </div>
                     {/* Columns */}
                     {HEATMAP_DAYS.map((day, di) => (
-                        <div key={day} className="flex flex-col gap-[3px]">
-                            <div className="h-5 flex items-center justify-center text-[9px] text-gray-500 font-semibold w-7">
+                        <div key={day} className="flex flex-col gap-[2px] flex-1 min-w-0">
+                            <div className="h-5 flex items-center justify-center text-[9px] text-gray-500 font-semibold">
                                 {HEATMAP_DAY_LBLS[di]}
                             </div>
                             {HEATMAP_HOURS.map((hour, hi) => {
@@ -531,7 +538,7 @@ function PeakHoursHeatmap({ data, className = '' }) {
                                         initial={{ opacity: 0 }}
                                         animate={inView ? { opacity: 1 } : { opacity: 0 }}
                                         transition={{ delay, duration: 0.15 }}
-                                        className="relative w-7 h-5 rounded-sm cursor-default"
+                                        className="relative w-full h-4 rounded-sm cursor-default"
                                         style={{ backgroundColor: heatmapBg(ratio) }}
                                         onMouseEnter={e => {
                                             const rect = e.currentTarget.getBoundingClientRect();
@@ -744,7 +751,7 @@ function MunicipalityChart({ data }) {
 
 // ── Voucher Performance Card ───────────────────────────────────────────────────
 
-function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }) {
+function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed, className = '' }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
     const top3   = (topVouchers ?? []).slice(0, 3);
@@ -756,7 +763,7 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 ${className}`}
         >
             <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-500"><IcoTag c="w-4 h-4" /></span>
@@ -928,6 +935,7 @@ function OverviewSection({
     ordersByStatus, peakHoursData, topVouchers,
     topRestaurants, topMenuItems, ordersByMunicipality,
     ordersByType, ownerPerformance,
+    pendingRestaurants,
 }) {
     const filteredOrders  = useMemo(() => filterByPeriod(orderGrowth ?? [], timePeriod).map(d => ({ ...d, count: Number(d.count) })),   [orderGrowth, timePeriod]);
     const filteredRevenue = useMemo(() => filterByPeriod(revenueGrowth ?? [], timePeriod).map(d => ({ ...d, revenue: Number(d.revenue) })), [revenueGrowth, timePeriod]);
@@ -963,20 +971,14 @@ function OverviewSection({
     const GRID_STROKE = 'rgba(55,65,81,0.4)';
 
     return (
-        <motion.div initial="hidden" animate="show" variants={STAGGER}>
+        <motion.div initial="hidden" animate="show" variants={STAGGER} className="space-y-4">
 
-            {/* Row 1 — Stat cards */}
-            <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                <StatCard label="Total restaurants" value={totalRestaurants} gradient="red-pink"  icon={<IcoStore c="w-5 h-5" />} subtitle={`${activeRestaurants} active`} />
-                <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
+            {/* ── Section 1 — KPI Bar ─────────────────────────────────────────── */}
+
+            {/* Row 1 — Primary KPIs */}
+            <motion.div variants={STAGGER} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <StatCard
-                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
-                    value={isFiltered ? periodOrders : totalOrders}
-                    gradient="blue-cyan"
-                    icon={<IcoBag c="w-5 h-5" />}
-                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
-                />
-                <StatCard
+                    size="primary"
                     label={isFiltered ? `Revenue — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total revenue'}
                     value={isFiltered ? periodRevenue : totalRevenue}
                     gradient="green"
@@ -985,60 +987,62 @@ function OverviewSection({
                     decimals={2}
                     subtitle={isFiltered ? `${fmtCurrency(totalRevenue)} all-time` : `${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`}
                 />
-                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" suffix="%" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
-                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" suffix="%" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
-            </motion.div>
-
-            {/* Row 2 — Order trends + Status donut */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5 items-start">
-                <DarkChartCard
-                    className="lg:col-span-3"
-                    title="Order trends"
-                    icon={<IcoBag c="w-3.5 h-3.5" />}
-                    stat={periodOrders.toLocaleString('en-PH')}
-                    statLabel="orders this period"
-                    height="h-36"
-                >
-                    {filteredOrders.length === 0 ? <EmptyChart /> : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={filteredOrders} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.2} />
-                                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                                <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={AXIS_STYLE} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                                <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} width={28} />
-                                <Tooltip content={<DarkTooltip />} />
-                                <Area type="monotone" dataKey="count" name="Orders" stroke="#22C55E" fill="url(#gradOrders)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#22C55E' }} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </DarkChartCard>
-
-                <DonutCard
-                    className="lg:col-span-2 p-5"
-                    title="Orders by status"
-                    icon={<IcoGrid c="w-3.5 h-3.5" />}
-                    data={statusData}
-                    colorMap={STATUS_COLORS}
-                    centerValue={totalStatusOrders.toLocaleString('en-PH')}
-                    centerLabel="total orders"
-                    height="h-44"
-                    legendCols={3}
+                <StatCard
+                    size="primary"
+                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
+                    value={isFiltered ? periodOrders : totalOrders}
+                    gradient="blue-cyan"
+                    icon={<IcoBag c="w-5 h-5" />}
+                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
+                />
+                <StatCard
+                    size="primary"
+                    label="Pending restaurants"
+                    value={pendingRestaurants ?? 0}
+                    gradient="red-pink"
+                    icon={<IcoStore c="w-5 h-5" />}
+                    subtitle={`${activeRestaurants} active · ${totalRestaurants} total`}
                 />
             </motion.div>
 
-            {/* Row 3 — Revenue trend + Voucher performance */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5 items-start">
+            {/* Row 2 — Secondary KPIs */}
+            <motion.div variants={STAGGER} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <StatCard
+                    label="Total users"
+                    value={totalUsers}
+                    gradient="purple"
+                    icon={<IcoUsers c="w-5 h-5" />}
+                    subtitle={`${totalCustomers} customers · ${totalOwners} owners`}
+                />
+                <StatCard
+                    label="Completion rate"
+                    value={completionRate}
+                    gradient="teal"
+                    icon={<IcoCheck c="w-5 h-5" />}
+                    prefix="" suffix="%" decimals={1}
+                    subtitle={`${totalCompletedOrders} completed`}
+                />
+                <StatCard
+                    label="Cancellation rate"
+                    value={cancellationRate}
+                    gradient="rose"
+                    icon={<IcoX c="w-5 h-5" />}
+                    prefix="" suffix="%" decimals={1}
+                    subtitle={`${totalCancelledOrders} cancelled`}
+                />
+            </motion.div>
+
+            {/* ── Section 2 — Trend Charts ─────────────────────────────────────── */}
+
+            {/* Revenue trend (2/3) + Orders by status donut (1/3) */}
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <DarkChartCard
-                    className="lg:col-span-3"
+                    className="lg:col-span-2"
                     title="Revenue trend"
                     icon={<IcoCoin c="w-3.5 h-3.5" />}
                     stat={fmtCurrency(periodRevenue)}
                     statLabel="this period"
+                    height="h-[220px]"
                 >
                     {filteredRevenue.length === 0 ? <EmptyChart /> : (
                         <ResponsiveContainer width="100%" height="100%">
@@ -1059,32 +1063,58 @@ function OverviewSection({
                     )}
                 </DarkChartCard>
 
-                <div className="lg:col-span-2">
-                    <VoucherPerformanceCard
-                        topVouchers={topVouchers}
-                        totalClaimed={totalClaimed}
-                        totalVouchersUsed={totalVouchersUsed}
-                    />
-                </div>
-            </motion.div>
-
-            {/* Row 4 — Peak hours + Order type breakdown */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5 items-start">
-                <PeakHoursHeatmap data={peakHoursData} className="lg:col-span-3" />
                 <DonutCard
-                    className="lg:col-span-2 p-5"
-                    title="Order type breakdown"
-                    icon={<IcoBag c="w-3.5 h-3.5" />}
-                    data={orderTypeData}
-                    colorMap={ORDER_TYPE_COLORS}
-                    centerValue={totalOrderTypeCount.toLocaleString('en-PH')}
+                    title="Orders by status"
+                    icon={<IcoGrid c="w-3.5 h-3.5" />}
+                    data={statusData}
+                    colorMap={STATUS_COLORS}
+                    centerValue={totalStatusOrders.toLocaleString('en-PH')}
                     centerLabel="total orders"
                     height="h-44"
+                    legendCols={2}
+                    className="p-5"
                 />
             </motion.div>
 
-            {/* Row 4b — Customer retention + New customers */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5 items-start">
+            {/* Order trends — full width */}
+            <motion.div variants={FADE_UP}>
+                <DarkChartCard
+                    title="Order trends"
+                    icon={<IcoBag c="w-3.5 h-3.5" />}
+                    stat={periodOrders.toLocaleString('en-PH')}
+                    statLabel="orders this period"
+                    height="h-[200px]"
+                >
+                    {filteredOrders.length === 0 ? <EmptyChart /> : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={filteredOrders} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                                <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={AXIS_STYLE} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                                <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} width={28} />
+                                <Tooltip content={<DarkTooltip />} />
+                                <Area type="monotone" dataKey="count" name="Orders" stroke="#22C55E" fill="url(#gradOrders)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#22C55E' }} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
+                </DarkChartCard>
+            </motion.div>
+
+            {/* ── Section 3 — Operational Insights (4 equal cols) ──────────────── */}
+
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                <VoucherPerformanceCard
+                    topVouchers={topVouchers}
+                    totalClaimed={totalClaimed}
+                    totalVouchersUsed={totalVouchersUsed}
+                    className="h-full"
+                />
+                <PeakHoursHeatmap data={peakHoursData} className="h-full" />
                 <DonutCard
                     title="Customer retention"
                     icon={<IcoRepeat c="w-3.5 h-3.5" />}
@@ -1093,23 +1123,30 @@ function OverviewSection({
                     centerValue={`${retentionRate}%`}
                     centerLabel="retention"
                     height="h-36"
-                    className="p-4"
+                    className="p-5 h-full"
                 />
-                <NewCustomersCard data={customerGrowth} timePeriod={timePeriod} />
+                <DonutCard
+                    title="Order type breakdown"
+                    icon={<IcoBag c="w-3.5 h-3.5" />}
+                    data={orderTypeData}
+                    colorMap={ORDER_TYPE_COLORS}
+                    centerValue={totalOrderTypeCount.toLocaleString('en-PH')}
+                    centerLabel="total orders"
+                    height="h-36"
+                    className="p-5 h-full"
+                />
             </motion.div>
 
-            {/* Row 5 — Top tables */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+            {/* ── Section 4 — Tables & Lists (3 equal cols) ────────────────────── */}
+
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <TopRestaurantsTable data={topRestaurants} />
                 <TopMenuItemsTable   data={topMenuItems} />
+                <MunicipalityChart   data={ordersByMunicipality} />
             </motion.div>
 
-            {/* Row 6 — Municipality (full-width) */}
-            <motion.div variants={FADE_UP} className="mb-5">
-                <MunicipalityChart data={ordersByMunicipality} />
-            </motion.div>
+            {/* ── Section 5 — Owner Performance (full width) ───────────────────── */}
 
-            {/* Row 7 — Owner performance (full-width) */}
             <motion.div variants={FADE_UP}>
                 <OwnerPerformanceTable data={ownerPerformance} />
             </motion.div>
@@ -1781,6 +1818,7 @@ export default function AdminDashboard({
         ordersByStatus, peakHoursData, topVouchers,
         topRestaurants, topMenuItems, ordersByMunicipality,
         ordersByType, ownerPerformance,
+        pendingRestaurants: pending.length,
     };
 
     return (
