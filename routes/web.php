@@ -95,6 +95,12 @@ Route::middleware('auth')->group(function () {
         return response()->json(['ok' => true]);
     })->name('profile.tour.complete');
 
+    // Owner dashboard tour completion
+    Route::post('/profile/owner-tour-complete', function () {
+        auth()->user()->update(['has_seen_owner_tour' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.owner.tour.complete');
+
     // Progress bar dismissal
     Route::post('/profile/dismiss-progress', function () {
         auth()->user()->update(['has_dismissed_progress_bar' => true]);

@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                     'avatar_url'                 => $user->avatar_url,
                     'has_seen_tour'              => (bool) $user->has_seen_tour,
                     'has_dismissed_progress_bar' => (bool) $user->has_dismissed_progress_bar,
+                    'has_seen_owner_tour'        => (bool) $user->has_seen_owner_tour,
                 ] : null,
             ],
 
