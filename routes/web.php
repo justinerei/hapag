@@ -76,8 +76,10 @@ Route::middleware('auth')->group(function () {
         if (!$user->google_id) {
             return response()->json(['error' => 'Not a Google account.'], 422);
         }
-        $googleAvatarUrl = 'https://lh3.googleusercontent.com/a/' . $user->google_id;
-        $user->update(['avatar_url' => $googleAvatarUrl]);
+        if (!$user->google_avatar) {
+            return response()->json(['error' => 'No Google photo on file. Please sign out and sign back in with Google, then try again.'], 422);
+        }
+        $user->update(['avatar_url' => $user->google_avatar]);
         return response()->json(['ok' => true]);
     })->name('profile.avatar.google-sync');
 

@@ -104,21 +104,23 @@ function AvatarUpload({ user: userProp }) {
     const user = auth?.user ?? userProp;
 
     const fileInputRef = useRef(null);
-    const [preview, setPreview] = useState(user.avatar_url ?? null);
+    const [localPreview, setLocalPreview] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({ avatar: null });
     const { delete: destroy, processing: removing } = useForm();
 
+    const displayImage = localPreview ?? user.avatar_url ?? null;
+
     function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
-        setPreview(URL.createObjectURL(file));
+        setLocalPreview(URL.createObjectURL(file));
         setData('avatar', file);
     }
 
     function handleCancelUpload() {
-        setPreview(user.avatar_url ?? null);
+        setLocalPreview(null);
         setData('avatar', null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -126,7 +128,7 @@ function AvatarUpload({ user: userProp }) {
     function handleConfirmRemove() {
         destroy(route('profile.avatar.remove'), {
             onSuccess: () => {
-                setPreview(null);
+                setLocalPreview(null);
                 setShowConfirmModal(false);
             },
         });
@@ -143,8 +145,8 @@ function AvatarUpload({ user: userProp }) {
                     onClick={() => fileInputRef.current.click()}
                 >
                     <div className="w-full h-full bg-green-500 flex items-center justify-center text-white text-2xl font-bold">
-                        {preview
-                            ? <img src={preview} alt="Profile" className="h-full w-full object-cover" />
+                        {displayImage
+                            ? <img src={displayImage} alt="Profile" className="h-full w-full object-cover" />
                             : <span>{user.name.charAt(0).toUpperCase()}</span>
                         }
                     </div>

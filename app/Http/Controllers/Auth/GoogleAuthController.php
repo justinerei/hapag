@@ -34,18 +34,20 @@ class GoogleAuthController extends Controller
 
         if ($user) {
             $user->update([
-                'google_id' => $googleUser->getId(),
+                'google_id'     => $googleUser->getId(),
+                'google_avatar' => $googleUser->getAvatar(),
             ]);
         } else {
             $intendedRole = session()->pull('google_intended_role', 'customer');
 
             $user = User::create([
-                'name'       => $googleUser->getName(),
-                'email'      => $googleUser->getEmail(),
-                'google_id'  => $googleUser->getId(),
-                'avatar_url' => null,
-                'role'       => $intendedRole,
-                'password'   => null,
+                'name'          => $googleUser->getName(),
+                'email'         => $googleUser->getEmail(),
+                'google_id'     => $googleUser->getId(),
+                'google_avatar' => $googleUser->getAvatar(),
+                'avatar_url'    => null,
+                'role'          => $intendedRole,
+                'password'      => null,
             ]);
         }
 
