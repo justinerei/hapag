@@ -97,6 +97,9 @@ class User extends Authenticatable
     {
         $raw = $this->attributes['avatar_url'] ?? null;
         if (!$raw) return null;
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+            return $raw;
+        }
         return asset('storage/' . $raw);
     }
 }
