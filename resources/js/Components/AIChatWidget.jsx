@@ -234,7 +234,7 @@ const RESTAURANT_SUGGESTIONS  = ["What's popular here?", 'Best value meal?', 'So
 
 // ── Main Widget ───────────────────────────────────────────────────────────────
 
-export default function AIChatWidget({ restaurantId = null, restaurantName = null }) {
+export default function AIChatWidget({ restaurantId = null, restaurantName = null, standalone = true }) {
     const [open, setOpen]         = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput]       = useState('');
@@ -311,7 +311,7 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
     return (
         <>
             {/* FAB */}
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+            <div className={standalone ? "fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2" : "relative flex flex-col items-end gap-2"}>
                 <button
                     onClick={() => setOpen(v => !v)}
                     className={`w-14 h-14 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 flex items-center justify-center ${open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-green-500 hover:bg-green-600'} text-white`}
@@ -329,8 +329,8 @@ export default function AIChatWidget({ restaurantId = null, restaurantName = nul
 
             {/* Chat Panel */}
             {open && (
-                <div className="fixed bottom-24 right-6 z-40 w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
-                     style={{ height: 'min(580px, calc(100vh - 8rem))' }}>
+                <div className={`${standalone ? 'fixed bottom-24 right-6' : 'absolute bottom-full mb-3 right-0'} z-40 w-[390px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col`}
+     style={{ height: 'min(580px, calc(100vh - 8rem))' }}>
 
                     {/* Header */}
                     <div className="bg-gradient-to-r from-green-500 to-green-600 px-4 py-3.5 shrink-0">

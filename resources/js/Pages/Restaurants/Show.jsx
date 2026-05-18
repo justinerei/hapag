@@ -1153,12 +1153,18 @@ export default function Show({
                                         whileHover={{ y: -2 }}
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => setCartExpanded(true)}
-                                        className="flex items-center gap-2.5 px-4 py-3 bg-green-500 text-white rounded-2xl shadow-xl shadow-green-500/35 hover:bg-green-600 transition-colors whitespace-nowrap"
+                                        className="relative flex items-center gap-2.5 px-4 py-3 bg-green-500 text-white rounded-2xl shadow-xl shadow-green-500/35 hover:bg-green-600 transition-colors whitespace-nowrap"
+                                        aria-label="View cart summary"
                                     >
-                                        <div className="w-6 h-6 rounded-xl bg-green-600 flex items-center justify-center">
-                                            <span className="text-[11px] font-extrabold tabular-nums">{totalItemCount}</span>
-                                        </div>
-                                        <span className="text-sm font-bold">View order</span>
+                                        {/* Item count badge */}
+                                        <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-orange-500 border-2 border-white text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">
+                                            {totalItemCount}
+                                        </span>
+                                        {/* Bag icon */}
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                                        </svg>
+                                        <span className="text-sm font-bold">Cart Summary</span>
                                         <span className="text-sm font-extrabold tabular-nums">{fmt(cartTotal)}</span>
                                         <IcoChevUp c="h-3.5 w-3.5 opacity-70" />
                                     </motion.button>
@@ -1168,7 +1174,7 @@ export default function Show({
                     )}
 
                     {/* AI Chat FAB — always on the right */}
-                    <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} />
+                    <AIChatWidget restaurantId={restaurant.id} restaurantName={restaurant.name} standalone={false} />
                 </div>
             )}
 
