@@ -71,15 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
-    Route::post('/profile/avatar/google-sync', function (\Illuminate\Http\Request $request) {
-        $user = auth()->user();
-        if (!$user->google_id) {
-            return response()->json(['error' => 'Not a Google account.'], 422);
-        }
-        $googleAvatarUrl = 'https://lh3.googleusercontent.com/a/' . $user->google_id;
-        $user->update(['avatar_url' => $googleAvatarUrl]);
-        return response()->json(['ok' => true]);
-    })->name('profile.avatar.google-sync');
+    Route::post('/profile/avatar/google-sync', [ProfileController::class, 'syncGoogleAvatar'])->name('profile.avatar.google-sync');
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -88,6 +80,24 @@ Route::middleware('auth')->group(function () {
     // Favorites
     Route::get('/favorites', [\App\Http\Controllers\FavoriteController::class, 'index'])->name('favorites');
     Route::post('/favorites/toggle', [\App\Http\Controllers\FavoriteController::class, 'toggle'])->name('favorites.toggle');
+
+    // Onboarding tour completion
+    Route::post('/profile/tour-complete', function () {
+        auth()->user()->update(['has_seen_tour' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.tour.complete');
+
+    // Owner dashboard tour completion
+    Route::post('/profile/owner-tour-complete', function () {
+        auth()->user()->update(['has_seen_owner_tour' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.owner.tour.complete');
+
+    // Progress bar dismissal
+    Route::post('/profile/dismiss-progress', function () {
+        auth()->user()->update(['has_dismissed_progress_bar' => true]);
+        return response()->json(['ok' => true]);
+    })->name('profile.dismiss.progress');
 
     // Municipality quick-update (AJAX from customer navbar)
     Route::patch('/profile/municipality', function (\Illuminate\Http\Request $request) {
@@ -116,35 +126,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/vouchers/validate', [VoucherController::class, 'validate'])->name('vouchers.validate');
 
     // Voucher claiming (menu page promos)
-    Route::post('/api/vouchers/claim', function (\Illuminate\Http\Request $request) {
-        $request->validate(['voucher_id' => 'required|exists:vouchers,id']);
-
-        $user    = auth()->user();
-        $voucher = \App\Models\Voucher::findOrFail($request->voucher_id);
-
-        if (! $voucher->is_active) {
-            return response()->json(['message' => 'This voucher is no longer active.'], 422);
-        }
-        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
-            return response()->json(['message' => 'This voucher has expired.'], 422);
-        }
-        if ($voucher->max_uses !== null && $voucher->used_count >= $voucher->max_uses) {
-            return response()->json(['message' => 'This voucher has reached its limit.'], 422);
-        }
-        if (\App\Models\VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You have already used this voucher.'], 422);
-        }
-        if (\App\Models\ClaimedVoucher::where('user_id', $user->id)->where('voucher_id', $voucher->id)->exists()) {
-            return response()->json(['message' => 'Already claimed.'], 422);
-        }
-
-        \App\Models\ClaimedVoucher::create([
-            'user_id'    => $user->id,
-            'voucher_id' => $voucher->id,
-        ]);
-
-        return response()->json(['claimed' => true, 'code' => $voucher->code]);
-    })->name('vouchers.claim');
+    Route::post('/api/vouchers/claim', [VoucherController::class, 'claim'])->name('vouchers.claim');
 
     // Notifications — mark as read
     Route::post('/notifications/read', function () {

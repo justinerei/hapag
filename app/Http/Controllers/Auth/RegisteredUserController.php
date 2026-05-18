@@ -37,13 +37,16 @@ class RegisteredUserController extends Controller
             'municipality' => ['nullable', 'string', 'max:255'],
         ]);
 
+        // role is not in $fillable — set it explicitly after creation
         $user = User::create([
             'name'         => trim($request->first_name . ' ' . $request->last_name),
             'email'        => $request->email,
             'password'     => Hash::make($request->password),
-            'role'         => $request->role,
             'municipality' => $request->municipality ?: null,
         ]);
+
+        $user->role = $request->role;
+        $user->save();
 
         event(new Registered($user));
 

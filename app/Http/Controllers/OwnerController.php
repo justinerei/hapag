@@ -42,18 +42,7 @@ class OwnerController extends Controller
             $imagePath = $request->file('image')->store('restaurants', 'public');
         }
 
-        $coords = [
-            'Santa Cruz'  => [14.2794, 121.4117],
-            'Pagsanjan'   => [14.2713, 121.4559],
-            'Los Baños'   => [14.1692, 121.2436],
-            'Calamba'     => [14.2116, 121.1653],
-            'San Pablo'   => [14.0688, 121.3224],
-            'Bay'         => [14.1791, 121.2840],
-            'Nagcarlan'   => [14.1390, 121.4180],
-            'Pila'        => [14.2300, 121.3670],
-        ];
-
-        [$lat, $lng] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+        [$lat, $lng] = $this->municipalityCoords()[$data['municipality']] ?? [14.2794, 121.4117];
 
         Restaurant::create([
             'owner_id'     => auth()->id(),
@@ -96,16 +85,12 @@ class OwnerController extends Controller
             'image'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
-        $coords = [
-            'Santa Cruz'  => [14.2794, 121.4117],
-            'Pagsanjan'   => [14.2713, 121.4559],
-            'Los Baños'   => [14.1692, 121.2436],
-            'Calamba'     => [14.2116, 121.1653],
-            'San Pablo'   => [14.0688, 121.3224],
-            'Bay'         => [14.1791, 121.2840],
-            'Nagcarlan'   => [14.1390, 121.4180],
-            'Pila'        => [14.2300, 121.3670],
-        ];
+        $coords = $this->municipalityCoords();
+
+        [$data['lat'], $data['lng']] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+        $data['address']          = $data['municipality'];
+        $data['status']           = 'pending';
+        $data['rejection_reason'] = null;
 
         if ($request->hasFile('image')) {
             $data['image_url'] = Storage::disk('public')->url(
@@ -114,7 +99,7 @@ class OwnerController extends Controller
         }
         unset($data['image']);
 
-        [$data['lat'], $data['lng']] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+        [$data['lat'], $data['lng']] = $this->municipalityCoords()[$data['municipality']] ?? [14.2794, 121.4117];
         $data['address']          = $data['municipality'];
         $data['status']           = 'pending';
         $data['rejection_reason'] = null;
@@ -311,16 +296,7 @@ class OwnerController extends Controller
             unset($data['image_url']);
         }
 
-        $coords = [
-            'Santa Cruz' => [14.2794, 121.4117],
-            'Pagsanjan'  => [14.2713, 121.4559],
-            'Los Baños'  => [14.1692, 121.2436],
-            'Calamba'    => [14.2116, 121.1653],
-            'San Pablo'  => [14.0688, 121.3224],
-            'Bay'        => [14.1791, 121.2840],
-            'Nagcarlan'  => [14.1390, 121.4180],
-            'Pila'       => [14.2300, 121.3670],
-        ];
+        $coords = $this->municipalityCoords();
 
         if (isset($coords[$data['municipality']])) {
             [$data['lat'], $data['lng']] = $coords[$data['municipality']];
@@ -422,5 +398,19 @@ class OwnerController extends Controller
                 'voucher_code'    => $o->voucher?->code,
             ]),
         ]);
+    }
+
+    private function municipalityCoords(): array
+    {
+        return [
+            'Santa Cruz' => [14.2794, 121.4117],
+            'Pagsanjan'  => [14.2713, 121.4559],
+            'Los Baños'  => [14.1692, 121.2436],
+            'Calamba'    => [14.2116, 121.1653],
+            'San Pablo'  => [14.0688, 121.3224],
+            'Bay'        => [14.1791, 121.2840],
+            'Nagcarlan'  => [14.1390, 121.4180],
+            'Pila'       => [14.2300, 121.3670],
+        ];
     }
 }

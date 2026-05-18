@@ -4,51 +4,78 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\Process\Process;
 
 class BackupService
 {
     public function run(): array
     {
-        $cfg = config('database.connections.mysql');
-
-        $filename  = 'hapag_backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
+        $filename = 'hapag_backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
 
         Storage::disk('local')->makeDirectory('backups');
 
-        $mysqldump = config('backup.mysqldump_path');
-        $password  = $cfg['password'] ?? '';
+        $lines   = [];
+        $lines[] = '-- Hapag database backup';
+        $lines[] = '-- Generated: ' . now()->toDateTimeString();
+        $lines[] = '';
+        $lines[] = 'SET FOREIGN_KEY_CHECKS=0;';
+        $lines[] = '';
 
-        $cmd = [
-            $mysqldump,
-            '--host='  . ($cfg['host']     ?? '127.0.0.1'),
-            '--port='  . ($cfg['port']     ?? '3306'),
-            '--user='  . ($cfg['username'] ?? 'root'),
-        ];
+        // Get the raw PDO connection for proper SQL escaping via PDO::quote()
+        $pdo    = DB::connection()->getPdo();
+        $tables = DB::select('SHOW TABLES');
+        $dbName = config('database.connections.mysql.database');
+        $tableKey = 'Tables_in_' . $dbName;
 
-        if ($password !== '') {
-            $cmd[] = '--password=' . $password;
+        foreach ($tables as $row) {
+            $table = $row->$tableKey;
+
+            $createRow = DB::select("SHOW CREATE TABLE `{$table}`");
+            $createSql = $createRow[0]->{'Create Table'};
+
+            $lines[] = "DROP TABLE IF EXISTS `{$table}`;";
+            $lines[] = $createSql . ';';
+            $lines[] = '';
+
+            $rows = DB::table($table)->get();
+
+            if ($rows->isEmpty()) {
+                continue;
+            }
+
+            $columns = array_map(
+                fn($col) => '`' . $col . '`',
+                array_keys((array) $rows->first())
+            );
+            $columnList = implode(', ', $columns);
+
+            $insertLines = [];
+            foreach ($rows as $record) {
+                $values = array_map(function ($value) use ($pdo) {
+                    if ($value === null) {
+                        return 'NULL';
+                    }
+                    // PDO::quote() handles all edge cases including multibyte
+                    // characters and binary data — safer than addslashes()
+                    return $pdo->quote((string) $value);
+                }, (array) $record);
+
+                $insertLines[] = '(' . implode(', ', $values) . ')';
+            }
+
+            $lines[] = "INSERT INTO `{$table}` ({$columnList}) VALUES";
+            $lastIdx = count($insertLines) - 1;
+            foreach ($insertLines as $i => $valueLine) {
+                $lines[] = $valueLine . ($i === $lastIdx ? ';' : ',');
+            }
+            $lines[] = '';
         }
 
-        $cmd[] = $cfg['database'];
+        $lines[] = 'SET FOREIGN_KEY_CHECKS=1;';
 
-        $process = new Process($cmd);
-        $process->setTimeout(300);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException('mysqldump failed: ' . $process->getErrorOutput());
-        }
-
-        $output = $process->getOutput();
-
-        if (trim($output) === '') {
-            throw new \RuntimeException('mysqldump produced empty output. Backup aborted.');
-        }
+        $output = implode("\n", $lines);
 
         $filePath = Storage::disk('local')->path('backups/' . $filename);
-
-        $written = file_put_contents($filePath, $output);
+        $written  = file_put_contents($filePath, $output);
 
         if ($written === false) {
             throw new \RuntimeException('Failed to write backup file: ' . $filePath);

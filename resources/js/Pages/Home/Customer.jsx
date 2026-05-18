@@ -65,6 +65,19 @@ function getCuisineImage(name) {
     return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
 }
 
+const MUNICIPALITIES = [
+    'Santa Cruz', 'Pagsanjan', 'Los Baños', 'Calamba',
+    'San Pablo', 'Bay', 'Nagcarlan', 'Pila',
+];
+
+const TOUR_STEPS = [
+    { description: "See today's weather and get food suggestions that match the vibe!" },
+    { description: 'Looking for something specific? Search dishes or restaurants here.' },
+    { description: 'Browse all restaurants near you. Tap one to see their full menu.' },
+    { description: 'Meet Hapag AI! Ask for recommendations, promos, or just chat about food.' },
+    { description: 'Your cart lives here. You can only order from one restaurant at a time.' },
+];
+
 function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 }
@@ -478,11 +491,70 @@ export default function Customer({
 
     const toastTimer = useRef(null);
     const gridRef = useRef(null);
+    const weatherRef = useRef(null);
+
+    // ── Tour state ────────────────────────────────────────────────────────────
+    const [tourStep, setTourStep] = useState(null);
+    const [tourRect, setTourRect] = useState(null);
+
+    // ── Profile progress state ────────────────────────────────────────────────
+    const [localUser, setLocalUser] = useState(() => pageProps.auth?.user ?? null);
+    const [dismissedProgress, setDismissedProgress] = useState(
+        () => !!pageProps.auth?.user?.has_dismissed_progress_bar,
+    );
+    const [quickFillOpen, setQuickFillOpen] = useState(false);
+    const [qfMunicipality, setQfMunicipality] = useState(
+        () => pageProps.auth?.user?.municipality ?? '',
+    );
+    const [qfAddress, setQfAddress] = useState(
+        () => pageProps.auth?.user?.address ?? '',
+    );
+    const [qfSaving, setQfSaving] = useState(false);
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 380);
         return () => clearTimeout(t);
     }, []);
+
+    // ── Tour initialisation ───────────────────────────────────────────────────
+    useEffect(() => {
+        const authUser = pageProps.auth?.user;
+        if (!authUser || authUser.has_seen_tour) return;
+        // Also bail if localUser already has it marked done (e.g. after skip)
+        if (localUser?.has_seen_tour) return;
+        const t = setTimeout(() => setTourStep(0), 950);
+        return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ── Tour target rect (recalculates every time step changes) ──────────────
+    useEffect(() => {
+        if (tourStep === null) { setTourRect(null); return; }
+
+        const getEl = () => {
+            if (tourStep === 0) return weatherRef.current;
+            if (tourStep === 1) {
+                const inp = document.querySelector('input[placeholder*="Search for restaurants"]');
+                return inp?.closest('.relative') ?? null;
+            }
+            if (tourStep === 2) return gridRef.current;
+            if (tourStep === 3) return document.querySelector('[aria-label="Hapag AI Chat"]');
+            if (tourStep === 4) return document.querySelector('[title="Cart"]');
+            return null;
+        };
+
+        const apply = () => {
+            const el = getEl();
+            setTourRect(el ? el.getBoundingClientRect() : null);
+        };
+
+        if (tourStep === 2) {
+            gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const t = setTimeout(apply, 480);
+            return () => clearTimeout(t);
+        }
+        apply();
+    }, [tourStep]);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -564,6 +636,80 @@ export default function Customer({
         setSortBy('relevance');
     }
 
+    // ── Tour helpers ──────────────────────────────────────────────────────────
+
+    async function completeTour() {
+        setTourStep(null);
+        // Update local state immediately so the tour doesn't restart on navigation
+        setLocalUser(prev => prev ? { ...prev, has_seen_tour: true } : prev);
+        try {
+            await fetch('/profile/tour-complete', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+            });
+        } catch { /* ignore */ }
+    }
+
+    function getTourTooltipPos(rect, step) {
+        if (!rect) return { top: 120, left: 20 };
+        const W = 296, OFFSET = 14;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const cx = rect.left + rect.width / 2;
+        let top, left;
+
+        if (step === 0 || step === 1) {
+            // below target
+            top = rect.bottom + OFFSET;
+            left = Math.max(16, Math.min(cx - W / 2, vw - W - 16));
+        } else if (step === 2) {
+            // above the section (it scrolls into view)
+            top = Math.max(80, rect.top - 210);
+            left = Math.max(16, Math.min(cx - W / 2, vw - W - 16));
+        } else if (step === 3) {
+            // above-left of AI Chat FAB (bottom-right)
+            top = Math.max(80, rect.top - 210);
+            left = Math.max(16, rect.right - W - 8);
+        } else {
+            // below cart icon (top-right navbar)
+            top = rect.bottom + OFFSET;
+            left = Math.max(16, Math.min(rect.right - W, vw - W - 16));
+        }
+
+        top = Math.max(80, Math.min(top, vh - 230));
+        return { top, left, width: W };
+    }
+
+    // ── Progress bar helpers ──────────────────────────────────────────────────
+
+    async function dismissProgress() {
+        setDismissedProgress(true);
+        try {
+            await fetch('/profile/dismiss-progress', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+            });
+        } catch { /* ignore */ }
+    }
+
+    async function saveQuickFill(e) {
+        e.preventDefault();
+        if (!qfMunicipality) return;
+        setQfSaving(true);
+        try {
+            const res = await fetch('/profile/municipality', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                body: JSON.stringify({ municipality: qfMunicipality, address: qfAddress }),
+            });
+            if (res.ok) {
+                setLocalUser(prev => prev ? { ...prev, municipality: qfMunicipality, address: qfAddress } : prev);
+                setQuickFillOpen(false);
+                showToast('Profile updated.');
+            }
+        } catch { showToast('Could not save.', true); }
+        setQfSaving(false);
+    }
+
     const filteredRestaurants = useMemo(() => {
         let list = [...restaurants];
         if (search) list = list.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
@@ -575,6 +721,24 @@ export default function Customer({
     }, [restaurants, search, selectedCuisines, hasDealsFilter, sortBy, promoRestaurantIds]);
 
     const allDeals = deals;
+
+    // ── Profile completion ────────────────────────────────────────────────────
+    const profileFields = useMemo(() => {
+        if (!localUser) return [];
+        return [
+            { label: 'Name',          filled: !!localUser.name?.trim() },
+            { label: 'Email',         filled: !!localUser.email?.trim() },
+            { label: 'Municipality',  filled: !!localUser.municipality?.trim() },
+            { label: 'Address',       filled: !!localUser.address?.trim() },
+            { label: 'Profile Photo', filled: !!localUser.avatar_url },
+        ];
+    }, [localUser]);
+
+    const completionPct = profileFields.length
+        ? Math.round(profileFields.filter(f => f.filled).length / profileFields.length * 100)
+        : 0;
+
+    const missingFields = profileFields.filter(f => !f.filled).map(f => f.label);
 
     const wTheme = WEATHER_THEME[weatherTag] ?? WEATHER_THEME.hot;
     const temp = weather ? Math.round(weather.main?.temp ?? 0) : null;
@@ -660,7 +824,7 @@ export default function Customer({
 
             {/* Weather hero, main content, AI widget — all unchanged from document 6 */}
             {weather && (
-                <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7 }}
+                <motion.section ref={weatherRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7 }}
                     className="relative overflow-hidden" style={{ background: wTheme.gradient, minHeight: '440px' }}>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                         {weatherTag === 'hot' && (<svg className="absolute -right-8 -top-8 w-[600px] h-[600px] opacity-40" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="300" cy="200" r="80" fill="url(#sunGrad)" className="sun-rays" style={{ transformOrigin: '300px 200px' }} /><circle cx="300" cy="200" r="130" fill="#fbbf24" opacity="0.12" className="weather-pulse" /><circle cx="300" cy="200" r="175" fill="#fbbf24" opacity="0.07" className="weather-pulse" style={{ animationDelay: '1s' }} />{[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (<line key={i} x1={300 + 105 * Math.cos(angle * Math.PI / 180)} y1={200 + 105 * Math.sin(angle * Math.PI / 180)} x2={300 + 160 * Math.cos(angle * Math.PI / 180)} y2={200 + 160 * Math.sin(angle * Math.PI / 180)} stroke="#fcd34d" strokeWidth="3.5" strokeLinecap="round" opacity="0.55" className="weather-pulse" style={{ animationDelay: `${i * 0.2}s` }} />))}<path d="M50 380 Q100 360 150 380 Q200 400 250 380 Q300 360 350 380 Q400 400 450 380" stroke="#fcd34d" strokeWidth="2.5" opacity="0.25" fill="none" className="weather-float" /><path d="M30 420 Q80 400 130 420 Q180 440 230 420 Q280 400 330 420 Q380 440 430 420" stroke="#fcd34d" strokeWidth="2" opacity="0.18" fill="none" className="weather-float" style={{ animationDelay: '1.5s' }} /><defs><radialGradient id="sunGrad" cx="0.4" cy="0.4" r="0.6"><stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#f59e0b" /></radialGradient></defs></svg>)}
@@ -714,6 +878,62 @@ export default function Customer({
                         </div>
                     </div>
                 </motion.section>
+            )}
+
+            {/* ── Profile completion banner ─────────────────────────────────────── */}
+            {localUser && !dismissedProgress && completionPct < 100 && (
+                <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                    <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5 pr-12">
+                        <button
+                            type="button"
+                            onClick={dismissProgress}
+                            className="absolute top-4 right-4 w-7 h-7 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                            aria-label="Dismiss"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-gray-800 mb-1.5">
+                                    Profile {completionPct}% complete
+                                </p>
+
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                                    <div
+                                        className="h-full bg-green-500 rounded-full transition-[width] duration-700"
+                                        style={{ width: `${completionPct}%` }}
+                                    />
+                                </div>
+
+                                {missingFields.length > 0 && (
+                                    <p className="text-xs text-gray-400 mb-3">
+                                        Missing: {missingFields.join(', ')}
+                                    </p>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setQuickFillOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-xl transition-colors active:scale-95"
+                                >
+                                    Complete your profile
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* ═══════════════════════════════════════════════════════
@@ -854,6 +1074,185 @@ export default function Customer({
                     </main>
                 </div>
             </div>
+
+            {/* ── Quick-Fill Modal ──────────────────────────────────────────────── */}
+            <AnimatePresence>
+                {quickFillOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-6"
+                    >
+                        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setQuickFillOpen(false)} />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                                <h2 className="text-lg font-extrabold text-gray-800">Complete your profile</h2>
+                                <p className="text-xs text-gray-400 mt-0.5">A few details to personalise your experience</p>
+                            </div>
+
+                            <div className="px-6 py-5 space-y-5">
+                                {/* Section A — Location fields */}
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Location</p>
+                                    <form onSubmit={saveQuickFill} className="space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Municipality</label>
+                                            <select
+                                                value={qfMunicipality}
+                                                onChange={e => setQfMunicipality(e.target.value)}
+                                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
+                                            >
+                                                <option value="">Select municipality</option>
+                                                {MUNICIPALITIES.map(m => (
+                                                    <option key={m} value={m}>{m}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Address</label>
+                                            <input
+                                                type="text"
+                                                value={qfAddress}
+                                                onChange={e => setQfAddress(e.target.value)}
+                                                placeholder="Street, barangay, or landmark"
+                                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={!qfMunicipality || qfSaving}
+                                            className="w-full py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-colors active:scale-95"
+                                        >
+                                            {qfSaving ? 'Saving...' : 'Save location'}
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* Section B — Avatar */}
+                                <div className="border-t border-gray-100 pt-5">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Profile Photo</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 rounded-full overflow-hidden bg-green-100 flex items-center justify-center shrink-0">
+                                            {localUser?.avatar_url ? (
+                                                <img src={localUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <Link
+                                                href={route('profile.edit')}
+                                                className="inline-flex items-center gap-1 text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                                                onClick={() => setQuickFillOpen(false)}
+                                            >
+                                                Change profile photo
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                                </svg>
+                                            </Link>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">You can upload your photo on your profile page.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setQuickFillOpen(false)}
+                                    className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Tour Overlay ──────────────────────────────────────────────────── */}
+            {tourStep !== null && (
+                <>
+                    {/* Transparent click-blocker — clicking outside skips tour */}
+                    <div
+                        className="fixed inset-0"
+                        style={{ zIndex: 900 }}
+                        onClick={completeTour}
+                    />
+
+                    {/* Highlight cutout: box-shadow creates the dark overlay around the target */}
+                    {tourRect && (
+                        <div
+                            className="fixed pointer-events-none"
+                            style={{
+                                top: tourRect.top - 6,
+                                left: tourRect.left - 6,
+                                width: tourRect.width + 12,
+                                height: tourRect.height + 12,
+                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.58)',
+                                border: '2px solid #22c55e',
+                                borderRadius: '14px',
+                                zIndex: 901,
+                            }}
+                        />
+                    )}
+
+                    {/* Tooltip card */}
+                    <div
+                        className="fixed bg-white rounded-2xl shadow-2xl p-5"
+                        style={{ ...getTourTooltipPos(tourRect, tourStep), zIndex: 902 }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Top row: step counter + skip */}
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">
+                                {tourStep + 1} of {TOUR_STEPS.length}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={completeTour}
+                                className="text-xs text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
+                            >
+                                Skip tour
+                            </button>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                            {TOUR_STEPS[tourStep].description}
+                        </p>
+
+                        {/* Progress dots + Next button */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 flex-1">
+                                {TOUR_STEPS.map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${i === tourStep ? 'bg-green-500 flex-1' : 'w-4 bg-gray-200'}`}
+                                    />
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => tourStep < TOUR_STEPS.length - 1 ? setTourStep(s => s + 1) : completeTour()}
+                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-xl transition-colors active:scale-95 shrink-0"
+                            >
+                                {tourStep === TOUR_STEPS.length - 1 ? 'Got it!' : 'Next'}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* AI Chat */}
             <AIChatWidget />

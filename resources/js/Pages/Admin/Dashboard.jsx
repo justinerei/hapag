@@ -135,6 +135,8 @@ const IcoGrid    = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24"
 const IcoStar    = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24" {...S}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
 const IcoMap     = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24" {...S}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>;
 const IcoRepeat  = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24" {...S}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>;
+const IcoClock   = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24" {...S}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const IcoUser    = ({ c = 'w-4 h-4' }) => <svg className={c} viewBox="0 0 24 24" {...S}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
 
 // ── CountUp ────────────────────────────────────────────────────────────────────
 
@@ -290,24 +292,31 @@ const CARD_GRADIENTS = {
     'rose':        'from-rose-600 to-red-500',
 };
 
-function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon }) {
-    const ref    = useRef(null);
-    const inView = useInView(ref, { once: true, margin: '-40px' });
-    const grad   = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
+function StatCard({ label, value, prefix = '', suffix = '', decimals = 0, subtitle, gradient = 'green', icon, size = 'secondary' }) {
+    const ref       = useRef(null);
+    const inView    = useInView(ref, { once: true, margin: '-40px' });
+    const grad      = CARD_GRADIENTS[gradient] ?? CARD_GRADIENTS.green;
+    const isPrimary = size === 'primary';
 
     return (
         <motion.div
             ref={ref}
             variants={FADE_UP}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 hover:border-gray-600/60 transition-colors"
+            className={[
+                'bg-gray-800/80 border border-gray-700/50 rounded-2xl hover:border-gray-600/60 transition-colors',
+                isPrimary ? 'p-6' : 'p-5',
+            ].join(' ')}
         >
             <div className="flex items-start justify-between mb-4">
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shadow-lg shrink-0`}>
                     {icon}
                 </div>
             </div>
-            <p className="text-[26px] font-bold text-white tracking-tight leading-none tabular-nums mb-1.5">
+            <p className={[
+                'text-white tracking-tight leading-none tabular-nums mb-1.5',
+                isPrimary ? 'text-3xl font-bold' : 'text-2xl font-semibold',
+            ].join(' ')}>
                 {inView ? <CountUp to={value} prefix={prefix} suffix={suffix} decimals={decimals} /> : `${prefix}0${suffix}`}
             </p>
             <p className="text-xs font-semibold text-gray-400">{label}</p>
@@ -385,7 +394,7 @@ function EmptyChart() {
 
 // ── Donut Card ─────────────────────────────────────────────────────────────────
 
-function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, height = 'h-52' }) {
+function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, height = 'h-52', className = 'p-5', legendCols = 2 }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
 
@@ -395,7 +404,7 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl flex flex-col ${className}`}
         >
             <div className="flex items-center gap-2 mb-3">
                 {icon && <span className="text-gray-500">{icon}</span>}
@@ -403,8 +412,8 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
             </div>
 
             {!data?.length ? <div className={`${height} flex items-center justify-center text-gray-600 text-sm`}>No data</div> : (
-                <>
-                    <div className={`relative ${height}`}>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="relative flex-1 w-full min-h-[144px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -437,15 +446,15 @@ function DonutCard({ title, icon, data, colorMap, centerValue, centerLabel, heig
                         </div>
                     </div>
                     {/* Legend */}
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                    <div className={`mt-3 grid w-full gap-x-2 gap-y-1.5 ${legendCols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         {data.map((entry, i) => (
-                            <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                            <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorMap?.[entry.status ?? entry.name] ?? '#6B7280' }} />
                                 {entry.name}: <span className="text-gray-300 font-semibold">{Number(entry.value).toLocaleString('en-PH')}</span>
                             </div>
                         ))}
                     </div>
-                </>
+                </div>
             )}
         </motion.div>
     );
@@ -466,7 +475,7 @@ function heatmapBg(ratio) {
     return '#4ADE80';                   // green-400
 }
 
-function PeakHoursHeatmap({ data }) {
+function PeakHoursHeatmap({ data, className = '' }) {
     const [hovered, setHovered] = useState(null);
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
@@ -493,28 +502,28 @@ function PeakHoursHeatmap({ data }) {
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 ${className}`}
         >
             <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-500"><IcoFire c="w-4 h-4" /></span>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peak ordering hours</p>
             </div>
             <div className="relative">
-            <div className="overflow-x-auto">
-                <div className="flex gap-1 min-w-fit">
+            <div className="overflow-hidden">
+                <div className="flex gap-1 w-full">
                     {/* Y-axis hour labels */}
-                    <div className="flex flex-col gap-[3px] pr-2">
+                    <div className="flex flex-col gap-[2px] pr-1 shrink-0">
                         <div className="h-5" />
                         {HEATMAP_HOURS.map(h => (
-                            <div key={h} className="h-5 flex items-center text-[9px] text-gray-600 font-mono w-6">
+                            <div key={h} className="h-4 flex items-center text-[9px] text-gray-600 font-mono w-5">
                                 {fmtHour(h)}
                             </div>
                         ))}
                     </div>
                     {/* Columns */}
                     {HEATMAP_DAYS.map((day, di) => (
-                        <div key={day} className="flex flex-col gap-[3px]">
-                            <div className="h-5 flex items-center justify-center text-[9px] text-gray-500 font-semibold w-7">
+                        <div key={day} className="flex flex-col gap-[2px] flex-1 min-w-0">
+                            <div className="h-5 flex items-center justify-center text-[9px] text-gray-500 font-semibold">
                                 {HEATMAP_DAY_LBLS[di]}
                             </div>
                             {HEATMAP_HOURS.map((hour, hi) => {
@@ -529,7 +538,7 @@ function PeakHoursHeatmap({ data }) {
                                         initial={{ opacity: 0 }}
                                         animate={inView ? { opacity: 1 } : { opacity: 0 }}
                                         transition={{ delay, duration: 0.15 }}
-                                        className="relative w-7 h-5 rounded-sm cursor-default"
+                                        className="relative w-full h-4 rounded-sm cursor-default"
                                         style={{ backgroundColor: heatmapBg(ratio) }}
                                         onMouseEnter={e => {
                                             const rect = e.currentTarget.getBoundingClientRect();
@@ -724,7 +733,7 @@ function MunicipalityChart({ data }) {
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Orders by municipality</p>
             </div>
             {!chartData.length ? <EmptyChart /> : (
-                <div className="h-52">
+                <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                             <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(55,65,81,0.4)" />
@@ -742,7 +751,7 @@ function MunicipalityChart({ data }) {
 
 // ── Voucher Performance Card ───────────────────────────────────────────────────
 
-function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }) {
+function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed, className = '' }) {
     const ref    = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
     const top3   = (topVouchers ?? []).slice(0, 3);
@@ -754,7 +763,7 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
             initial="hidden"
             animate={inView ? 'show' : 'hidden'}
             variants={FADE_IN}
-            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5"
+            className={`bg-gray-800/80 border border-gray-700/50 rounded-2xl p-5 ${className}`}
         >
             <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-500"><IcoTag c="w-4 h-4" /></span>
@@ -797,6 +806,118 @@ function VoucherPerformanceCard({ topVouchers, totalClaimed, totalVouchersUsed }
     );
 }
 
+// ── New Customers Card ─────────────────────────────────────────────────────────
+
+function NewCustomersCard({ data, timePeriod }) {
+    const filtered = useMemo(() =>
+        filterByPeriod(data ?? [], timePeriod).map(d => ({ ...d, count: Number(d.count) })),
+        [data, timePeriod]
+    );
+    const total = filtered.reduce((s, d) => s + d.count, 0);
+
+    return (
+        <DarkChartCard
+            title="New customers"
+            icon={<IcoUsers c="w-3.5 h-3.5" />}
+            stat={total.toLocaleString('en-PH')}
+            statLabel="this period"
+            height="h-36"
+        >
+            {filtered.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={filtered} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="gradNewCust" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%"  stopColor="#3B82F6" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(55,65,81,0.4)" vertical={false} />
+                        <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} width={24} />
+                        <Tooltip content={<DarkTooltip />} />
+                        <Area type="monotone" dataKey="count" name="New customers" stroke="#3B82F6" fill="url(#gradNewCust)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3B82F6' }} />
+                    </AreaChart>
+                </ResponsiveContainer>
+            )}
+        </DarkChartCard>
+    );
+}
+
+// ── Owner Performance Table ────────────────────────────────────────────────────
+
+function OwnerPerformanceTable({ data }) {
+    const ref    = useRef(null);
+    const inView = useInView(ref, { once: true, margin: '-60px' });
+
+    const fmtMinutes = mins => {
+        if (!mins || mins <= 0) return '—';
+        if (mins < 60) return `${mins}m`;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    };
+
+    return (
+        <motion.div
+            ref={ref}
+            initial="hidden"
+            animate={inView ? 'show' : 'hidden'}
+            variants={FADE_IN}
+            className="bg-gray-800/80 border border-gray-700/50 rounded-2xl overflow-hidden"
+        >
+            <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+                <span className="text-gray-500"><IcoClock c="w-4 h-4" /></span>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Owner performance</p>
+                <span className="ml-auto text-[10px] text-gray-600">Avg time from order → completed</span>
+            </div>
+            {!data?.length ? (
+                <p className="px-5 pb-5 text-sm text-gray-600">No completed order data yet.</p>
+            ) : (
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b border-gray-700/50">
+                            <th className="text-left px-5 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">#</th>
+                            <th className="text-left px-5 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Owner</th>
+                            <th className="text-right px-5 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden sm:table-cell">Branches</th>
+                            <th className="text-right px-5 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Completed</th>
+                            <th className="text-right px-5 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:table-cell">Avg time</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700/30">
+                        {data.map((row, i) => (
+                            <tr key={row.owner_id} className="hover:bg-gray-700/20 transition-colors">
+                                <td className="px-5 py-3 w-10">
+                                    {i < 3 ? (
+                                        <span className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black"
+                                            style={{ backgroundColor: `${MEDAL[i]}22`, color: MEDAL[i] }}>
+                                            {i + 1}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[11px] text-gray-600 tabular-nums">{i + 1}</span>
+                                    )}
+                                </td>
+                                <td className="px-5 py-3">
+                                    <p className="font-semibold text-gray-200 text-xs">{row.owner_name}</p>
+                                </td>
+                                <td className="px-5 py-3 text-right text-xs text-gray-400 tabular-nums hidden sm:table-cell">
+                                    {Number(row.restaurant_count ?? 0)}
+                                </td>
+                                <td className="px-5 py-3 text-right text-xs font-semibold text-green-400 tabular-nums">
+                                    {Number(row.total_orders ?? 0).toLocaleString('en-PH')}
+                                </td>
+                                <td className="px-5 py-3 text-right text-xs text-blue-400 tabular-nums hidden md:table-cell">
+                                    {fmtMinutes(row.avg_minutes)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </motion.div>
+    );
+}
+
 // ── Overview Section ───────────────────────────────────────────────────────────
 
 function OverviewSection({
@@ -813,6 +934,8 @@ function OverviewSection({
     orderGrowth, revenueGrowth, voucherUsageGrowth,
     ordersByStatus, peakHoursData, topVouchers,
     topRestaurants, topMenuItems, ordersByMunicipality,
+    ordersByType, ownerPerformance,
+    pendingRestaurants,
 }) {
     const filteredOrders  = useMemo(() => filterByPeriod(orderGrowth ?? [], timePeriod).map(d => ({ ...d, count: Number(d.count) })),   [orderGrowth, timePeriod]);
     const filteredRevenue = useMemo(() => filterByPeriod(revenueGrowth ?? [], timePeriod).map(d => ({ ...d, revenue: Number(d.revenue) })), [revenueGrowth, timePeriod]);
@@ -837,24 +960,25 @@ function OverviewSection({
 
     const retentionColorMap = { Repeat: '#22C55E', 'One-time': '#374151' };
 
+    const ORDER_TYPE_COLORS = { Pickup: '#FB923C', Delivery: '#3B82F6' };
+    const orderTypeData = useMemo(() => (ordersByType ?? []).map(d => ({
+        name:  cap(d.order_type),
+        value: Number(d.count),
+    })), [ordersByType]);
+    const totalOrderTypeCount = orderTypeData.reduce((s, d) => s + d.value, 0);
+
     const AXIS_STYLE = { fontSize: 10, fill: '#6B7280' };
     const GRID_STROKE = 'rgba(55,65,81,0.4)';
 
     return (
-        <motion.div initial="hidden" animate="show" variants={STAGGER}>
+        <motion.div initial="hidden" animate="show" variants={STAGGER} className="space-y-4">
 
-            {/* Row 1 — Stat cards */}
-            <motion.div variants={STAGGER} className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-                <StatCard label="Total restaurants" value={totalRestaurants} gradient="red-pink"  icon={<IcoStore c="w-5 h-5" />} subtitle={`${activeRestaurants} active`} />
-                <StatCard label="Total users"        value={totalUsers}        gradient="purple"    icon={<IcoUsers c="w-5 h-5" />} subtitle={`${totalCustomers} customers · ${totalOwners} owners`} />
+            {/* ── Section 1 — KPI Bar ─────────────────────────────────────────── */}
+
+            {/* Row 1 — Primary KPIs */}
+            <motion.div variants={STAGGER} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <StatCard
-                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
-                    value={isFiltered ? periodOrders : totalOrders}
-                    gradient="blue-cyan"
-                    icon={<IcoBag c="w-5 h-5" />}
-                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
-                />
-                <StatCard
+                    size="primary"
                     label={isFiltered ? `Revenue — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total revenue'}
                     value={isFiltered ? periodRevenue : totalRevenue}
                     gradient="green"
@@ -863,58 +987,62 @@ function OverviewSection({
                     decimals={2}
                     subtitle={isFiltered ? `${fmtCurrency(totalRevenue)} all-time` : `${fmtCurrency(revenueSavedByVouchers)} saved via vouchers`}
                 />
-                <StatCard label="Completion rate"    value={completionRate}    gradient="teal"      icon={<IcoCheck c="w-5 h-5" />} prefix="" suffix="%" decimals={1} subtitle={`${totalCompletedOrders} completed`} />
-                <StatCard label="Cancellation rate"  value={cancellationRate}  gradient="rose"      icon={<IcoX c="w-5 h-5" />}     prefix="" suffix="%" decimals={1} subtitle={`${totalCancelledOrders} cancelled`} />
-            </motion.div>
-
-            {/* Row 2 — Order trends + Status donut */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
-                <DarkChartCard
-                    className="lg:col-span-3"
-                    title="Order trends"
-                    icon={<IcoBag c="w-3.5 h-3.5" />}
-                    stat={periodOrders.toLocaleString('en-PH')}
-                    statLabel="orders this period"
-                >
-                    {filteredOrders.length === 0 ? <EmptyChart /> : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={filteredOrders} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.2} />
-                                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                                <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={AXIS_STYLE} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                                <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} width={28} />
-                                <Tooltip content={<DarkTooltip />} />
-                                <Area type="monotone" dataKey="count" name="Orders" stroke="#22C55E" fill="url(#gradOrders)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#22C55E' }} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </DarkChartCard>
-
-                <DonutCard
-                    className="lg:col-span-2"
-                    title="Orders by status"
-                    icon={<IcoGrid c="w-3.5 h-3.5" />}
-                    data={statusData}
-                    colorMap={STATUS_COLORS}
-                    centerValue={totalStatusOrders.toLocaleString('en-PH')}
-                    centerLabel="total orders"
-                    height="h-44"
+                <StatCard
+                    size="primary"
+                    label={isFiltered ? `Orders — ${TIME_PERIODS.find(p => p.id === timePeriod)?.label}` : 'Total orders'}
+                    value={isFiltered ? periodOrders : totalOrders}
+                    gradient="blue-cyan"
+                    icon={<IcoBag c="w-5 h-5" />}
+                    subtitle={isFiltered ? `${totalOrders.toLocaleString('en-PH')} all-time` : `${periodOrders.toLocaleString('en-PH')} this period`}
+                />
+                <StatCard
+                    size="primary"
+                    label="Pending restaurants"
+                    value={pendingRestaurants ?? 0}
+                    gradient="red-pink"
+                    icon={<IcoStore c="w-5 h-5" />}
+                    subtitle={`${activeRestaurants} active · ${totalRestaurants} total`}
                 />
             </motion.div>
 
-            {/* Row 3 — Revenue trend + Voucher performance */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+            {/* Row 2 — Secondary KPIs */}
+            <motion.div variants={STAGGER} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <StatCard
+                    label="Total users"
+                    value={totalUsers}
+                    gradient="purple"
+                    icon={<IcoUsers c="w-5 h-5" />}
+                    subtitle={`${totalCustomers} customers · ${totalOwners} owners`}
+                />
+                <StatCard
+                    label="Completion rate"
+                    value={completionRate}
+                    gradient="teal"
+                    icon={<IcoCheck c="w-5 h-5" />}
+                    prefix="" suffix="%" decimals={1}
+                    subtitle={`${totalCompletedOrders} completed`}
+                />
+                <StatCard
+                    label="Cancellation rate"
+                    value={cancellationRate}
+                    gradient="rose"
+                    icon={<IcoX c="w-5 h-5" />}
+                    prefix="" suffix="%" decimals={1}
+                    subtitle={`${totalCancelledOrders} cancelled`}
+                />
+            </motion.div>
+
+            {/* ── Section 2 — Trend Charts ─────────────────────────────────────── */}
+
+            {/* Revenue trend (2/3) + Orders by status donut (1/3) */}
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <DarkChartCard
-                    className="lg:col-span-3"
+                    className="lg:col-span-2"
                     title="Revenue trend"
                     icon={<IcoCoin c="w-3.5 h-3.5" />}
                     stat={fmtCurrency(periodRevenue)}
                     statLabel="this period"
+                    height="h-[220px]"
                 >
                     {filteredRevenue.length === 0 ? <EmptyChart /> : (
                         <ResponsiveContainer width="100%" height="100%">
@@ -935,42 +1063,92 @@ function OverviewSection({
                     )}
                 </DarkChartCard>
 
-                <div className="lg:col-span-2">
-                    <VoucherPerformanceCard
-                        topVouchers={topVouchers}
-                        totalClaimed={totalClaimed}
-                        totalVouchersUsed={totalVouchersUsed}
-                    />
-                </div>
-            </motion.div>
-
-            {/* Row 4 — Peak hours heatmap */}
-            <motion.div variants={FADE_UP} className="mb-5">
-                <PeakHoursHeatmap data={peakHoursData} />
-            </motion.div>
-
-            {/* Row 5 — Top tables */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-                <TopRestaurantsTable data={topRestaurants} />
-                <TopMenuItemsTable   data={topMenuItems} />
-            </motion.div>
-
-            {/* Row 6 — Municipality + Customer retention */}
-            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-                <div className="lg:col-span-3">
-                    <MunicipalityChart data={ordersByMunicipality} />
-                </div>
-
                 <DonutCard
-                    className="lg:col-span-2"
+                    title="Orders by status"
+                    icon={<IcoGrid c="w-3.5 h-3.5" />}
+                    data={statusData}
+                    colorMap={STATUS_COLORS}
+                    centerValue={totalStatusOrders.toLocaleString('en-PH')}
+                    centerLabel="total orders"
+                    height="h-44"
+                    legendCols={2}
+                    className="p-5"
+                />
+            </motion.div>
+
+            {/* Order trends — full width */}
+            <motion.div variants={FADE_UP}>
+                <DarkChartCard
+                    title="Order trends"
+                    icon={<IcoBag c="w-3.5 h-3.5" />}
+                    stat={periodOrders.toLocaleString('en-PH')}
+                    statLabel="orders this period"
+                    height="h-[200px]"
+                >
+                    {filteredOrders.length === 0 ? <EmptyChart /> : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={filteredOrders} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                                <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={AXIS_STYLE} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                                <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} width={28} />
+                                <Tooltip content={<DarkTooltip />} />
+                                <Area type="monotone" dataKey="count" name="Orders" stroke="#22C55E" fill="url(#gradOrders)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#22C55E' }} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
+                </DarkChartCard>
+            </motion.div>
+
+            {/* ── Section 3 — Operational Insights (4 equal cols) ──────────────── */}
+
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                <VoucherPerformanceCard
+                    topVouchers={topVouchers}
+                    totalClaimed={totalClaimed}
+                    totalVouchersUsed={totalVouchersUsed}
+                    className="h-full"
+                />
+                <PeakHoursHeatmap data={peakHoursData} className="h-full" />
+                <DonutCard
                     title="Customer retention"
                     icon={<IcoRepeat c="w-3.5 h-3.5" />}
                     data={retentionData}
                     colorMap={retentionColorMap}
                     centerValue={`${retentionRate}%`}
                     centerLabel="retention"
-                    height="h-44"
+                    height="h-36"
+                    className="p-5 h-full"
                 />
+                <DonutCard
+                    title="Order type breakdown"
+                    icon={<IcoBag c="w-3.5 h-3.5" />}
+                    data={orderTypeData}
+                    colorMap={ORDER_TYPE_COLORS}
+                    centerValue={totalOrderTypeCount.toLocaleString('en-PH')}
+                    centerLabel="total orders"
+                    height="h-36"
+                    className="p-5 h-full"
+                />
+            </motion.div>
+
+            {/* ── Section 4 — Tables & Lists (3 equal cols) ────────────────────── */}
+
+            <motion.div variants={FADE_UP} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <TopRestaurantsTable data={topRestaurants} />
+                <TopMenuItemsTable   data={topMenuItems} />
+                <MunicipalityChart   data={ordersByMunicipality} />
+            </motion.div>
+
+            {/* ── Section 5 — Owner Performance (full width) ───────────────────── */}
+
+            <motion.div variants={FADE_UP}>
+                <OwnerPerformanceTable data={ownerPerformance} />
             </motion.div>
 
         </motion.div>
@@ -1497,6 +1675,8 @@ export default function AdminDashboard({
     topRestaurants         = [],
     topMenuItems           = [],
     ordersByMunicipality   = [],
+    ordersByType           = [],
+    ownerPerformance       = [],
 }) {
     const [pending,       setPending]       = useState(initialPending);
     const [categories,    setCategories]    = useState(initialCategories);
@@ -1608,12 +1788,16 @@ export default function AdminDashboard({
         setBackupLoading(true);
         try {
             const data = await apiFetch(route('admin.backup'), 'POST');
+            if (!data.success) {
+                addToast(data.message ?? 'Backup failed. Check server logs.', 'error');
+                return;
+            }
             setLastBackup(data.last_backup_at);
             setBackupFile(data.last_backup_file);
             addToast('Database backup complete.');
-            fetchBackups();
-        } catch {
-            addToast('Backup failed. Check server logs.', 'error');
+            try { await fetchBackups(); } catch { /* list refresh failed — ignore */ }
+        } catch (e) {
+            addToast(e?.data?.message || 'Backup failed. Check server logs.', 'error');
         } finally {
             setBackupLoading(false);
         }
@@ -1633,6 +1817,8 @@ export default function AdminDashboard({
         orderGrowth, revenueGrowth, voucherUsageGrowth,
         ordersByStatus, peakHoursData, topVouchers,
         topRestaurants, topMenuItems, ordersByMunicipality,
+        ordersByType, ownerPerformance,
+        pendingRestaurants: pending.length,
     };
 
     return (

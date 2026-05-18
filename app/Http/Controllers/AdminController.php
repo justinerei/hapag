@@ -123,6 +123,24 @@ class AdminController extends Controller
             ->orderByDesc('count')
             ->get();
 
+        $ordersByType = Order::selectRaw('order_type, COUNT(*) as count')
+            ->groupBy('order_type')
+            ->orderBy('order_type')
+            ->get();
+
+        $ownerPerformance = DB::table('orders')
+            ->join('restaurants', 'orders.restaurant_id', '=', 'restaurants.id')
+            ->join('users', 'restaurants.owner_id', '=', 'users.id')
+            ->where('orders.status', 'completed')
+            ->select('users.id as owner_id', 'users.name as owner_name')
+            ->selectRaw('COUNT(DISTINCT restaurants.id) as restaurant_count')
+            ->selectRaw('COUNT(orders.id) as total_orders')
+            ->selectRaw('ROUND(AVG(TIMESTAMPDIFF(MINUTE, orders.created_at, orders.updated_at)), 0) as avg_minutes')
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('total_orders')
+            ->take(10)
+            ->get();
+
         return Inertia::render('Admin/Dashboard', compact(
             'pendingRestaurants',
             'categories',
@@ -158,6 +176,8 @@ class AdminController extends Controller
             'topRestaurants',
             'topMenuItems',
             'ordersByMunicipality',
+            'ordersByType',
+            'ownerPerformance',
         ));
     }
 

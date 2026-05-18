@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\CartItem;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,7 +55,6 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Delete old file if exists
         $oldPath = $user->getRawOriginal('avatar_url');
         if ($oldPath) {
             Storage::disk('public')->delete($oldPath);
@@ -73,16 +73,38 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // getRawOriginal bypasses the accessor to get the actual DB value
         $rawPath = $user->getRawOriginal('avatar_url');
         if ($rawPath) {
             Storage::disk('public')->delete($rawPath);
         }
 
-        // forceFill + save bypasses any accessor interference
         $user->forceFill(['avatar_url' => null])->save();
 
         return back()->with('status', 'avatar-removed');
+    }
+
+    /**
+     * Sync the user's avatar with their Google profile photo.
+     * Only applicable to Google-linked accounts.
+     */
+    public function syncGoogleAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->google_id) {
+            return response()->json(['error' => 'Not a Google account.'], 422);
+        }
+
+        if (!$user->google_avatar) {
+            return response()->json([
+                'error' => 'No Google photo on file. Please sign out and sign back in with Google, then try again.',
+            ], 422);
+        }
+
+        $user->avatar_url = $user->google_avatar;
+        $user->save();
+
+        return response()->json(['ok' => true]);
     }
 
     /**
@@ -95,7 +117,7 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        
+
         $rawPath = $user->getRawOriginal('avatar_url');
         if ($rawPath) {
             Storage::disk('public')->delete($rawPath);
