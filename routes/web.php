@@ -71,17 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
-    Route::post('/profile/avatar/google-sync', function (\Illuminate\Http\Request $request) {
-        $user = auth()->user();
-        if (!$user->google_id) {
-            return response()->json(['error' => 'Not a Google account.'], 422);
-        }
-        if (!$user->google_avatar) {
-            return response()->json(['error' => 'No Google photo on file. Please sign out and sign back in with Google, then try again.'], 422);
-        }
-        $user->update(['avatar_url' => $user->google_avatar]);
-        return response()->json(['ok' => true]);
-    })->name('profile.avatar.google-sync');
+    Route::post('/profile/avatar/google-sync', [ProfileController::class, 'syncGoogleAvatar'])->name('profile.avatar.google-sync');
 
     // My orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');

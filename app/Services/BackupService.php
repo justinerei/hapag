@@ -13,13 +13,15 @@ class BackupService
 
         Storage::disk('local')->makeDirectory('backups');
 
-        $lines = [];
+        $lines   = [];
         $lines[] = '-- Hapag database backup';
         $lines[] = '-- Generated: ' . now()->toDateTimeString();
         $lines[] = '';
         $lines[] = 'SET FOREIGN_KEY_CHECKS=0;';
         $lines[] = '';
 
+        // Get the raw PDO connection for proper SQL escaping via PDO::quote()
+        $pdo    = DB::connection()->getPdo();
         $tables = DB::select('SHOW TABLES');
         $dbName = config('database.connections.mysql.database');
         $tableKey = 'Tables_in_' . $dbName;
@@ -48,11 +50,13 @@ class BackupService
 
             $insertLines = [];
             foreach ($rows as $record) {
-                $values = array_map(function ($value) {
+                $values = array_map(function ($value) use ($pdo) {
                     if ($value === null) {
                         return 'NULL';
                     }
-                    return "'" . addslashes((string) $value) . "'";
+                    // PDO::quote() handles all edge cases including multibyte
+                    // characters and binary data — safer than addslashes()
+                    return $pdo->quote((string) $value);
                 }, (array) $record);
 
                 $insertLines[] = '(' . implode(', ', $values) . ')';
@@ -71,7 +75,7 @@ class BackupService
         $output = implode("\n", $lines);
 
         $filePath = Storage::disk('local')->path('backups/' . $filename);
-        $written = file_put_contents($filePath, $output);
+        $written  = file_put_contents($filePath, $output);
 
         if ($written === false) {
             throw new \RuntimeException('Failed to write backup file: ' . $filePath);

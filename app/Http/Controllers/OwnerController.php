@@ -87,12 +87,10 @@ class OwnerController extends Controller
 
         $coords = $this->municipalityCoords();
 
-        [$lat, $lng] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
-
-            'Bay'         => [14.1791, 121.2840],
-            'Nagcarlan'   => [14.1390, 121.4180],
-            'Pila'        => [14.2300, 121.3670],
-        ];
+        [$data['lat'], $data['lng']] = $coords[$data['municipality']] ?? [14.2794, 121.4117];
+        $data['address']          = $data['municipality'];
+        $data['status']           = 'pending';
+        $data['rejection_reason'] = null;
 
         if ($request->hasFile('image')) {
             $data['image_url'] = Storage::disk('public')->url(
