@@ -20,7 +20,7 @@ A multi-restaurant online food ordering web application built for Laguna provinc
 
 ## 📖 About
 
-**Hapag** (Filipino for _dining table_) is a full-stack food ordering platform developed as an academic project for **ITEL 203 — Web Systems and Technologies** at Laguna State Polytechnic University (LSPU). It covers 8 municipalities in Laguna, featuring 6 fictional restaurant brands with multiple branches.
+**Hapag** (Filipino for _dining table_) is a full-stack food ordering platform developed as an academic project at Laguna State Polytechnic University - San Pablo City Campus (LSPU - SPCC). It covers 8 municipalities in Laguna, featuring 6 fictional restaurant brands with multiple branches.
 
 The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no payment gateway integration. Delivery is handled directly by the restaurant.
 
