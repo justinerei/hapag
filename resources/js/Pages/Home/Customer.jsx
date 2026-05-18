@@ -520,6 +520,8 @@ export default function Customer({
     useEffect(() => {
         const authUser = pageProps.auth?.user;
         if (!authUser || authUser.has_seen_tour) return;
+        // Also bail if localUser already has it marked done (e.g. after skip)
+        if (localUser?.has_seen_tour) return;
         const t = setTimeout(() => setTourStep(0), 950);
         return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -638,6 +640,8 @@ export default function Customer({
 
     async function completeTour() {
         setTourStep(null);
+        // Update local state immediately so the tour doesn't restart on navigation
+        setLocalUser(prev => prev ? { ...prev, has_seen_tour: true } : prev);
         try {
             await fetch('/profile/tour-complete', {
                 method: 'POST',
