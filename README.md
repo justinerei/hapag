@@ -28,35 +28,50 @@ The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no p
 
 ## ✨ Features
 
+### For Guests
+
+- 🌐 Browse restaurants and menus without an account
+- 🗺️ View interactive Laguna restaurant map (Leaflet.js)
+- 🔍 Search restaurants and dishes
+- 📄 View the Partner with Us / Owner FAQ pages
+
 ### For Customers
 
 - 🔍 Browse and search restaurants and menu items across Laguna
 - 🛒 Cart system (one restaurant per cart enforced)
-- 🎟️ Voucher/promo code support (global and restaurant-specific)
+- 🎟️ Voucher/promo code support — claim and apply global or restaurant-specific codes
 - 📦 Order tracking (Pending → Accepted → Preparing → Ready → Completed)
+- 🚚 Pickup or Cash on Delivery ordering with optional scheduling
 - ❤️ Favorite restaurants
-- 🤖 AI-powered food recommender and chatbot (GROQ/LLaMA)
+- 🤖 AI-powered food recommender and chatbot (GROQ/LLaMA) with Taglish personality
 - 🌤️ Weather-based food suggestions (OpenWeatherMap)
 - 📍 Interactive Laguna restaurant map (Leaflet.js)
 - 🔔 Real-time order status notifications (Laravel Echo + Reverb)
-- 🔐 Google OAuth login
+- 🔐 Google OAuth login or standard email/password registration
+- 🧭 Onboarding tour for first-time users
+- 👤 Profile management (avatar upload, municipality, address)
 
 ### For Restaurant Owners
 
-- 🏪 Restaurant setup and management (pending admin approval)
+- 🏪 Restaurant setup and management (pending admin approval workflow)
+- 🔄 Reapply after rejection with updated information
 - 🍴 Menu item management (add, edit, toggle availability, upload images)
-- 📋 Order management pipeline with live incoming order alerts
+- 📋 Order management pipeline with live incoming order alerts (Reverb)
 - 🎟️ Create restaurant-scoped vouchers
-- ✍️ AI-generated menu descriptions (GROQ)
-- 📊 Sales dashboard and CSV export
+- ✍️ AI-generated menu item descriptions (GROQ)
+- 📊 Sales dashboard with revenue, order stats, and top items
+- 📁 Sales data export (filtered by today / week / month / all time)
+- ⚙️ Restaurant settings (name, hours, category, image, municipality)
+- 🧭 Owner onboarding tour for first-time dashboard visit
 
 ### For Admins
 
-- ✅ Restaurant approval/rejection workflow
-- 🗂️ Category management (with weather tags)
+- ✅ Restaurant approval/rejection workflow with optional rejection reason
+- 🗂️ Category management (with weather tags for food suggestions)
 - 🎟️ Site-wide voucher management
-- 📈 Platform analytics (revenue, growth charts, retention rate)
-- 💾 One-click database backups
+- 📈 Platform analytics — revenue, growth charts, order heatmap, retention rate, top restaurants, top menu items, municipality breakdown, owner performance
+- 💾 One-click database backups (downloadable `.sql` files)
+- 🗃️ View and download past backup files
 
 ---
 
@@ -85,6 +100,8 @@ The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no p
 | `owner`    | Manages their restaurant(s), menu, and incoming orders           |
 | `admin`    | Full system oversight — approvals, categories, vouchers, backups |
 
+> Guests (unauthenticated users) can browse restaurants, view menus, and use the map — but cannot place orders or access any protected features.
+
 ---
 
 ## 🚀 Getting Started
@@ -97,6 +114,7 @@ The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no p
 - MySQL (Laragon recommended for Windows)
 - GROQ API key
 - OpenWeatherMap API key
+- Google OAuth credentials (optional — only needed for Google login)
 
 ### Installation
 
@@ -138,7 +156,7 @@ DB_PASSWORD=
 
 # OpenWeatherMap
 OWM_API_KEY=your_key_here
-OWM_CITY=Santa Cruz,PH
+DEFAULT_CITY=Santa Cruz,PH
 
 # GROQ (AI features)
 GROQ_API_KEY=your_key_here
@@ -146,12 +164,15 @@ GROQ_API_KEY=your_key_here
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REDIRECT_URI=http://localhost/auth/google/callback
+GOOGLE_REDIRECT_URI=http://127.0.0.1:8000/auth/google/callback
 
-# Laravel Reverb (real-time)
-REVERB_APP_ID=hapag
-REVERB_APP_KEY=hapag-key
-REVERB_APP_SECRET=hapag-secret
+# Laravel Reverb (real-time notifications)
+REVERB_APP_ID=your_app_id
+REVERB_APP_KEY=your_app_key
+REVERB_APP_SECRET=your_app_secret
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
 ```
 
 **6. Run migrations and seed**
@@ -169,25 +190,40 @@ php artisan storage:link
 **8. Start the dev servers**
 
 ```bash
-# In one terminal — Laravel
+# Terminal 1 — Laravel
 php artisan serve
 
-# In another — Vite (React)
+# Terminal 2 — Vite (React hot reload)
 npm run dev
 
-# Optional — Reverb (real-time)
+# Terminal 3 — Reverb (real-time, optional but needed for live order notifications)
 php artisan reverb:start
 ```
 
-Visit `http://localhost:8000` in your browser.
+Visit `http://127.0.0.1:8000` in your browser.
+
+---
 
 ### Seeded Test Accounts
 
-| Role     | Email              | Password |
-| -------- | ------------------ | -------- |
-| Admin    | admin@hapag.com    | password |
-| Owner    | owner@hapag.com    | password |
-| Customer | customer@hapag.com | password |
+| Role     | Email            | Password |
+| -------- | ---------------- | -------- |
+| Admin    | admin@hapag.com  | password |
+| Owner    | owner1@hapag.com | password |
+| Owner    | owner2@hapag.com | password |
+| Customer | juan@example.com | password |
+| Customer | ana@example.com  | password |
+
+> There are **15 owner accounts** (`owner1@hapag.com` through `owner15@hapag.com`) and **30 customer accounts** seeded. All use `password` as the password.
+
+### Seeded Voucher Codes
+
+| Code       | Type       | Value | Scope     | Min. Order |
+| ---------- | ---------- | ----- | --------- | ---------- |
+| `HAPAG20`  | Percentage | 20%   | Site-wide | ₱200       |
+| `KAINDITO` | Fixed      | ₱50   | Site-wide | —          |
+
+> Additional restaurant-specific vouchers are also seeded. Check the app's Promos section per restaurant to discover them.
 
 ---
 
@@ -204,35 +240,50 @@ Visit `http://localhost:8000` in your browser.
 
 ~25–30 branches spread across: **Santa Cruz, Pagsanjan, Los Baños, Calamba, San Pablo, Bay, Nagcarlan, and Pila**.
 
+> All restaurant brands, menu items, and business data are **fictional** and created solely for this project. No real geocoding — all coordinates are hardcoded per branch in the seeder.
+
 ---
 
 ## 🗄️ Database Schema (Core Tables)
 
 ```
-users               — Roles, municipality, Google ID, avatar
-categories          — Food categories with weather tags
-restaurants         — Branches with lat/lng, status, opening hours
+users               — Roles, municipality, Google ID, avatar, onboarding flags
+categories          — Food categories with weather tags (rainy, hot, cool, cloudy)
+restaurants         — Branches with lat/lng, status, opening/closing hours, rejection reason
 menu_items          — Food items with price, availability, image
-cart_items          — Active user carts (one restaurant per user)
-orders              — Pickup/delivery orders with status pipeline
-order_items         — Frozen snapshot of items at checkout
-vouchers            — Discount codes (global or restaurant-scoped)
+cart_items          — Active user carts (one restaurant per user enforced)
+orders              — Pickup/delivery orders with full status pipeline + scheduling
+order_items         — Frozen snapshot of items and prices at checkout
+vouchers            — Discount codes (percentage or fixed, global or restaurant-scoped)
 voucher_usages      — One-use-per-customer enforcement
-claimed_vouchers    — Vouchers saved by customers
+claimed_vouchers    — Vouchers saved/claimed by customers from menu page
 favorites           — Pivot: users ↔ restaurants
-system_settings     — Key-value store (e.g., last backup time)
-notifications       — Laravel notification log
+system_settings     — Key-value store (e.g. last backup timestamp and filename)
+notifications       — Laravel notification log (order + restaurant status updates)
 ```
 
 ---
 
 ## 🤖 AI Features
 
-Powered by **GROQ API (LLaMA 3)**:
+Powered by **GROQ API (LLaMA 3.1 8B Instant)**:
 
-- **Food Recommender** — Customer describes a craving; AI picks 2–4 matching dishes from actual menu data
-- **Hapag Chatbot** — Conversational assistant with full restaurant/voucher context; responds in Taglish
-- **Menu Description Generator** — Owners can auto-generate appetizing item descriptions
+- **Food Recommender** — Customer describes a craving; AI picks 2–4 matching dishes from actual live menu data with item cards
+- **Hapag Chatbot** — Conversational assistant aware of restaurants, menus, and active vouchers; responds in Taglish; municipality-aware (prioritizes local restaurants)
+- **Menu Description Generator** — Owners can auto-generate appetizing item descriptions from just the item name and category
+
+---
+
+## 💾 Database Backup
+
+The admin can trigger a full database backup from the Admin Dashboard. Backups are:
+
+- Stored as `.sql` files in `storage/app/private/backups/`
+- Named `hapag_backup_YYYY-MM-DD_HH-MM-SS.sql`
+- Downloadable directly from the dashboard
+- Also run automatically via Laravel Scheduler daily at **7:00 AM**
+
+To enable the scheduler on Windows, a `run-scheduler.vbs` script is included in the project root. Set it up as a Windows Task Scheduler job to run every minute.
 
 ---
 
@@ -242,21 +293,31 @@ Powered by **GROQ API (LLaMA 3)**:
 app/
   Http/Controllers/     — All route controllers
   Models/               — Eloquent models
-  Services/             — BackupService
-  Notifications/        — Order & restaurant status notifications
-  Events/               — NewOrderPlaced (real-time)
+  Services/             — BackupService (pure PHP SQL export)
+  Notifications/        — OrderStatusUpdated, RestaurantStatusUpdated
+  Events/               — NewOrderPlaced (real-time broadcast)
 resources/js/
-  Pages/                — Inertia React page components
+  Pages/
     Home/               — Guest & Customer dashboards
-    Owner/              — Owner dashboard, setup, rejected
-    Admin/              — Admin dashboard
+    Owner/              — Dashboard, Setup, PendingApproval, Rejected
+    Admin/              — Admin dashboard with analytics
     Cart/, Checkout/    — Cart and checkout flows
-    Orders/, Restaurants/, Search/, Favorites/
-  Components/           — Shared UI components
+    Orders/             — Customer order history
+    Restaurants/        — Restaurant listing and menu page
+    Search/             — Full search results
+    Favorites/          — Saved restaurants
+    Profile/            — Profile edit page
+  Components/           — Shared UI (Modal, SignInModal, SignUpModal, AIChatWidget, Skeleton, etc.)
   Layouts/              — CustomerLayout, GuestLayout
+  Hooks/                — useNotification.js
 database/
   migrations/           — All schema definitions
-  seeders/              — Full seeded dataset
+  seeders/              — Full seeded dataset (1 admin, 15 owners, 30 customers, 6 brands)
+routes/
+  web.php               — All application routes
+  channels.php          — Private broadcast channel authorization
+storage/
+  app/private/backups/  — Database backup files
 ```
 
 ---
