@@ -1744,6 +1744,71 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
     const restaurantDropRef                           = useRef(null);
     const [isSettingsDirty, setIsSettingsDirty]       = useState(false);
 
+    // ── Restaurant profile progress bar state ─────────────────────────────────
+    const [dismissedProgress, setDismissedProgress]   = useState(() => !!auth?.user?.has_dismissed_progress_bar);
+    const [quickFillOpen, setQuickFillOpen]           = useState(false);
+    const [quickFillSaving, setQuickFillSaving]       = useState(false);
+    const [quickFillImage, setQuickFillImage]         = useState(null);
+    const [quickFillPreview, setQuickFillPreview]     = useState(null);
+    const [quickFillDesc, setQuickFillDesc]           = useState('');
+    const [quickFillOpenTime, setQuickFillOpenTime]   = useState('');
+    const [quickFillCloseTime, setQuickFillCloseTime] = useState('');
+
+    // ── Owner tour state ──────────────────────────────────────────────────────
+    const [ownerTourStep, setOwnerTourStep] = useState(null);
+    const [ownerTourRect, setOwnerTourRect] = useState(null);
+
+    const OWNER_TOUR_STEPS = [
+        { target: 'orders',   description: 'New orders appear here in real time. Accept, prepare, and mark them ready from this panel.' },
+        { target: 'menu',     description: 'Manage your menu here — add new dishes, update prices, upload photos, or toggle items as unavailable when sold out.' },
+        { target: 'vouchers', description: 'Create promo codes for your restaurant. Set a discount, minimum order, expiry date, and usage limit.' },
+        { target: 'overview', description: 'Track your revenue, order volume, and top-selling items here. You can also export your sales data as CSV.' },
+        { target: 'settings', description: 'Update your restaurant details, opening hours, and other settings here.' },
+    ];
+
+    useEffect(() => {
+        if (auth?.user?.has_seen_owner_tour) return;
+        const firstRestaurant = initialRestaurants[0];
+        if (!firstRestaurant || firstRestaurant.status !== 'active') return;
+        const t = setTimeout(() => setOwnerTourStep(0), 950);
+        return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (ownerTourStep === null) { setOwnerTourRect(null); return; }
+        const step = OWNER_TOUR_STEPS[ownerTourStep];
+        if (!step) return;
+        const el = document.querySelector(`[data-tour="${step.target}"]`);
+        setOwnerTourRect(el ? el.getBoundingClientRect() : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ownerTourStep]);
+
+    async function completeOwnerTour() {
+        setOwnerTourStep(null);
+        try {
+            await fetch('/profile/owner-tour-complete', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest' },
+            });
+        } catch { /* ignore */ }
+    }
+
+    function getOwnerTourTooltipPos(rect) {
+        if (!rect) return { top: 120, left: 20 };
+        const W = 296, OFFSET = 16;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let top = rect.top + rect.height / 2 - 80;
+        let left;
+        if (rect.right + OFFSET + W < vw) {
+            left = rect.right + OFFSET;
+        } else {
+            left = Math.max(16, Math.min((vw - W) / 2, vw - W - 16));
+        }
+        top = Math.max(80, Math.min(top, vh - 250));
+        return { top, left, width: W };
+    }
+
     useEffect(() => {
         if (!auth?.user?.id) return;
         const channel = window.Echo.private('owner.' + auth.user.id);
@@ -1869,6 +1934,63 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
 
     const pendingCount = (restaurant.orders ?? []).filter(o => o.status === 'pending').length;
 
+    // ── Restaurant profile completion ─────────────────────────────────────────
+    const restaurantFields = [
+        { label: 'Restaurant Image', filled: !!(restaurant.image_url?.trim()) },
+        { label: 'Description',       filled: !!(restaurant.description?.trim()) },
+        { label: 'Opening Hours',     filled: !!(restaurant.opening_time && restaurant.closing_time) },
+    ];
+    const profileCompletionPct = Math.round(restaurantFields.filter(f => f.filled).length / restaurantFields.length * 100);
+    const profileMissingFields = restaurantFields.filter(f => !f.filled).map(f => f.label);
+
+    function openQuickFill() {
+        setQuickFillDesc(restaurant.description ?? '');
+        setQuickFillOpenTime(restaurant.opening_time ?? '');
+        setQuickFillCloseTime(restaurant.closing_time ?? '');
+        setQuickFillImage(null);
+        setQuickFillPreview(restaurant.image_url ?? null);
+        setQuickFillOpen(true);
+    }
+
+    async function dismissRestaurantProgress() {
+        setDismissedProgress(true);
+        try {
+            await fetch('/profile/dismiss-progress', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest' },
+            });
+        } catch { /* ignore */ }
+    }
+
+    async function saveQuickFill(e) {
+        e.preventDefault();
+        setQuickFillSaving(true);
+        try {
+            const fd = new FormData();
+            fd.append('_method', 'PATCH');
+            fd.append('name', restaurant.name);
+            fd.append('municipality', restaurant.municipality);
+            fd.append('description', quickFillDesc);
+            fd.append('opening_time', quickFillOpenTime);
+            fd.append('closing_time', quickFillCloseTime);
+            if (quickFillImage) fd.append('image', quickFillImage);
+            const res = await fetch(route('owner.settings.update', restaurant.id), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF(), 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error('Failed');
+            patchRestaurant(r => ({ ...r, ...data.restaurant }));
+            setQuickFillOpen(false);
+            if (statusToastTimer.current) clearTimeout(statusToastTimer.current);
+            setStatusToast('Restaurant profile updated');
+            statusToastTimer.current = setTimeout(() => setStatusToast(null), 3000);
+        } catch { /* ignore */ } finally {
+            setQuickFillSaving(false);
+        }
+    }
+
     function handleTabChange(key) {
         if (activeTab === 'settings' && isSettingsDirty) {
             if (!window.confirm('You have unsaved changes. Leave anyway?')) return;
@@ -1970,6 +2092,8 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                                     )}
                                     <button
                                         onClick={() => handleTabChange(key)}
+                                        data-tour={key}
+                                        aria-label={`Navigate to ${label}`}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                             ${active ? 'bg-green-50 text-green-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}
                                     >
@@ -2110,6 +2234,57 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                                 ))}
                             </div>
                         )}
+                        {/* ── Restaurant profile completion banner ──────────────────── */}
+                        {restaurant.status === 'active' && !dismissedProgress && profileCompletionPct < 100 && (
+                            <div className="mb-5">
+                                <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5 pr-12">
+                                    <button
+                                        type="button"
+                                        onClick={dismissRestaurantProgress}
+                                        className="absolute top-4 right-4 w-7 h-7 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                        aria-label="Dismiss"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-gray-800 mb-1.5">
+                                                Restaurant profile {profileCompletionPct}% complete
+                                            </p>
+                                            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                                                <div
+                                                    className="h-full bg-green-500 rounded-full transition-[width] duration-700"
+                                                    style={{ width: `${profileCompletionPct}%` }}
+                                                />
+                                            </div>
+                                            {profileMissingFields.length > 0 && (
+                                                <p className="text-xs text-gray-400 mb-3">
+                                                    Missing: {profileMissingFields.join(', ')}
+                                                </p>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={openQuickFill}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-xl transition-colors active:scale-95"
+                                            >
+                                                Complete your profile
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
@@ -2191,6 +2366,208 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ── Quick-Fill Modal ──────────────────────────────────────────────── */}
+            <AnimatePresence>
+                {quickFillOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-6"
+                    >
+                        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setQuickFillOpen(false)} />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-lg font-extrabold text-gray-800">Complete your profile</h2>
+                                        <p className="text-xs text-gray-400 mt-0.5">Fill in the missing details to attract more customers</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuickFillOpen(false)}
+                                        className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                        aria-label="Close"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <form onSubmit={saveQuickFill}>
+                                <div className="px-6 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+
+                                    {/* Restaurant Image */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Restaurant Image</label>
+                                        {quickFillPreview && (
+                                            <div className="mb-2 w-full h-32 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                                                <img src={quickFillPreview} alt="Preview" className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-gray-300 text-xs text-gray-500 hover:border-green-400 hover:text-green-600 transition-colors cursor-pointer">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                            </svg>
+                                            <span className="truncate">{quickFillImage ? quickFillImage.name : 'Click to upload image'}</span>
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                                className="hidden"
+                                                onChange={e => {
+                                                    const f = e.target.files[0];
+                                                    if (!f) return;
+                                                    setQuickFillImage(f);
+                                                    setQuickFillPreview(URL.createObjectURL(f));
+                                                }}
+                                            />
+                                        </label>
+                                        <p className="text-[10px] text-gray-400 mt-1">JPEG, PNG, WebP — max 2 MB</p>
+                                    </div>
+
+                                    {/* Description */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
+                                        <textarea
+                                            value={quickFillDesc}
+                                            onChange={e => setQuickFillDesc(e.target.value)}
+                                            maxLength={1000}
+                                            rows={3}
+                                            placeholder="Describe your restaurant — specialties, vibe, what makes you unique..."
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400 transition-all duration-150 resize-none"
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1 text-right">{quickFillDesc.length} / 1000</p>
+                                    </div>
+
+                                    {/* Opening Hours */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Opening Hours</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1">Opens at</label>
+                                                <input
+                                                    type="time"
+                                                    value={quickFillOpenTime}
+                                                    onChange={e => setQuickFillOpenTime(e.target.value)}
+                                                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400 transition-all duration-150"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1">Closes at</label>
+                                                <input
+                                                    type="time"
+                                                    value={quickFillCloseTime}
+                                                    onChange={e => setQuickFillCloseTime(e.target.value)}
+                                                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400 transition-all duration-150"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuickFillOpen(false)}
+                                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={quickFillSaving}
+                                        className="flex items-center gap-2 px-5 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
+                                    >
+                                        {quickFillSaving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                                        {quickFillSaving ? 'Saving…' : 'Save changes'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Owner Onboarding Tour ─────────────────────────────────────────── */}
+            {ownerTourStep !== null && (
+                <>
+                    {/* Backdrop — clicking outside completes the tour */}
+                    <div
+                        className="fixed inset-0"
+                        style={{ zIndex: 900 }}
+                        onClick={completeOwnerTour}
+                    />
+
+                    {/* Green-ring highlight cutout around target element */}
+                    {ownerTourRect && (
+                        <div
+                            className="fixed pointer-events-none"
+                            style={{
+                                top: ownerTourRect.top - 6,
+                                left: ownerTourRect.left - 6,
+                                width: ownerTourRect.width + 12,
+                                height: ownerTourRect.height + 12,
+                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.58)',
+                                border: '2px solid #22c55e',
+                                borderRadius: '14px',
+                                zIndex: 901,
+                            }}
+                        />
+                    )}
+
+                    {/* Tooltip card */}
+                    <div
+                        className="fixed bg-white rounded-2xl shadow-2xl p-5"
+                        style={{ ...getOwnerTourTooltipPos(ownerTourRect), zIndex: 902 }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">
+                                {ownerTourStep + 1} of {OWNER_TOUR_STEPS.length}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={completeOwnerTour}
+                                className="text-xs text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
+                            >
+                                Skip tour
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                            {OWNER_TOUR_STEPS[ownerTourStep].description}
+                        </p>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 flex-1">
+                                {OWNER_TOUR_STEPS.map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${i === ownerTourStep ? 'bg-green-500 flex-1' : 'w-4 bg-gray-200'}`}
+                                    />
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => ownerTourStep < OWNER_TOUR_STEPS.length - 1 ? setOwnerTourStep(s => s + 1) : completeOwnerTour()}
+                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-xl transition-colors active:scale-95 shrink-0"
+                            >
+                                {ownerTourStep === OWNER_TOUR_STEPS.length - 1 ? 'Got it!' : 'Next'}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* New-order toast */}
             <AnimatePresence>

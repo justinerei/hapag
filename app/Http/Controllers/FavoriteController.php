@@ -29,11 +29,15 @@ class FavoriteController extends Controller
     {
         $request->validate(['restaurant_id' => 'required|exists:restaurants,id']);
 
-        $userId       = auth()->id();
-        $restaurantId = $request->restaurant_id;
+        // Only allow favoriting active restaurants
+        $restaurant = Restaurant::where('id', $request->restaurant_id)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $userId = auth()->id();
 
         $existing = Favorite::where('user_id', $userId)
-            ->where('restaurant_id', $restaurantId)
+            ->where('restaurant_id', $restaurant->id)
             ->first();
 
         if ($existing) {
@@ -42,7 +46,7 @@ class FavoriteController extends Controller
         } else {
             Favorite::create([
                 'user_id'       => $userId,
-                'restaurant_id' => $restaurantId,
+                'restaurant_id' => $restaurant->id,
             ]);
             $isFavorited = true;
         }

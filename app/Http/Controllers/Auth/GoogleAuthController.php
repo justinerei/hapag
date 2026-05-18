@@ -33,26 +33,29 @@ class GoogleAuthController extends Controller
             ->first();
 
         if ($user) {
-            $user->update([
-                'google_id' => $googleUser->getId(),
-            ]);
+            // Existing user — update Google-specific fields only
+            $user->google_id     = $googleUser->getId();
+            $user->google_avatar = $googleUser->getAvatar();
+            $user->save();
         } else {
+            // New user — role is not in $fillable, set it explicitly
             $intendedRole = session()->pull('google_intended_role', 'customer');
 
             $user = User::create([
-                'name'       => $googleUser->getName(),
-                'email'      => $googleUser->getEmail(),
-                'google_id'  => $googleUser->getId(),
-                'avatar_url' => null,
-                'role'       => $intendedRole,
-                'password'   => null,
+                'name'          => $googleUser->getName(),
+                'email'         => $googleUser->getEmail(),
+                'google_id'     => $googleUser->getId(),
+                'google_avatar' => $googleUser->getAvatar(),
+                'avatar_url'    => null,
+                'password'      => null,
             ]);
+
+            $user->role = $intendedRole;
+            $user->save();
         }
 
         Auth::login($user, remember: true);
 
-        // ✅ Role-based redirect instead of intended() which
-        //    could send users to a stale /owner/setup URL
         return match ($user->role) {
             'admin' => redirect()->route('admin.dashboard'),
             'owner' => redirect()->route('owner.dashboard'),

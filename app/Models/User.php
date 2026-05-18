@@ -13,15 +13,21 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    // 'role' is intentionally excluded from $fillable.
+    // It must be set explicitly (e.g. $user->role = 'customer') to prevent
+    // mass assignment privilege escalation.
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
         'municipality',
         'address',
         'avatar_url',
         'google_id',
+        'google_avatar',
+        'has_seen_tour',
+        'has_seen_owner_tour', 
+        'has_dismissed_progress_bar',
     ];
 
     protected $hidden = [
@@ -29,15 +35,13 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    // Ensure avatar_url is included when the model is serialized (e.g. for Inertia)
-    //   the accessor in JSON/array output sent to Inertia
     protected $appends = ['avatar_url'];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
@@ -95,6 +99,9 @@ class User extends Authenticatable
     {
         $raw = $this->attributes['avatar_url'] ?? null;
         if (!$raw) return null;
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+            return $raw;
+        }
         return asset('storage/' . $raw);
     }
 }

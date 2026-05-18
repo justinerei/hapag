@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('category_id')->constrained('categories')->restrictOnDelete();
             $table->string('name');
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->string('address');
             $table->string('municipality');
             $table->decimal('lat', 10, 7);
