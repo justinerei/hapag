@@ -172,8 +172,11 @@ function ItemModal({ mode, item, existingCategories, restaurantId, restaurantNam
     );
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiError, setAiError] = useState('');
+    const [aiLoading, setAiLoading]         = useState(false);
+    const [aiError, setAiError]             = useState('');
+    const [aiPreview, setAiPreview]         = useState('');
+    const [aiGenCount, setAiGenCount]       = useState(0);
+    const AI_GEN_LIMIT = 3;
     const [imageFile, setImageFile] = useState(null);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -206,13 +209,29 @@ function ItemModal({ mode, item, existingCategories, restaurantId, restaurantNam
     }
 
     async function generateDescription() {
-        if (!form.name || !form.category) { setAiError('Fill in name and category first.'); return; }
+        if (!form.name || !form.category) { setAiError('Fill in item name and category first.'); return; }
+        if (aiGenCount >= AI_GEN_LIMIT) { setAiError(`Limit reached — max ${AI_GEN_LIMIT} generations per item.`); return; }
         setAiError(''); setAiLoading(true);
         try {
-            const data = await apiFetch(route('owner.ai.describe'), 'POST', { name: form.name, category: form.category, restaurant_name: restaurantName });
-            set('description', data.description ?? '');
+            const data = await apiFetch(route('owner.ai.describe'), 'POST', {
+                name:            form.name,
+                category:        form.category,
+                price:           form.price || null,
+                restaurant_name: restaurantName,
+            });
+            setAiPreview(data.description ?? '');
+            setAiGenCount(c => c + 1);
         } catch { setAiError('AI unavailable. Try again.'); }
         finally { setAiLoading(false); }
+    }
+
+    function acceptAiPreview() {
+        set('description', aiPreview);
+        setAiPreview('');
+    }
+
+    function discardAiPreview() {
+        setAiPreview('');
     }
 
     return (
@@ -282,12 +301,56 @@ function ItemModal({ mode, item, existingCategories, restaurantId, restaurantNam
                         <div className="relative">
                             <textarea value={form.description} onChange={e => set('description', e.target.value)}
                                 className={inp + ' resize-none pr-28'} rows={4} placeholder="Short appetizing description…" />
-                            <button type="button" onClick={generateDescription} disabled={aiLoading}
-                                className="absolute right-2 bottom-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 disabled:opacity-60 transition-colors">
+                            <button
+                                type="button"
+                                onClick={generateDescription}
+                                disabled={aiLoading || aiGenCount >= AI_GEN_LIMIT}
+                                className="absolute right-2 bottom-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
                                 <SparkleIcon cls="w-3.5 h-3.5" />
                                 {aiLoading ? 'Writing…' : 'AI Write'}
                             </button>
                         </div>
+
+                        {/* Generation limit indicator */}
+                        <p className={`text-[10px] mt-1 ${aiGenCount >= AI_GEN_LIMIT ? 'text-red-400' : 'text-gray-400'}`}>
+                            {aiGenCount}/{AI_GEN_LIMIT} generations used
+                        </p>
+
+                        {/* AI Preview */}
+                        {aiPreview && (
+                            <div className="mt-2 rounded-xl border border-green-200 bg-green-50 p-3 space-y-2">
+                                <div className="flex items-start gap-2">
+                                    <SparkleIcon cls="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
+                                    <p className="text-xs text-gray-700 leading-relaxed flex-1">{aiPreview}</p>
+                                </div>
+                                <div className="flex items-center gap-2 pt-1 border-t border-green-100">
+                                    <button
+                                        type="button"
+                                        onClick={acceptAiPreview}
+                                        className="flex-1 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 transition-colors"
+                                    >
+                                        ✓ Use this
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={generateDescription}
+                                        disabled={aiLoading || aiGenCount >= AI_GEN_LIMIT}
+                                        className="flex-1 py-1.5 rounded-lg border border-green-300 text-green-700 text-xs font-semibold hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        ↺ Regenerate
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={discardAiPreview}
+                                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 text-xs font-semibold hover:bg-gray-50 transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
                     </Field>
                     <button type="button" onClick={() => set('is_available', !form.is_available)} className="flex items-center gap-3 select-none">

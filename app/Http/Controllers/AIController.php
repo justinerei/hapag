@@ -14,8 +14,10 @@ class AIController extends Controller
     public function recommend(Request $request)
     {
         $request->validate([
-            'prompt'        => 'required|string|max:300',
-            'restaurant_id' => 'nullable|exists:restaurants,id',
+            'name'            => 'required|string|max:120',
+            'category'        => 'required|string|max:80',
+            'price'           => 'nullable|numeric|min:0',
+            'restaurant_name' => 'nullable|string|max:120',
         ]);
 
         $itemQuery = MenuItem::where('is_available', true)
@@ -322,13 +324,24 @@ PROMPT;
             : 'a Filipino restaurant in Laguna, Philippines';
 
         $systemPrompt = <<<PROMPT
-You are a menu copywriter for Filipino restaurants.
-Write a single appetizing description (1–2 sentences, max 80 words) for a menu item.
-Be vivid and specific. Do not start with the item name. Write in English.
-PROMPT;
+        You are a menu copywriter for Filipino restaurants.
+        Write exactly ONE sentence (max 20 words) that describes the dish appetizingly.
+        Rules:
+        - One sentence only. No periods after the last word is fine, but never two sentences.
+        - Do NOT mention the price.
+        - Do NOT start with the item name.
+        - Be vivid and specific. Write in English.
+        PROMPT;
+
+        $priceHint = $request->price ? " (price point: ₱{$request->price} — use this only to gauge portion/quality, do NOT mention it)" : '';
+
+        $userPrompt = "Write a one-sentence menu description for \"{$request->name}\" "
+            . "(category: {$request->category}{$priceHint}) served at {$context}.";
+
+        $priceContext = $request->price ? " priced at ₱{$request->price}" : '';
 
         $userPrompt = "Write a menu description for \"{$request->name}\" "
-            . "(category: {$request->category}) served at {$context}.";
+            . "(category: {$request->category}{$priceContext}) served at {$context}.";
 
         $reply = $this->callGroq($systemPrompt, $userPrompt);
 
