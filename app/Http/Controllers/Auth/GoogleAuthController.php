@@ -36,6 +36,7 @@ class GoogleAuthController extends Controller
             // Existing user — update Google-specific fields only
             $user->google_id     = $googleUser->getId();
             $user->google_avatar = $googleUser->getAvatar();
+            $user->email_verified_at  = $user->email_verified_at ?? now();
             $user->save();
         } else {
             // New user — role is not in $fillable, set it explicitly
@@ -48,6 +49,7 @@ class GoogleAuthController extends Controller
                 'google_avatar' => $googleUser->getAvatar(),
                 'avatar_url'    => null,
                 'password'      => null,
+                'email_verified_at'  => now(),
             ]);
 
             $user->role = $intendedRole;

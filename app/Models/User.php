@@ -28,6 +28,7 @@ class User extends Authenticatable
         'has_seen_tour',
         'has_seen_owner_tour', 
         'has_dismissed_progress_bar',
+        'email_verified_at',
     ];
 
     protected $hidden = [
