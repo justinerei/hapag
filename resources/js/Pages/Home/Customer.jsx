@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 import AIChatWidget from '@/Components/AIChatWidget';
 import { Skeleton, SkeletonCard, ShimmerStyles } from '@/Components/Skeleton';
+import AddressAutocomplete from '@/Components/AddressAutocomplete';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -456,6 +457,118 @@ function CustomerPageSkeleton({ cartCount = 0, orderNotifCount = 0 }) {
                 </div>
             </div>
         </CustomerLayout>
+    );
+}
+
+// ── MunicipalitySelect ────────────────────────────────────────────────────────
+// A styled searchable dropdown replacing the plain <select> in the onboarding modal.
+
+function MunicipalitySelect({ value, onChange, municipalities }) {
+    const [open, setOpen]   = useState(false);
+    const [search, setSearch] = useState('');
+    const wrapperRef = useRef(null);
+    const searchRef  = useRef(null);
+
+    const filtered = search.trim()
+        ? municipalities.filter(m => m.toLowerCase().includes(search.toLowerCase()))
+        : municipalities;
+
+    // Close on outside click
+    useEffect(() => {
+        function handleClick(e) {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+                setOpen(false);
+                setSearch('');
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    // Focus search when opened
+    useEffect(() => {
+        if (open) setTimeout(() => searchRef.current?.focus(), 50);
+    }, [open]);
+
+    function select(m) {
+        onChange(m);
+        setOpen(false);
+        setSearch('');
+    }
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Municipality</label>
+
+            {/* Trigger button */}
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-green-500/20 ${
+                    open
+                        ? 'border-green-500 ring-2 ring-green-500/20'
+                        : 'border-gray-200 hover:border-gray-300'
+                } bg-white`}
+            >
+                <span className={value ? 'text-gray-800 font-medium' : 'text-gray-400'}>
+                    {value || 'Select municipality'}
+                </span>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {/* Dropdown panel */}
+            {open && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
+                    {/* Search inside dropdown */}
+                    <div className="p-2 border-b border-gray-100">
+                        <div className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                ref={searchRef}
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search municipality..."
+                                className="w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400/30 bg-gray-50 placeholder:text-gray-400"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Options list */}
+                    <ul className="max-h-48 overflow-y-auto py-1">
+                        {filtered.length === 0 ? (
+                            <li className="px-4 py-3 text-xs text-gray-400 text-center">No results for "{search}"</li>
+                        ) : filtered.map(m => (
+                            <li
+                                key={m}
+                                onClick={() => select(m)}
+                                className={`flex items-center gap-2.5 px-3.5 py-2 cursor-pointer text-sm transition-colors ${
+                                    m === value
+                                        ? 'bg-green-50 text-green-700 font-semibold'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                {/* Checkmark for selected */}
+                                <span className={`w-3.5 h-3.5 shrink-0 ${m === value ? 'text-green-500' : 'text-transparent'}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </span>
+                                {m}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -1102,29 +1215,26 @@ export default function Customer({
                                 <div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Location</p>
                                     <form onSubmit={saveQuickFill} className="space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Municipality</label>
-                                            <select
-                                                value={qfMunicipality}
-                                                onChange={e => setQfMunicipality(e.target.value)}
-                                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                            >
-                                                <option value="">Select municipality</option>
-                                                {MUNICIPALITIES.map(m => (
-                                                    <option key={m} value={m}>{m}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Address</label>
-                                            <input
-                                                type="text"
-                                                value={qfAddress}
-                                                onChange={e => setQfAddress(e.target.value)}
-                                                placeholder="Street, barangay, or landmark"
-                                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-colors"
-                                            />
-                                        </div>
+                                        {/* ── Municipality custom dropdown ── */}
+                                        <MunicipalitySelect
+                                            value={qfMunicipality}
+                                            onChange={setQfMunicipality}
+                                            municipalities={MUNICIPALITIES}
+                                        />
+
+                                        {/* ── Address with Nominatim autocomplete ── */}
+                                        <AddressAutocomplete
+                                            value={qfAddress}
+                                            label="Address"
+                                            placeholder="Street, barangay, or landmark"
+                                            onType={val => setQfAddress(val)}
+                                            onChange={(fullAddress, municipality) => {
+                                                setQfAddress(fullAddress);
+                                                // Auto-fill municipality when user picks a suggestion
+                                                if (municipality) setQfMunicipality(municipality);
+                                            }}
+                                        />
+
                                         <button
                                             type="submit"
                                             disabled={!qfMunicipality || qfSaving}

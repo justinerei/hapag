@@ -115,4 +115,39 @@ class RestaurantController extends Controller
             ])
         );
     }
+
+    public function preview(Restaurant $restaurant)
+    {
+        // Only the restaurant's own owner can preview it, and only when active
+        abort_if($restaurant->owner_id !== auth()->id(), 403);
+        abort_if($restaurant->status !== 'active', 403);
+
+        $restaurant->load(['category', 'owner']);
+
+        $menuItems = $restaurant->menuItems()
+            ->where('is_available', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('category');
+
+        $featuredItems = $restaurant->menuItems()
+            ->where('is_available', true)
+            ->inRandomOrder()
+            ->limit(4)
+            ->get();
+
+        return Inertia::render('Restaurants/Show', [
+            'restaurant'         => $restaurant,
+            'menuItems'          => $menuItems,
+            'featuredItems'      => $featuredItems,
+            'restaurantVouchers' => [],
+            'allVouchers'        => [],
+            'cartCount'          => 0,
+            'favoriteIds'        => [],
+            'claimedCodes'       => [],
+            'isAuth'             => false,   // ← forces read-only mode in Show.jsx
+            'isPreview'          => true,    // ← new flag for the banner
+        ]);
+    }
 }

@@ -1873,7 +1873,7 @@ export default function OwnerDashboard({ restaurants: initialRestaurants, catego
     }
 
     useEffect(() => {
-        if (!auth?.user?.id) return;
+        if (!auth?.user?.id || !window.Echo) return;
         const channel = window.Echo.private('owner.' + auth.user.id);
         channel.listen('.new-order', (event) => {
             setNewOrderCount(prev => prev + 1);

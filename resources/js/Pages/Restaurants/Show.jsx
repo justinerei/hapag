@@ -306,6 +306,7 @@ export default function Show({
     favoriteIds,
     claimedCodes: serverClaimedCodes = [],
     isAuth,
+    isPreview = false,
 }) {
     const [localCartCount, setLocalCartCount] = useState(cartCount);
     const [isFavorited, setIsFavorited] = useState(() => favoriteIds.includes(restaurant.id));
@@ -551,6 +552,25 @@ export default function Show({
     return (
         <CustomerLayout cartCount={localCartCount} hideSearch>
             <Head title={`${restaurant.name} — Hapag`} />
+
+            {/* ── Owner Preview Banner ── */}
+            {isPreview && (
+                <div className="sticky top-0 z-50 w-full bg-amber-400 text-amber-900 px-4 py-2.5 flex items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Preview Mode — this is how customers see your page. Cart and ordering are disabled.
+                    </div>
+                    <Link
+                        href={route('owner.dashboard')}
+                        className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-900/15 hover:bg-amber-900/25 transition-colors"
+                    >
+                        ← Back to Dashboard
+                    </Link>
+                </div>
+            )}
 
             {/* ── Toast ──────────────────────────────────────────── */}
             <AnimatePresence>
