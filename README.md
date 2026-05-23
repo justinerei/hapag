@@ -18,6 +18,15 @@ A multi-restaurant online food ordering web application built for Laguna provinc
 
 ---
 
+## 📸 Screenshots
+
+![Guest Landing](public/images/screenshot-landing.png)
+![Customer Dashboard](public/images/screenshot-customer.png)
+![Owner Dashboard](public/images/screenshot-owner.png)
+![Admin Dashboard](public/images/screenshot-admin.png)
+
+---
+
 ## 📖 About
 
 **Hapag** (Filipino for _dining table_) is a full-stack food ordering platform developed as an academic project at Laguna State Polytechnic University - San Pablo City Campus (LSPU - SPCC). It covers 8 municipalities in Laguna, featuring 6 fictional restaurant brands with multiple branches.
@@ -121,7 +130,7 @@ The platform supports **Cash on Pickup** and **Cash on Delivery (COD)** — no p
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/your-username/hapag.git
+git clone https://github.com/justinerei/hapag.git
 cd hapag
 ```
 
