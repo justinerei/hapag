@@ -9,7 +9,7 @@ import AddressAutocomplete from '@/Components/AddressAutocomplete';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CUISINE_IMAGES = {
-    'Filipino':   'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=200&h=200&fit=crop',
+   'Filipino': 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=200&h=200&fit=crop',
     'BBQ':        'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
     'Ihaw':       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&h=200&fit=crop',
     'Cafe':       'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop',
@@ -692,6 +692,7 @@ export default function Customer({
                     return next;
                 });
                 showToast(data.favorited ? 'Added to favorites.' : 'Removed from favorites.');
+                window.dispatchEvent(new CustomEvent('favorites-updated', { detail: { delta: data.favorited ? +1 : -1 } }));
             }
         } catch {
             showToast('Could not update favorites.', true);

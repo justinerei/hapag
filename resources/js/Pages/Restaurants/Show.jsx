@@ -458,7 +458,9 @@ export default function Show({
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() },
                 body: JSON.stringify({ restaurant_id: restaurant.id }),
             });
-            if (res.ok) { const d = await res.json(); setIsFavorited(d.favorited); showToast(d.favorited ? 'Added to favorites!' : 'Removed from favorites.'); }
+            if (res.ok) { const d = await res.json(); setIsFavorited(d.favorited); showToast(d.favorited ? 'Added to favorites!' : 'Removed from favorites.');
+                 window.dispatchEvent(new CustomEvent('favorites-updated', { detail: { delta: d.favorited ? +1 : -1 } }));
+             }
         } catch { showToast('Could not update favorites.', true); }
     }
 
@@ -517,9 +519,10 @@ export default function Show({
     }
 
     function scrollToSection(id) {
-        const el = document.getElementById(`section-${id}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    setActiveSection(id);
+    const el = document.getElementById(`section-${id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } 
 
     async function claimVoucher(voucher) {
         if (!isAuth) { setSignInOpen(true); return; }

@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                 : 0,
 
             'cartCount' => $user ? $user->cartItems()->count() : 0,
+            'favoritesCount' => $user ? $user->favorites()->count() : 0,
         ];
     }
 }
