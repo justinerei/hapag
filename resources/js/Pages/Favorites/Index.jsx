@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { useState, useRef, useEffect } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -70,6 +70,11 @@ export default function FavoritesIndex({ restaurants: initialRestaurants, cartCo
     const [toast, setToast]         = useState(null);
     const toastTimer = useRef(null);
 
+    useEffect(() => {
+    sessionStorage.setItem('hapag_favorites_seen', 'true'); // ✅ I-save sa sessionStorage
+    window.dispatchEvent(new CustomEvent('favorites-seen'));
+    }, []);
+
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);
         setToast({ message, isError });
@@ -92,9 +97,11 @@ export default function FavoritesIndex({ restaurants: initialRestaurants, cartCo
                 setList(prev => prev.filter(r => r.id !== restaurantId));
                 setFavorites(prev => { const next = new Set(prev); next.delete(restaurantId); return next; });
                 showToast('Removed from favorites.');
+                window.dispatchEvent(new CustomEvent('favorites-updated', { detail: { delta: -1 } }));
             } else {
                 setFavorites(prev => { const next = new Set(prev); next.add(restaurantId); return next; });
                 showToast('Added to favorites!');
+                window.dispatchEvent(new CustomEvent('favorites-updated', { detail: { delta: +1 } }));
             }
         } catch {
             showToast('Could not update favorites.', true);

@@ -116,7 +116,7 @@ export default function CheckoutIndex({ cartItems, restaurant, cartCount, allVou
     const [pickupMode, setPickupMode]           = useState('standard'); // 'standard' | 'scheduled'
     const [scheduledAt, setScheduledAt]         = useState('');
     const [selectedDay, setSelectedDay]         = useState(0);
-    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [deliveryAddress, setDeliveryAddress] = useState(user?.address || '');
     const [pickupNote, setPickupNote]           = useState('');
     const [voucherCode, setVoucherCode]         = useState('');
     const [voucherStatus, setVoucherStatus]     = useState(null);

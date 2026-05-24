@@ -88,6 +88,7 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast]         = useState(null);
     const [mounted, setMounted]     = useState(false);
+    const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
     const toastTimer = useRef(null);
 
     useEffect(() => {
@@ -179,6 +180,40 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                 </div>
             )}
 
+            {/* ── Confirm Modal ── */}
+            {confirmModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setConfirmModal(null)}
+                    />
+                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-800">{confirmModal.message}</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmModal(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
                 {/* Page header */}
@@ -249,9 +284,10 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                                             type="button"
                                             onClick={() => {
                                                 if (item.quantity === 1) {
-                                                    if (window.confirm(`Remove ${item.menu_item.name} from your cart?`)) {
-                                                        removeItem(item.id);
-                                                    }
+                                                    setConfirmModal({
+                                                        message: `Remove "${item.menu_item.name}" from your cart?`,
+                                                        onConfirm: () => removeItem(item.id),
+                                                    });
                                                 } else {
                                                     updateQty(item.id, item.quantity - 1);
                                                 }
@@ -289,11 +325,10 @@ export default function CartIndex({ cartItems: initialItems, restaurant, cartCou
                             <div className="pt-1">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        if (window.confirm('Remove all items from your cart?')) {
-                                            clearCart();
-                                        }
-                                    }}
+                                    onClick={() => setConfirmModal({
+                                        message: 'Remove all items from your cart?',
+                                        onConfirm: clearCart,
+                                    })}
                                     className="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                     ✕ Clear all items
