@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import CustomerLayout from '@/Layouts/CustomerLayout';
 
@@ -69,6 +69,11 @@ export default function FavoritesIndex({ restaurants: initialRestaurants, cartCo
     const [favorites, setFavorites] = useState(() => new Set(favoriteIds));
     const [toast, setToast]         = useState(null);
     const toastTimer = useRef(null);
+
+    useEffect(() => {
+    sessionStorage.setItem('hapag_favorites_seen', 'true'); // ✅ I-save sa sessionStorage
+    window.dispatchEvent(new CustomEvent('favorites-seen'));
+    }, []);
 
     function showToast(message, isError = false) {
         if (toastTimer.current) clearTimeout(toastTimer.current);

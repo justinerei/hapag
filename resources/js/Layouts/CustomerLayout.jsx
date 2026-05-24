@@ -221,7 +221,12 @@ function SearchBar({ initialValue = '', onSearchPage, onSearchSubmit }) {
 
 export default function CustomerLayout({ children, cartCount = 0, orderNotifCount = 0, onSearch, onSearchSubmit, initialSearch = '', hideSearch = false }) {
     const { auth, notifications: initialNotifications = [], orderNotifCount: sharedOrderNotifCount = 0, favoritesCount: initialFavoritesCount = 0 } = usePage().props;
-    const [favoritesCount, setFavoritesCount] = useState(initialFavoritesCount);
+    const [favoritesCount, setFavoritesCount] = useState(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('hapag_favorites_seen') === 'true') {
+        return 0;
+    }
+    return initialFavoritesCount;
+    });
     const user = auth?.user ?? null;
 
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -232,7 +237,12 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     const [notifications, setNotifications] = useState(initialNotifications);
     const [unreadCount, setUnreadCount] = useState(initialNotifications.length);
     // Always read from middleware shared props — works on every page without passing manually
-    const [liveOrderNotifCount, setLiveOrderNotifCount] = useState(sharedOrderNotifCount || orderNotifCount);
+    const [liveOrderNotifCount, setLiveOrderNotifCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+        return parseInt(sessionStorage.getItem('hapag_orders_count') || '0');
+    }
+    return 0;
+    });
     const bellRef = useRef(null);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
@@ -249,9 +259,19 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
     useEffect(() => {
     function onFavoritesUpdated(e) {
         setFavoritesCount(prev => Math.max(0, prev + e.detail.delta));
+         if (e.detail.delta > 0) {
+        sessionStorage.removeItem('hapag_favorites_seen'); // ✅ Bag-ong favorite, ipakita ulit badge
+       }
+    }
+    function onFavoritesSeen() {
+        setFavoritesCount(0); 
     }
     window.addEventListener('favorites-updated', onFavoritesUpdated);
-    return () => window.removeEventListener('favorites-updated', onFavoritesUpdated);
+    window.addEventListener('favorites-seen', onFavoritesSeen);
+    return () => {
+        window.removeEventListener('favorites-updated', onFavoritesUpdated);
+        window.removeEventListener('favorites-seen', onFavoritesSeen);
+    };
     }, []);
     useEffect(() => {
         function onClickOutside(e) {
@@ -274,7 +294,7 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
         if (!user || user.role !== 'customer') return;
         const channel = window.Echo.private('customer.' + user.id);
         channel.listen('.order-status-updated', (event) => {
-            setNotifications(prev => [
+        setNotifications(prev => [
                 {
                     id: Date.now(),
                     message: event.message,
@@ -285,8 +305,15 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                 ...prev,
             ]);
             setUnreadCount(prev => prev + 1);
-            // Increment the My Orders badge live when resto updates status
-            setLiveOrderNotifCount(prev => prev + 1);
+
+            // ✅ PALITAN ITO:
+            if (!['received', 'completed', 'cancelled'].includes(event.status)) {
+                setLiveOrderNotifCount(prev => {
+                    const newCount = prev + 1;
+                    sessionStorage.setItem('hapag_orders_count', String(newCount));
+                    return newCount;
+                });
+            }
         });
         return () => {
             window.Echo.leave('customer.' + user.id);
@@ -757,7 +784,11 @@ export default function CustomerLayout({ children, cartCount = 0, orderNotifCoun
                                     <Link
                                         href={route('orders.index')}
                                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                        onClick={() => setProfileOpen(false)}
+                                        onClick={() => {
+                                            setProfileOpen(false);
+                                            setLiveOrderNotifCount(0);
+                                            sessionStorage.setItem('hapag_orders_count', '0'); 
+                                        }}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                                         <span className="flex-1">My Orders</span>
